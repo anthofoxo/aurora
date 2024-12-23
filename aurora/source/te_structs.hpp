@@ -62,40 +62,24 @@ namespace aurora {
 		uint8_t unknownBool1;
 		std::string leafName;
 		std::string defaultPath;
-		uint32_t subPathCount; //may not be needed
+		//uint32_t subPathCount; //may not be needed
 		std::vector<std::string> subpaths;
 
-		uint32_t unknown0;
+		//uint32_t unknown0;
 		std::string stepType;	//available options are		kStepAny	kStepFirst	kStepGameplay	kStepLast	kStepProp
 
 		uint32_t unknown1;
-		uint32_t unknown2;
-		uint32_t unknown3;
-		uint32_t unknown4;
 
-		//vec3
-		float unknownFloat0;
-		float unknownFloat1;
-		float unknownFloat2;
+		Transform transform;
 
-		float unknownFloat3;
-		float unknownFloat4;
-		float unknownFloat5;
-
-		float unknownFloat6;
-		float unknownFloat7;
-		float unknownFloat8;
-
-		float unknownFloat9;
-		float unknownFloat10;		// scale
-		float unknownFloat11;
 
 		uint8_t unknownBool2;
 		uint8_t unknownBool3;
-		uint8_t unknownBool4;
+		//uint8_t unknownBool4;
 
 		uint32_t unknown5;			// this is placed in between each leaf sequin, but is exempt in the final leaf sequin. !!UNSURE WHAT TO DO WITH THIS!!
 
+		void deserialize(ByteStream& aStream);
 	};
 
 
@@ -239,6 +223,8 @@ namespace aurora {
 
 	struct Lvl final {						// struct developed from 0x5177 offset from demo.objlib
 		std::string _declaredName;
+		size_t _beginOffset = 0;
+		size_t _endOffset = 0;
 
 		uint32_t header[4];
 		uint32_t hash0;
@@ -252,10 +238,10 @@ namespace aurora {
 		uint32_t unknown2;
 		std::string phaseMoveType;
 		uint32_t unknown3;
-		uint32_t leafSequinCount;
-		uint8_t unknownBool0;
+		//uint32_t leafSequinCount;
+		//uint8_t unknownBool0;
 
-		std::vector<LvlLeafSequin> LeafSequin;		//all leafs are read in and the tunnels attached to them. everything to here should be right
+		std::vector<LvlLeafSequin> leafSequin;		//all leafs are read in and the tunnels attached to them. everything to here should be right
 
 
 		uint32_t sampCount;
@@ -268,7 +254,7 @@ namespace aurora {
 		float unknownfloat14;	//unknown if float
 		std::string kNumTraitType;	//available options are		kNumTraitInterps	kNumTraitTypes
 		uint8_t unknownBool6;
-		std::string tutorialType;	//available options are		TUTORIAL_GRIND, TUTORIAL_GRIND, TUTORIAL_JUMP, TUTORIAL_LANES, TUTORIAL_NONE, TUTORIAL_POUND, TUTORIAL_POUND_REMINDER, TUTORIAL_POWER_GRIND, TUTORIAL_THUMP, TUTORIAL_THUMP_REMINDER, TUTORIAL_TURN_LEFT, TUTORIAL_TURN_RIGHT
+		std::string tutorialType; // See: is_known_tutorial_type
 
 		//footer (maybe????)
 
@@ -276,7 +262,7 @@ namespace aurora {
 		float footer2;
 		float footer3;
 
-
+		void deserialize(ByteStream& aStream);
 	};
 
 	struct LibraryImport final {
@@ -305,6 +291,7 @@ namespace aurora {
 		std::vector<Spn> _spns;
 		std::vector<SequinMaster> _masters;
 		std::vector<SequinDrawer> _drawers;
+		std::vector<Lvl> _lvls;
 
 		uint32_t filetype; // 0x8
 		uint32_t objlibType; // 0x19621c9d

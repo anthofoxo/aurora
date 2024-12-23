@@ -172,6 +172,11 @@ void read_all_leafs(std::optional<std::filesystem::path> const& aThumperPath) {
     for (auto const& pathUnhashed : paths) {
         std::string path = std::format("{}/cache/{:x}.pc", path_to_string(aThumperPath.value()), aurora::hash(pathUnhashed));
 
+        if (!std::filesystem::exists(path)) {
+            std::cout << "File " << pathUnhashed << " (" << path << ") doesnt exist.\n";
+            continue;
+        }
+
         aurora::ByteStream stream = aurora::ByteStream(path);
         aurora::ObjlibLevel level;
         level.deserialize(stream);

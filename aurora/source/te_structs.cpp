@@ -251,7 +251,34 @@ namespace aurora {
 
             }
 
+#if 0
+            // Lvl
+            else if (declaration.type == 0xbcd17473) {
+                uint32_t header[]{ 0x33, 0x21, 0x04, 0x02 };
+                auto headerBytes = std::span<char>(reinterpret_cast<char*>(std::addressof(header)), sizeof(header));
+
+                auto it = std::search(aStream.mData.begin() + aStream.mOffset, aStream.mData.end(), headerBytes.begin(), headerBytes.end());
+                if (it != aStream.mData.end()) {
+                    aStream.advance(std::distance(aStream.mData.begin() + aStream.mOffset, it));
+
+                    if (declaration.name == "loop_title.lvl") continue;
+
+                    declaration._definitionOffset = aStream.mOffset;
+                    Lvl definition;
+                    definition._declaredName = declaration.name;
+                    definition._beginOffset = aStream.mOffset;
+                    definition.deserialize(aStream);
+                    definition._endOffset = aStream.mOffset;
+
+                    _lvls.push_back(std::move(definition));
+                }
+
+            }
+#endif
+
         }
+
+
 
         // Footer
     }
@@ -354,7 +381,7 @@ namespace aurora {
         for (auto& sublevel : sublevels) {
             sublevel.deserialize(aStream);
         }
-
+        
         footer1 = aStream.read_u8();
         footer2 = aStream.read_u8();
         footer3 = aStream.read_u32();
@@ -382,5 +409,107 @@ namespace aurora {
         drawLayers = aStream.read_str();
         bucketType = aStream.read_str();
         unknown1 = aStream.read_u32();
+
+        
+    }
+
+    void LvlLeafSequin::deserialize(ByteStream& aStream) {
+        unknownBool0 = aStream.read_u8();
+        beatCount = aStream.read_u32();
+        unknownBool1 = aStream.read_u8();
+        leafName = aStream.read_str();
+        defaultPath = aStream.read_str();
+
+        subpaths.resize(aStream.read_u32());
+
+        for (auto& subpath : subpaths) {
+            subpath = aStream.read_str();
+            aStream.read_u32();
+        }
+
+        stepType = aStream.read_str();
+
+        unknown1 = aStream.read_u32();
+
+        transform = aStream.read_transform();
+
+        unknownBool2 = aStream.read_u8();
+        unknownBool3 = aStream.read_u8();
+        aStream.read_u8();
+       
+    }
+
+    bool is_known_tutorial_type(std::string_view aTutorial) {
+        if (aTutorial == "TUTORIAL_GRIND") return true;
+        if (aTutorial == "TUTORIAL_JUMP") return true;
+        if (aTutorial == "TUTORIAL_LANES") return true;
+        if (aTutorial == "TUTORIAL_NONE") return true;
+        if (aTutorial == "TUTORIAL_POUND_REMINDER") return true;
+        if (aTutorial == "TUTORIAL_POWER_GRIND") return true;
+        if (aTutorial == "TUTORIAL_THUMP") return true;
+        if (aTutorial == "TUTORIAL_THUMP_REMINDER") return true;
+        if (aTutorial == "TUTORIAL_TURN_LEFT") return true;
+        if (aTutorial == "TUTORIAL_TURN_RIGHT") return true;
+        return false;
+    }
+
+    void Lvl::deserialize(ByteStream& aStream) {
+        header[0] = aStream.read_u32();
+        assert(header[0] == 0x33);
+        header[1] = aStream.read_u32();
+        assert(header[1] == 0x21);
+        header[2] = aStream.read_u32();
+        assert(header[2] == 0x04);
+        header[3] = aStream.read_u32();
+        assert(header[3] == 0x02);
+
+        hash0 = aStream.read_u32();
+        unknown0 = aStream.read_u32();
+        hash1 = aStream.read_u32();
+        timeUnit = aStream.read_str();
+
+        unknown1 = aStream.read_u32();
+        unknownInt0 = aStream.read_u32();
+        editStateCompHash = aStream.read_u32();
+
+        traits.resize(aStream.read_u32());
+
+        for (auto& trait : traits) {
+            trait.deserialize(aStream);
+        }
+
+        unknown2 = aStream.read_u32();
+        phaseMoveType = aStream.read_str();
+        unknown3 = aStream.read_u32();
+
+        leafSequin.resize(aStream.read_u32());
+        for (auto& lvlleaf : leafSequin) {
+            lvlleaf.deserialize(aStream);
+        }
+
+        auto unknown5 = aStream.read_u32();
+
+        for (int i = 0; i < unknown5; ++i) {
+            auto name = aStream.read_str();
+            auto loopBeats = aStream.read_u32();
+            auto unknown2 = aStream.read_u32();
+        }
+
+        // ASRDSFghihsdfgoipu
+
+        unknownBool5 = aStream.read_u8();
+        unknownFloat12 = aStream.read_f32();
+        unknownFloat13 = aStream.read_f32();
+        unknownfloat14 = aStream.read_f32();
+
+        kNumTraitType = aStream.read_str();
+        unknownBool6 = aStream.read_u8();
+        tutorialType = aStream.read_str();
+
+        assert(is_known_tutorial_type(tutorialType));
+
+        footer1 = aStream.read_f32();
+        footer2 = aStream.read_f32();
+        footer3 = aStream.read_f32();
     }
 }
