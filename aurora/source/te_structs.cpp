@@ -78,15 +78,9 @@ namespace aurora {
     }
 
     void Leaf::deserialize(ByteStream& aStream) {
-        _beginOffset = aStream.mOffset;
-
-        for(int i = 0; i < 4; ++i)
-            header[i] = aStream.read_u32();
-
-        assert(header[0] == 0x22);
-        assert(header[1] == 0x21);
-        assert(header[2] == 0x04);
-        assert(header[3] == 0x02);
+        for (size_t i = 0; i < kHeader.size(); ++i) {
+            assert(header[i] = aStream.read_u32() == kHeader[i]);
+        }
 
         hash0 = aStream.read_u32();
         unknown0 = aStream.read_u32();
@@ -109,8 +103,6 @@ namespace aurora {
         unknown3 = aStream.read_u32();
         unknown4 = aStream.read_u32();
         unknown5 = aStream.read_u32();
-
-        _endOffset = aStream.mOffset;
     }
 
     void ObjlibLevel::deserialize(ByteStream& aStream) {
@@ -142,7 +134,7 @@ namespace aurora {
 
         objectDeclarations.resize(aStream.read_u32());
         for (int i = 0; i < objectDeclarations.size(); ++i) {
-            objectDeclarations[i].type = aStream.read_u32();
+            objectDeclarations[i].type = static_cast<DeclarationType>(aStream.read_u32());
             objectDeclarations[i].name = aStream.read_str();
         }
 
@@ -151,10 +143,8 @@ namespace aurora {
         for (size_t iDeclaration = 0; iDeclaration < objectDeclarations.size(); ++iDeclaration) {
             auto& declaration = objectDeclarations[iDeclaration];
 
-            // Leaf
-            if (declaration.type == 0xce7e85f6) {
-                uint32_t header[]{ 0x22, 0x21, 0x04, 0x02 };
-                auto headerBytes = std::span<char>(reinterpret_cast<char*>(std::addressof(header)), sizeof(header));
+            if (declaration.type == DeclarationType::kLeaf) {
+                auto headerBytes = std::as_bytes(std::span(Leaf::kHeader));
 
                 auto it = std::search(aStream.mData.begin() + aStream.mOffset, aStream.mData.end(), headerBytes.begin(), headerBytes.end());
                 if (it != aStream.mData.end()) {
@@ -163,16 +153,15 @@ namespace aurora {
                     declaration._definitionOffset = aStream.mOffset;
                     Leaf leaf;
                     leaf._declaredName = declaration.name;
+                    leaf._beginOffset = aStream.mOffset;
                     leaf.deserialize(aStream);
+                    leaf._endOffset = aStream.mOffset;
 
                     _leafs.push_back(std::move(leaf));
                 }
             }
-
-            // Samp
-            else if (declaration.type == 0x7aa8f390) {
-                uint32_t header[]{ 0x0C, 0x04 };
-                auto headerBytes = std::span<char>(reinterpret_cast<char*>(std::addressof(header)), sizeof(header));
+            else if (declaration.type == DeclarationType::kSamp) {
+                auto headerBytes = std::as_bytes(std::span(Samp::kHeader));
 
                 auto it = std::search(aStream.mData.begin() + aStream.mOffset, aStream.mData.end(), headerBytes.begin(), headerBytes.end());
                 if (it != aStream.mData.end()) {
@@ -187,13 +176,11 @@ namespace aurora {
                 }
                 
             }
-
-            // Spn
-            else if (declaration.type == 0xd897d5db) {
+            else if (declaration.type == DeclarationType::kSpn) {
 
 
                 uint32_t header[]{ 0x01, 0x04, 0x02 };
-                auto headerBytes = std::span<char>(reinterpret_cast<char*>(std::addressof(header)), sizeof(header));
+                auto headerBytes = std::span<std::byte>(reinterpret_cast<std::byte*>(std::addressof(header)), sizeof(header));
 
                 auto it = std::search(aStream.mData.begin() + aStream.mOffset, aStream.mData.end(), headerBytes.begin(), headerBytes.end());
                 if (it != aStream.mData.end()) {
@@ -209,11 +196,8 @@ namespace aurora {
                     _spns.push_back(std::move(definition));
                 }
             }
-
-            // Master
-            else if (declaration.type == 0x490780b9) {
-                uint32_t header[]{ 33, 33, 4, 2 };
-                auto headerBytes = std::span<char>(reinterpret_cast<char*>(std::addressof(header)), sizeof(header));
+            else if (declaration.type == DeclarationType::kMaster) {
+                std::span<std::byte const> headerBytes = std::as_bytes(std::span(SequinMaster::kHeader));
 
                 auto it = std::search(aStream.mData.begin() + aStream.mOffset, aStream.mData.end(), headerBytes.begin(), headerBytes.end());
                 if (it != aStream.mData.end()) {
@@ -229,11 +213,9 @@ namespace aurora {
                     _masters.push_back(std::move(definition));
                 }
             }
-
-            // Drawer
-            else if (declaration.type == 0xd3058b5d) {
+            else if (declaration.type == DeclarationType::kDrawer) {
                 uint32_t header[]{ 7, 4, 1 };
-                auto headerBytes = std::span<char>(reinterpret_cast<char*>(std::addressof(header)), sizeof(header));
+                auto headerBytes = std::span<std::byte>(reinterpret_cast<std::byte*>(std::addressof(header)), sizeof(header));
 
                 auto it = std::search(aStream.mData.begin() + aStream.mOffset, aStream.mData.end(), headerBytes.begin(), headerBytes.end());
                 if (it != aStream.mData.end()) {
@@ -250,10 +232,28 @@ namespace aurora {
                 }
 
             }
+            else if (declaration.type == DeclarationType::kGate) {
+                std::span<std::byte const> headerBytes = std::as_bytes(std::span(Gate::kHeader));
+
+                auto it = std::search(aStream.mData.begin() + aStream.mOffset, aStream.mData.end(), headerBytes.begin(), headerBytes.end());
+                if (it != aStream.mData.end()) {
+                    aStream.advance(std::distance(aStream.mData.begin() + aStream.mOffset, it));
+
+                    declaration._definitionOffset = aStream.mOffset;
+                    Gate definition;
+                    definition._declaredName = declaration.name;
+                    definition._beginOffset = aStream.mOffset;
+                    definition.deserialize(aStream);
+                    definition._endOffset = aStream.mOffset;
+
+                    _gates.push_back(std::move(definition));
+                }
+
+            }
 
 #if 0
             // Lvl
-            else if (declaration.type == 0xbcd17473) {
+            else if (declaration.type == DeclarationType::kLvl) {
                 uint32_t header[]{ 0x33, 0x21, 0x04, 0x02 };
                 auto headerBytes = std::span<char>(reinterpret_cast<char*>(std::addressof(header)), sizeof(header));
 
@@ -278,7 +278,80 @@ namespace aurora {
 
         }
 
+        // If last object was found we can happily read the footer
+        if (objectDeclarations.back()._definitionOffset != 0) {
+            assert(aStream.read_u32() == 0);
+            assert(aStream.read_u32() == 4);
 
+            struct Camera final {
+                // Matches drawer??
+                uint32_t hash0;
+                uint32_t unknown0; // 8
+                bool unknown1;
+                std::string drawLayers; // kNumDrawLayers
+                std::string bucketParent; // kBucketParent
+                std::vector<std::string> strings;
+                // END
+                uint32_t unknown2;
+                uint32_t unknown3;
+                std::string xfmer;
+                std::string constraint; // kConstraintParent
+                Transform transform;
+
+                void deserialize(ByteStream& aStream) {
+                    hash0 = aStream.read_u32();
+                    unknown0 = aStream.read_u32();
+                    unknown1 = aStream.read_u8();
+                    drawLayers = aStream.read_str();
+                    bucketParent = aStream.read_str();
+                    strings.resize(aStream.read_u32());
+
+                    for (size_t i = 0; i < strings.size(); ++i) {
+                        strings[i] = aStream.read_str();
+                    }
+
+                    unknown2 = aStream.read_u32();
+                    unknown3 = aStream.read_u32();
+                    xfmer = aStream.read_str();
+                    constraint = aStream.read_str(); // kConstraintParent
+                    transform = aStream.read_transform();
+                }
+           };
+          
+            uint32_t unknown0 = aStream.read_u32();
+            uint32_t unknown1 = aStream.read_u32();
+            uint32_t unknown2 = aStream.read_u32();
+            Camera unknownCameraDefinition0;
+            unknownCameraDefinition0.deserialize(aStream);
+
+            auto camera = aStream.read_str(); // world.cam
+
+            uint32_t unknown3 = aStream.read_u32();
+            uint32_t unknown4 = aStream.read_u32();
+            uint32_t unknown5 = aStream.read_u32();
+            Camera unknownCameraDefinition1;
+            unknownCameraDefinition1.deserialize(aStream);
+
+            auto scaling = aStream.read_f32vec3();
+
+            sceneName = aStream.read_str();
+            lowSpecScene = aStream.read_str();
+            vrSettings = aStream.read_str();
+            environment = aStream.read_str();
+            playerCamera = aStream.read_str();
+            unknownfooteritem = aStream.read_str();
+            playerCam2 = aStream.read_str();
+            bpm = aStream.read_f32();
+            avatar = aStream.read_str();
+            master = aStream.read_str();
+            drawer = aStream.read_str();
+            masterChannel = aStream.read_str();
+            baseChannel = aStream.read_str();
+            realtimeChannel = aStream.read_str();
+            unknownFooterval = aStream.read_u8();
+        }
+
+       
 
         // Footer
     }
@@ -357,14 +430,9 @@ namespace aurora {
     }
 
     void SequinMaster::deserialize(ByteStream& aStream) {
-        header[0] = aStream.read_u32();
-        assert(header[0] == 33);
-        header[1] = aStream.read_u32();
-        assert(header[1] == 33);
-        header[2] = aStream.read_u32();
-        assert(header[2] == 0x04);
-        header[3] = aStream.read_u32();
-        assert(header[3] == 0x02);
+        for (size_t i = 0; i < kHeader.size(); ++i) {
+            assert(header[i] = aStream.read_u32() == kHeader[i]);
+        }
 
         hash0 = aStream.read_u32();
         unknown0 = aStream.read_u32();
@@ -511,5 +579,40 @@ namespace aurora {
         footer1 = aStream.read_f32();
         footer2 = aStream.read_f32();
         footer3 = aStream.read_f32();
+    }
+
+    void Gate::GateEntry::deserialize(ByteStream& aStream) {
+        bucketHash = aStream.read_u32();
+        lvlName = aStream.read_str();
+        unknown1 = aStream.read_u8();
+        sentryType = aStream.read_str();
+        hash = aStream.read_u32();
+        unknowncounter = aStream.read_u32();
+    }
+
+    void Gate::deserialize(ByteStream& aStream) {
+        for (size_t i = 0; i < kHeader.size(); ++i) {
+            assert(header[i] = aStream.read_u32() == kHeader[i]);
+        }
+        
+        editStateComp = aStream.read_u32();
+        spn = aStream.read_str();
+        unknown0 = aStream.read_u32();
+        spnParameter = aStream.read_u32();
+        unknown1 = aStream.read_s32();
+
+        enteries.resize(aStream.read_u32());
+
+        for (int i = 0; i < enteries.size(); ++i) {
+            enteries[i].deserialize(aStream);
+        }
+
+        preintro = aStream.read_str();
+        postintro = aStream.read_str();
+        restart = aStream.read_str();
+        unknownLvlParam = aStream.read_str();
+        sectionBossType = aStream.read_str();
+        unknown2 = aStream.read_f32();
+        randomFunction = aStream.read_str();
     }
 }

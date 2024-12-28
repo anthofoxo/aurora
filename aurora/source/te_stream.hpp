@@ -9,6 +9,7 @@
 #include <cassert>
 #include <string>
 #include <fstream>
+#include <cstddef>
 
 namespace aurora {
 	struct ByteStream final {
@@ -18,7 +19,7 @@ namespace aurora {
 			in.seekg(0, std::ios::end);
 			mData.resize(in.tellg());
 			in.seekg(0, std::ios::beg);
-			in.read(mData.data(), mData.size());
+			in.read(reinterpret_cast<char*>(mData.data()), mData.size());
 		}
 	
 		inline int8_t poke_s8() const { return *reinterpret_cast<int8_t const*>(head()); }
@@ -55,14 +56,16 @@ namespace aurora {
 		}
 
 
-		inline char const* head() const { return mData.data() + mOffset; }
+		inline std::byte const* head() const { return mData.data() + mOffset; }
 
 		void advance(size_t aRelativeOffset) {
-			assert(mOffset + aRelativeOffset < mData.size());
+			assert(mOffset + aRelativeOffset <= mData.size());
 			mOffset += aRelativeOffset;
 		}
 
-		std::vector<char> mData;
+		inline char const* charhead() const { return reinterpret_cast<char const*>(mData.data()) + mOffset; }
+
+		std::vector<std::byte> mData;
 		size_t mOffset = 0;
 	};
 }

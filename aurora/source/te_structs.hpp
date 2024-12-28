@@ -2,10 +2,23 @@
 
 #include "te_stream.hpp"
 
+#include "te_hash.hpp"
+
 #include <any>
+#include <array>
 #include <string>
 
 namespace aurora {
+	enum struct DeclarationType : uint32_t {
+		kLeaf = 0xce7e85f6, // SequinLeaf
+		kSamp = 0x7aa8f390, // Sample
+		kSpn = 0xd897d5db, // EntitySpawner
+		kMaster = 0x490780b9, // SequinMaster
+		kDrawer = 0xd3058b5d, // SequinDrawer
+		kGate = 0xaa63a508, // SequinGate
+		kLvl = 0xbcd17473, // SequinLevel
+	};
+
 	struct Datapoint final {
 		float time;
 		std::any value;
@@ -84,6 +97,8 @@ namespace aurora {
 
 
 	struct Leaf final {
+		static constexpr std::array<uint32_t, 4> kHeader = { 34, 33, 4, 2 };
+
 		std::string _declaredName;
 		size_t _beginOffset = 0;
 		size_t _endOffset = 0;
@@ -105,6 +120,8 @@ namespace aurora {
 	};
 
 	struct Samp final {
+		static constexpr std::array<uint32_t, 2> kHeader = { 12, 4 };
+
 		std::string _declaredName;
 		size_t _beginOffset = 0;
 		size_t _endOffset = 0;
@@ -186,8 +203,48 @@ namespace aurora {
 		void deserialize(ByteStream& aStream);
 	};
 
+	struct Gate final {
+		struct GateEntry {
+			uint32_t bucketHash;
+			std::string lvlName;
+			bool unknown1;
+			std::string sentryType;
+			uint32_t hash;
+			uint32_t unknowncounter;
+
+			void deserialize(ByteStream& aStream);
+		};
+
+		static constexpr std::array<uint32_t, 3> kHeader = { 26, 4, 1 };
+
+		std::string _declaredName;
+		size_t _beginOffset = 0;
+		size_t _endOffset = 0;
+
+		uint32_t header[3];
+		uint32_t editStateComp;
+		std::string spn;
+		uint32_t unknown0;
+		uint32_t spnParameter;
+		int32_t unknown1; // -1
+
+		std::vector<GateEntry> enteries;
+
+		std::string preintro;
+		std::string postintro;
+		std::string restart;
+		std::string unknownLvlParam;
+		std::string sectionBossType;
+		float unknown2;
+		std::string randomFunction;
+
+		void deserialize(ByteStream& aStream);
+	};
+
 	//using level 2's sequin master as the example, offset 0x346B
 	struct SequinMaster final {
+		static constexpr std::array<uint32_t, 4> kHeader = { 33, 33, 4, 2 };
+
 		std::string _declaredName;
 		size_t _beginOffset = 0;
 		size_t _endOffset = 0;
@@ -280,18 +337,19 @@ namespace aurora {
 	struct ObjectDeclaration final {
 		size_t _definitionOffset = 0;
 
-		uint32_t type;
+		DeclarationType type;
 		std::string name;
 	};
 
 	struct ObjlibLevel final {
-		std::vector<char> _bytes;
+		std::vector<std::byte> _bytes;
 		std::vector<Leaf> _leafs;
 		std::vector<Samp> _samps;
 		std::vector<Spn> _spns;
 		std::vector<SequinMaster> _masters;
 		std::vector<SequinDrawer> _drawers;
 		std::vector<Lvl> _lvls;
+		std::vector<Gate> _gates;
 
 		uint32_t filetype; // 0x8
 		uint32_t objlibType; // 0x19621c9d
@@ -307,6 +365,24 @@ namespace aurora {
 		// Object definitions are dumped here
 
 		// Footer
+
+		// THESE REMAIN UNSET ATM
+		std::string sceneName;
+		std::string lowSpecScene;
+		std::string vrSettings;
+		std::string environment;
+		std::string playerCamera;
+		std::string unknownfooteritem; //nx.cam
+		std::string playerCam2; // duplicate of camera
+		float bpm;
+		std::string avatar;
+		std::string master;
+		std::string drawer;
+		std::string masterChannel;
+		std::string baseChannel;
+		std::string realtimeChannel;
+		bool unknownFooterval;
+		// !--
 
 		void deserialize(ByteStream& aStream);
 	};

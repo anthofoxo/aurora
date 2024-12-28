@@ -156,6 +156,26 @@ void imgui_uninit() {
 std::vector<aurora::ObjlibLevel> gLevels;
 
 void read_all_leafs(std::optional<std::filesystem::path> const& aThumperPath) {
+
+#if 0
+    std::vector<std::filesystem::path> targets;
+    for (auto const& entry : std::filesystem::directory_iterator(aThumperPath.value() / "cache")) {
+        aurora::ByteStream stream = aurora::ByteStream(entry);
+
+        if (stream.read_u32() != 8) continue;
+        if (stream.read_u32() != 0x0b374d9e) continue;
+        stream.mOffset = 0;
+
+        std::cout << entry << '\n';
+
+        //aurora::ObjlibLevel level;
+        //level.deserialize(stream);
+        //level._bytes = std::move(stream.mData);
+        //
+        //gLevels.push_back(std::move(level));
+    }
+
+#else
     std::string_view paths[] = {
         "Alevels/title_screen.objlib",
         "Alevels/demo.objlib",
@@ -184,6 +204,7 @@ void read_all_leafs(std::optional<std::filesystem::path> const& aThumperPath) {
 
         gLevels.push_back(std::move(level));
     }
+#endif
 }
 
 class Application final {
@@ -235,6 +256,9 @@ public:
         aurora::SequinDrawer* pDrawer = nullptr;
         std::string drawerTitle;
 
+        aurora::Gate* pGate = nullptr;
+        std::string gateTitle;
+
         MemoryEditor memoryEditor;
         void* memoryEditorOffset = nullptr;
         size_t memoryEditorSize = 0;
@@ -258,14 +282,100 @@ public:
     void gui_sample_viewer() {
         if (!mContext.sampleTitle.empty() && mContext.pSample) {
             if (ImGui::Begin(mContext.sampleTitle.c_str())) {
-                ImGui::LabelText("Play Mode", "%s", mContext.pSample->samplePlayMode.c_str());
-                ImGui::LabelText("Path", "%s", mContext.pSample->filePath.c_str());
-                ImGui::LabelText("Volume", "%.2f", mContext.pSample->volume);
-                ImGui::LabelText("Pitch", "%.2f", mContext.pSample->pitch);
-                ImGui::LabelText("Pan", "%.2f", mContext.pSample->pan);
-                ImGui::LabelText("Offset", "%.2f", mContext.pSample->offset);
-                ImGui::LabelText("Channel Group", "%s", mContext.pSample->channelGroup.c_str());
-                
+                ImGui::InputText("Path Mode", &mContext.pSample->samplePlayMode);
+                if (ImGui::BeginPopupContextItem()) {
+                    static std::array items = {
+                        "kSampleOneOff",
+                        "kSampleDynamic",
+                    };
+
+                    for (auto& item : items) {
+                        if (ImGui::Selectable(item)) {
+                            mContext.pSample->samplePlayMode = item;
+                            ImGui::CloseCurrentPopup();
+                        }
+                    }
+
+                    ImGui::EndPopup();
+                }
+
+                ImGui::InputText("Path", &mContext.pSample->filePath);
+                ImGui::SliderFloat("Volume", &mContext.pSample->volume, 0.0f, 2.0f);
+                ImGui::SliderFloat("Pitch", &mContext.pSample->pitch, 0.0f, 2.0f);
+                ImGui::SliderFloat("Pan", &mContext.pSample->pan, -1.0f, 1.0f);
+                ImGui::DragFloat("Offset (ms)", &mContext.pSample->offset);
+
+                ImGui::InputText("Channel Group", &mContext.pSample->channelGroup);
+                if (ImGui::BeginPopupContextItem()) {
+                    static std::array items = {
+                        "base.ch",
+                        "base_credits.ch",
+                        "bass_cut.ch",
+                        "beat_time.ch",
+                        "beneath_ice.ch",
+                        "carve.ch",
+                        "checkpoint_hud.ch",
+                        "death_sfx.ch",
+                        "DF.ch",
+                        "dissonant_bursts.ch",
+                        "effects.ch",
+                        "effects_echo.ch",
+                        "effects_echoflange.ch",
+                        "effects_flanger.ch",
+                        "effects_loud.ch",
+                        "effects_tremelo_2hz.ch",
+                        "flutter_grind_wet.ch",
+                        "french_horn_swells.ch",
+                        "grind_thump_pitch.ch",
+                        "hI.ch",
+                        "i.ch",
+                        "master.ch",
+                        "master_realtime.ch",
+                        "Master_uncompressed.ch",
+                        "music_fade.ch",
+                        "once_rises.ch",
+                        "pound_hit.ch",
+                        "rail_drone_left.ch",
+                        "rail_drone_right.ch",
+                        "rises.ch",
+                        "rises_1_1.ch",
+                        "rise_delay.ch",
+                        "rise_delay_1_1.ch",
+                        "rumble.ch",
+                        "scrape_drone.ch",
+                        "scrape_sfx.ch",
+                        "sequin.ch",
+                        "streak_layer.ch",
+                        "swooshes.ch",
+                        "thumps.ch",
+                        "thumps_accents.ch",
+                        "thumps_realtime.ch",
+                        "thump_hit.ch",
+                        "tunnel_whooshes.ch",
+                        "turn_anticipation.ch",
+                        "turn_auto.ch",
+                        "turn_strike.ch",
+                        "ui.ch",
+                        "wail_delay.ch",
+                        "white_noise.ch",
+                        "wind.ch",
+                        "_m.ch",
+                    };
+
+                    for (auto& item : items) {
+                        if (ImGui::Selectable(item)) {
+                            mContext.pSample->channelGroup = item;
+                            ImGui::CloseCurrentPopup();
+                        }
+                    }
+
+                    ImGui::EndPopup();
+                }
+
+                ImGui::Separator();
+                ImGui::BeginDisabled();
+                ImGui::Button("Apply Changes");
+                ImGui::EndDisabled();
             }
             ImGui::End();
         }
@@ -307,6 +417,44 @@ public:
                 ImGui::LabelText("Draw Layers", "%s", mContext.pDrawer->drawLayers.c_str());
                 ImGui::LabelText("Bucket Type", "%s", mContext.pDrawer->bucketType.c_str());
                 ImGui::LabelText("unknown1", "%u", mContext.pDrawer->unknown1);
+            }
+            ImGui::End();
+        }
+    }
+
+    void gui_gate_viewer() {
+        if (!mContext.gateTitle.empty() && mContext.pGate) {
+            if (ImGui::Begin(mContext.gateTitle.c_str())) {
+                ImGui::LabelText("editcomp", "0x%x", mContext.pGate->editStateComp);
+                ImGui::LabelText("Spn", "%s", mContext.pGate->spn.c_str());
+                ImGui::LabelText("unknown0", "%u", mContext.pGate->unknown0);
+                ImGui::LabelText("spnParameter", "0x%x", mContext.pGate->spnParameter);
+                ImGui::LabelText("unknown1", "%d", mContext.pGate->unknown1);
+
+                ImGui::LabelText("Pre Intro", "%s", mContext.pGate->preintro.c_str());
+                ImGui::LabelText("Post Intro", "%s", mContext.pGate->postintro.c_str());
+                ImGui::LabelText("Restart", "%s", mContext.pGate->restart.c_str());
+                ImGui::LabelText("UnknownLvlParam", "%s", mContext.pGate->unknownLvlParam.c_str());
+                ImGui::LabelText("Boss section type", "%s", mContext.pGate->sectionBossType.c_str());
+                ImGui::LabelText("Random bucket", "%s", mContext.pGate->randomFunction.c_str());
+                ImGui::LabelText("unknown2", "%.1f", mContext.pGate->unknown2);
+
+                for (size_t i = 0; i < mContext.pGate->enteries.size(); ++i) {
+                    ImGui::Separator();
+                    ImGui::PushID(i);
+
+                    ImGui::LabelText("bucket", "0x%x", mContext.pGate->enteries[i].bucketHash);
+                    ImGui::LabelText("Level", "%s", mContext.pGate->enteries[i].lvlName.c_str());
+                    ImGui::Checkbox("unknown1", &mContext.pGate->enteries[i].unknown1);
+                    
+                    ImGui::LabelText("sentryType", "%s", mContext.pGate->enteries[i].sentryType.c_str());
+                    
+                    ImGui::LabelText("hash", "0x%x", mContext.pGate->enteries[i].hash);
+                    ImGui::LabelText("unknowncounter", "0x%x", mContext.pGate->enteries[i].unknowncounter);
+
+                    ImGui::PopID();
+                }
+                
             }
             ImGui::End();
         }
@@ -764,6 +912,34 @@ void Application::update() {
                     ImGui::TreePop();
                 }
 
+                if (ImGui::TreeNode("Gates")) {
+                    ImGui::PushID(level.origin.c_str());
+
+                    for (auto& gate : level._gates) {
+                        if (ImGui::SmallButton(gate._declaredName.c_str())) {
+                            mContext.pGate = &gate;
+                            mContext.gateTitle = std::format("{}:{}###GATEVIEWER", level.origin, gate._declaredName);
+                        }
+
+                        if (ImGui::BeginPopupContextItem()) {
+                            if (ImGui::Button("Jump to offset in objlib")) {
+                                mContext.memoryEditorOffset = level._bytes.data();
+                                mContext.memoryEditorSize = level._bytes.size();
+                                mContext.memoryEditor.GotoAddrAndHighlight(gate._beginOffset, gate._endOffset);
+                                ImGui::CloseCurrentPopup();
+                            }
+
+                            ImGui::EndPopup();
+                        }
+
+                        ImGui::SetItemTooltip("Offset from 0x%x to 0x%x (%d bytes)", gate._beginOffset, gate._endOffset, gate._endOffset - gate._beginOffset);
+                    }
+
+                    ImGui::PopID();
+
+                    ImGui::TreePop();
+                }
+
                 if (ImGui::TreeNode("Masters")) {
                     ImGui::PushID(level.origin.c_str());
 
@@ -881,6 +1057,7 @@ void Application::update() {
     gui_memory_editor();    
     gui_sample_viewer();
     gui_leaf_viewer();
+    gui_gate_viewer();
     gui_spn_viewer();
     gui_master_viewer();
     gui_drawer_viewer();
