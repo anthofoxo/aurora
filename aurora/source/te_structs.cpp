@@ -273,6 +273,26 @@ namespace aurora {
                 }
 
             }
+
+            else if (declaration.type == DeclarationType::kPath) {
+                uint32_t header[]{ 41, 4, 1 };
+                auto headerBytes = std::span<std::byte>(reinterpret_cast<std::byte*>(std::addressof(header)), sizeof(header));
+
+                auto it = std::search(aStream.mData.begin() + aStream.mOffset, aStream.mData.end(), headerBytes.begin(), headerBytes.end());
+                if (it != aStream.mData.end()) {
+                    aStream.advance(std::distance(aStream.mData.begin() + aStream.mOffset, it));
+
+                    declaration._definitionOffset = aStream.mOffset;
+                    Path definition;
+                    definition._declaredName = declaration.name;
+                    definition._beginOffset = aStream.mOffset;
+                    definition.deserialize(aStream);
+                    definition._endOffset = aStream.mOffset;
+
+                    _paths.push_back(std::move(definition));
+                }
+
+            }
         }
 
 
@@ -625,5 +645,33 @@ namespace aurora {
         sectionBossType = aStream.read_str();
         unknown2 = aStream.read_f32();
         randomFunction = aStream.read_str();
+    }
+
+    void Path::deserialize(ByteStream& aStream) {
+        header[0] = aStream.read_u32();
+        assert(header[0] == 41);
+        header[1] = aStream.read_u32();
+        assert(header[1] == 4);
+        header[2] = aStream.read_u32();
+        assert(header[2] == 1);
+
+        hash0 = aStream.read_u32();
+
+        scale0 = aStream.read_f32vec3();
+        scale1 = aStream.read_f32vec3();
+        unknown6 = aStream.read_u32();
+
+        meshName = aStream.read_str();
+        unknownBool0 = aStream.read_u8();
+        pathInterpType = aStream.read_str();
+        unknown7 = aStream.read_u32();
+        unknown8 = aStream.read_u8();
+        unknown9 = aStream.read_u8();
+        decorators.resize(aStream.read_u32());
+        for (auto i = 0; i < decorators.size(); i++)
+        {
+            decorators[i] = aStream.read_str();
+        }
+        unknownBool1 = aStream.read_u8();
     }
 }

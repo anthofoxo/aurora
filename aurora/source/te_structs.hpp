@@ -17,6 +17,7 @@ namespace aurora {
 		kDrawer = 0xd3058b5d, // SequinDrawer
 		kGate = 0xaa63a508, // SequinGate
 		kLvl = 0xbcd17473, // SequinLevel
+		kPath = 0x4890a3f6,
 	};
 
 	struct Datapoint final {
@@ -347,6 +348,36 @@ namespace aurora {
 		std::string name;
 	};
 
+
+
+	struct Path final {
+		std::string _declaredName;
+		size_t _beginOffset = 0;
+		size_t _endOffset = 0;
+
+		uint32_t header[3]; // 41, 4, 1
+		uint32_t hash0; //editstatecomp
+
+		f32vec3 scale0;
+
+		f32vec3 scale1;
+
+		uint32_t unknown6;
+
+		std::string meshName; //lattice_5.mesh
+		bool unknownBool0;
+		std::string pathInterpType; //kPathScaleInterpLinear
+		uint32_t unknown7;
+		uint8_t unknown8;
+		uint8_t unknown9;
+		//uint32_t decCount; //2
+		std::vector<std::string> decorators;
+
+		bool unknownBool1;
+
+		void deserialize(ByteStream& aStream);
+	};
+
 	struct ObjlibLevel final {
 		std::vector<std::byte> _bytes;
 		std::vector<Leaf> _leafs;
@@ -356,6 +387,7 @@ namespace aurora {
 		std::vector<SequinDrawer> _drawers;
 		std::vector<Lvl> _lvls;
 		std::vector<Gate> _gates;
+		std::vector<Path> _paths;
 
 		uint32_t filetype; // 0x8
 		uint32_t objlibType; // 0x19621c9d
