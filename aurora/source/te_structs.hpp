@@ -153,6 +153,8 @@ namespace aurora {
 	};
 
 	struct Spn final {
+		static constexpr std::array<uint32_t, 3> kHeader = { 1, 4, 2 };
+
 		std::string _declaredName;
 		size_t _beginOffset = 0;
 		size_t _endOffset = 0;
@@ -176,11 +178,13 @@ namespace aurora {
 	};
 
 	struct SequinDrawer final {
+		static constexpr std::array<uint32_t, 3> kHeader = { 7, 4, 1 };
+
 		std::string _declaredName;
 		size_t _beginOffset = 0;
 		size_t _endOffset = 0;
 
-		uint8_t header[3]; //7, 4, 1
+		uint8_t header[3];
 		uint32_t hash0;
 		uint32_t unknown0;
 		uint8_t unknownBool0;
@@ -286,7 +290,9 @@ namespace aurora {
 		void deserialize(ByteStream& aStream);
 	};
 
-	struct Lvl final {						// struct developed from 0x5177 offset from demo.objlib
+	struct Lvl final {
+		static constexpr std::array<uint32_t, 4> kHeader = { 51, 33, 4, 2 };
+
 		std::string _declaredName;
 		size_t _beginOffset = 0;
 		size_t _endOffset = 0;
@@ -306,11 +312,10 @@ namespace aurora {
 		uint32_t unknown4;
 		uint8_t unknown5;
 
-		// One of the rare cases where the size of the array isnt first, only way we currently know about this is via a continuation byte
+		// One of the rare cases where the size of the array size isnt first,
+		// only way we currently know about this is via a continuation byte
 		std::vector<LvlLeafSequin> leafSequin;
 
-
-		
 		uint8_t unknownBool5;
 
 		float unknownFloat12;
@@ -351,11 +356,13 @@ namespace aurora {
 
 
 	struct Path final {
+		static constexpr std::array<uint32_t, 3> kHeader = { 41, 4, 1 };
+
 		std::string _declaredName;
 		size_t _beginOffset = 0;
 		size_t _endOffset = 0;
 
-		uint32_t header[3]; // 41, 4, 1
+		uint32_t header[3];
 		uint32_t hash0; //editstatecomp
 
 		f32vec3 scale0;

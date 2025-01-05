@@ -172,19 +172,18 @@ namespace aurora {
                     aStream.advance(std::distance(aStream.mData.begin() + aStream.mOffset, it));
 
                     declaration._definitionOffset = aStream.mOffset;
-                    Samp samp;
-                    samp._declaredName = declaration.name;
-                    samp.deserialize(aStream);
+                    Samp definition;
+                    definition._declaredName = declaration.name;
+                    definition._beginOffset = aStream.mOffset;
+                    definition.deserialize(aStream);
+                    definition._beginOffset = aStream.mOffset;
 
-                    _samps.push_back(std::move(samp));
+                    _samps.push_back(std::move(definition));
                 }
                 
             }
             else if (declaration.type == DeclarationType::kSpn) {
-
-
-                uint32_t header[]{ 0x01, 0x04, 0x02 };
-                auto headerBytes = std::span<std::byte>(reinterpret_cast<std::byte*>(std::addressof(header)), sizeof(header));
+                auto headerBytes = std::as_bytes(std::span(Spn::kHeader));
 
                 auto it = std::search(aStream.mData.begin() + aStream.mOffset, aStream.mData.end(), headerBytes.begin(), headerBytes.end());
                 if (it != aStream.mData.end()) {
@@ -218,8 +217,7 @@ namespace aurora {
                 }
             }
             else if (declaration.type == DeclarationType::kDrawer) {
-                uint32_t header[]{ 7, 4, 1 };
-                auto headerBytes = std::span<std::byte>(reinterpret_cast<std::byte*>(std::addressof(header)), sizeof(header));
+                std::span<std::byte const> headerBytes = std::as_bytes(std::span(SequinDrawer::kHeader));
 
                 auto it = std::search(aStream.mData.begin() + aStream.mOffset, aStream.mData.end(), headerBytes.begin(), headerBytes.end());
                 if (it != aStream.mData.end()) {
@@ -255,8 +253,7 @@ namespace aurora {
 
             }
             else if (declaration.type == DeclarationType::kLvl) {
-                uint32_t header[]{ 0x33, 0x21, 0x04, 0x02 };
-                auto headerBytes = std::span<std::byte>(reinterpret_cast<std::byte*>(std::addressof(header)), sizeof(header));
+                std::span<std::byte const> headerBytes = std::as_bytes(std::span(Lvl::kHeader));
 
                 auto it = std::search(aStream.mData.begin() + aStream.mOffset, aStream.mData.end(), headerBytes.begin(), headerBytes.end());
                 if (it != aStream.mData.end()) {
@@ -275,8 +272,7 @@ namespace aurora {
             }
 
             else if (declaration.type == DeclarationType::kPath) {
-                uint32_t header[]{ 41, 4, 1 };
-                auto headerBytes = std::span<std::byte>(reinterpret_cast<std::byte*>(std::addressof(header)), sizeof(header));
+                std::span<std::byte const> headerBytes = std::as_bytes(std::span(Path::kHeader));
 
                 auto it = std::search(aStream.mData.begin() + aStream.mOffset, aStream.mData.end(), headerBytes.begin(), headerBytes.end());
                 if (it != aStream.mData.end()) {
@@ -376,8 +372,6 @@ namespace aurora {
     }
 
     void Samp::deserialize(ByteStream& aStream) {
-        _beginOffset = aStream.mOffset;
-
         header[0] = aStream.read_u32();
         assert(header[0] == 0x0C);
         header[1] = aStream.read_u32();
@@ -405,8 +399,6 @@ namespace aurora {
         pan = aStream.read_f32();
         offset = aStream.read_f32();
         channelGroup = aStream.read_str();
-
-        _endOffset = aStream.mOffset;
     }
 
     void Spn::deserialize(ByteStream& aStream) {
