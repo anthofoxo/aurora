@@ -28,11 +28,16 @@ namespace aurora {
 		void deserialize(ByteStream& aStream, uint32_t aDatatype);
 	};
 
-	struct Trait final {
-		std::string object;
-		uint32_t unknown0;
+	struct TraitSelector {
 		uint32_t selector;
-		int32_t selectorShareIdx;
+		int32_t shareIdx;
+	};
+
+	struct Trait final {
+		
+
+		std::string object;
+		std::vector<TraitSelector> selectors;
 		uint32_t datatype;
 		std::vector<Datapoint> datapoints;
 		std::vector<Datapoint> editorDatapoints;
@@ -69,16 +74,17 @@ namespace aurora {
 		uint32_t unknown2;
 	};
 
+	struct Subpath final {
+		std::string string;
+		uint32_t unknown2;
+	};
+
 	struct LvlLeafSequin final {
-		uint8_t unknownBool0; //might not exist, but was found at 0x5590 in demo.objlib
 		uint32_t beatCount;
 		uint8_t unknownBool1;
 		std::string leafName;
 		std::string defaultPath;
-		//uint32_t subPathCount; //may not be needed
-		std::vector<std::string> subpaths;
-
-		//uint32_t unknown0;
+		std::vector<Subpath> subpaths;
 		std::string stepType;	//available options are		kStepAny	kStepFirst	kStepGameplay	kStepLast	kStepProp
 
 		uint32_t unknown1;
@@ -88,9 +94,10 @@ namespace aurora {
 
 		uint8_t unknownBool2;
 		uint8_t unknownBool3;
-		//uint8_t unknownBool4;
-
-		uint32_t unknown5;			// this is placed in between each leaf sequin, but is exempt in the final leaf sequin. !!UNSURE WHAT TO DO WITH THIS!!
+		uint8_t continuation;
+		
+		std::vector<SampleEntry> sampNames;
+		
 
 		void deserialize(ByteStream& aStream);
 	};
@@ -295,20 +302,19 @@ namespace aurora {
 		uint32_t unknown2;
 		std::string phaseMoveType;
 		uint32_t unknown3;
-		//uint32_t leafSequinCount;
-		//uint8_t unknownBool0;
+		uint32_t unknown4;
+		uint8_t unknown5;
 
-		std::vector<LvlLeafSequin> leafSequin;		//all leafs are read in and the tunnels attached to them. everything to here should be right
+		// One of the rare cases where the size of the array isnt first, only way we currently know about this is via a continuation byte
+		std::vector<LvlLeafSequin> leafSequin;
 
 
-		uint32_t sampCount;
-		std::vector<SampleEntry> sampNames;
-
+		
 		uint8_t unknownBool5;
 
 		float unknownFloat12;
-		float unknownFloat13;	//unknown if float
-		float unknownfloat14;	//unknown if float
+		std::string flowref;
+		std::vector<TraitSelector> traitSelectors;
 		std::string kNumTraitType;	//available options are		kNumTraitInterps	kNumTraitTypes
 		uint8_t unknownBool6;
 		std::string tutorialType; // See: is_known_tutorial_type

@@ -199,6 +199,7 @@ void read_all_leafs(std::optional<std::filesystem::path> const& aThumperPath) {
 
         aurora::ByteStream stream = aurora::ByteStream(path);
         aurora::ObjlibLevel level;
+        level._bytes = stream.mData;
         level.deserialize(stream);
         level._bytes = std::move(stream.mData);
 
@@ -514,17 +515,17 @@ public:
                         std::string name;
 
                         if (trait.object == mContext.pLeaf->_declaredName)
-                            name = aurora::rev_hash(trait.selector);
+                            name = aurora::rev_hash(trait.selectors[0].selector);
                         else
-                            name = std::format("{}:{}", trait.object, aurora::rev_hash(trait.selector).c_str());
+                            name = std::format("{}:{}", trait.object, aurora::rev_hash(trait.selectors[0].selector).c_str());
 
                         ImGui::TableHeader(name.c_str());
 
                         ImGui::SetItemTooltip(
                             "intensity0: %s\n"
                             "intensity1: %s\n"
-                            "Selector Share: %d\n"
-                            "Unknown 0: %d\n"
+                            //"Selector Share: %d\n"
+                            //"Unknown 0: %d\n"
                             "Unknown 1: %d\n"
                             "Unknown 2: %d\n"
                             "Unknown 3: %d\n"
@@ -543,8 +544,8 @@ public:
                             "Unknown 16: %d\n",
                             trait.intensity0.c_str(),
                             trait.intensity1.c_str(),
-                            trait.selectorShareIdx,
-                            trait.unknown0,
+                            //trait.selectorShareIdx,
+                            //trait.unknown0,
                             trait.unknown1,
                             trait.unknown2,
                             trait.unknown3,

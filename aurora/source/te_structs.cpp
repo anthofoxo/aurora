@@ -38,9 +38,13 @@ namespace aurora {
 
     void Trait::deserialize(ByteStream& aStream) {
         object = aStream.read_str();
-        unknown0 = aStream.read_u32();
-        selector = aStream.read_u32();
-        selectorShareIdx = aStream.read_s32();
+        selectors.resize(aStream.read_u32());
+
+        for(auto& selector : selectors) {
+            selector.selector = aStream.read_u32();
+            selector.shareIdx = aStream.read_s32();
+        }
+        
         datatype = aStream.read_u32();
 
         datapoints.resize(aStream.read_u32());
@@ -250,18 +254,13 @@ namespace aurora {
                 }
 
             }
-
-#if 0
-            // Lvl
             else if (declaration.type == DeclarationType::kLvl) {
                 uint32_t header[]{ 0x33, 0x21, 0x04, 0x02 };
-                auto headerBytes = std::span<char>(reinterpret_cast<char*>(std::addressof(header)), sizeof(header));
+                auto headerBytes = std::span<std::byte>(reinterpret_cast<std::byte*>(std::addressof(header)), sizeof(header));
 
                 auto it = std::search(aStream.mData.begin() + aStream.mOffset, aStream.mData.end(), headerBytes.begin(), headerBytes.end());
                 if (it != aStream.mData.end()) {
                     aStream.advance(std::distance(aStream.mData.begin() + aStream.mOffset, it));
-
-                    if (declaration.name == "loop_title.lvl") continue;
 
                     declaration._definitionOffset = aStream.mOffset;
                     Lvl definition;
@@ -274,10 +273,10 @@ namespace aurora {
                 }
 
             }
-#endif
-
         }
 
+
+#if 0
         // If last object was found we can happily read the footer
         if (objectDeclarations.back()._definitionOffset != 0) {
             assert(aStream.read_u32() == 0);
@@ -350,7 +349,7 @@ namespace aurora {
             realtimeChannel = aStream.read_str();
             unknownFooterval = aStream.read_u8();
         }
-
+#endif
        
 
         // Footer
@@ -482,7 +481,6 @@ namespace aurora {
     }
 
     void LvlLeafSequin::deserialize(ByteStream& aStream) {
-        unknownBool0 = aStream.read_u8();
         beatCount = aStream.read_u32();
         unknownBool1 = aStream.read_u8();
         leafName = aStream.read_str();
@@ -491,8 +489,8 @@ namespace aurora {
         subpaths.resize(aStream.read_u32());
 
         for (auto& subpath : subpaths) {
-            subpath = aStream.read_str();
-            aStream.read_u32();
+            subpath.string = aStream.read_str();
+            subpath.unknown2 = aStream.read_u32();
         }
 
         stepType = aStream.read_str();
@@ -503,8 +501,15 @@ namespace aurora {
 
         unknownBool2 = aStream.read_u8();
         unknownBool3 = aStream.read_u8();
-        aStream.read_u8();
-       
+        continuation = aStream.read_u8();
+
+        sampNames.resize(aStream.read_u32());
+
+        for (auto& sample : sampNames) {
+            sample.sampleName = aStream.read_str();
+            sample.loopBeats = aStream.read_u32();
+            sample.unknown2 = aStream.read_u32();
+        }
     }
 
     bool is_known_tutorial_type(std::string_view aTutorial) {
@@ -512,6 +517,7 @@ namespace aurora {
         if (aTutorial == "TUTORIAL_JUMP") return true;
         if (aTutorial == "TUTORIAL_LANES") return true;
         if (aTutorial == "TUTORIAL_NONE") return true;
+        if (aTutorial == "TUTORIAL_POUND") return true;
         if (aTutorial == "TUTORIAL_POUND_REMINDER") return true;
         if (aTutorial == "TUTORIAL_POWER_GRIND") return true;
         if (aTutorial == "TUTORIAL_THUMP") return true;
@@ -549,26 +555,31 @@ namespace aurora {
         unknown2 = aStream.read_u32();
         phaseMoveType = aStream.read_str();
         unknown3 = aStream.read_u32();
+        unknown4 = aStream.read_u32();
+        unknown5 = aStream.read_u8();
 
-        leafSequin.resize(aStream.read_u32());
-        for (auto& lvlleaf : leafSequin) {
-            lvlleaf.deserialize(aStream);
+        while (true) {
+            LvlLeafSequin sequin;
+            sequin.deserialize(aStream);
+            leafSequin.push_back(sequin);
+
+            // If continuation byte is false, we are done reading this section
+            if (sequin.continuation == false) break;
         }
 
-        auto unknown5 = aStream.read_u32();
 
-        for (int i = 0; i < unknown5; ++i) {
-            auto name = aStream.read_str();
-            auto loopBeats = aStream.read_u32();
-            auto unknown2 = aStream.read_u32();
-        }
-
-        // ASRDSFghihsdfgoipu
-
+        
         unknownBool5 = aStream.read_u8();
         unknownFloat12 = aStream.read_f32();
-        unknownFloat13 = aStream.read_f32();
-        unknownfloat14 = aStream.read_f32();
+        flowref = aStream.read_str();
+
+        traitSelectors.resize(aStream.read_u32());
+
+        for (auto& selector : traitSelectors) {
+            selector.selector = aStream.read_u32();
+            selector.shareIdx = aStream.read_u32();
+        }
+
 
         kNumTraitType = aStream.read_str();
         unknownBool6 = aStream.read_u8();
