@@ -679,15 +679,8 @@ namespace aurora {
         if (unknown0 == 1) {
             unknown6 = aStream.read_u32();
         }
-
-        if (unknown0 == 0) {
-
-            __debugbreak();
-        }
-
-        meshName = aStream.read_str();
-
         
+        meshName = aStream.read_str();
 
         unknownBool0 = aStream.read_u8();
         pathInterpType = aStream.read_str();
