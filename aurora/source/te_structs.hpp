@@ -1,5 +1,6 @@
 #pragma once
 
+#include "te_annotate.hpp"
 #include "te_stream.hpp"
 
 #include "te_hash.hpp"
@@ -83,6 +84,7 @@ namespace aurora {
 		uint32_t unknown2;
 	};
 
+	TE_STRUCT_NAME_MATCHES;
 	struct SequinLeaf final {
 		static constexpr std::array<uint32_t, 4> kHeader = { 34, 33, 4, 2 };
 
@@ -106,6 +108,7 @@ namespace aurora {
 		void deserialize(ByteStream& aStream);
 	};
 
+	TE_STRUCT_NAME_MATCHES;
 	struct Sample final {
 		static constexpr std::array<uint32_t, 2> kHeader = { 12, 4 };
 
@@ -131,6 +134,7 @@ namespace aurora {
 		void deserialize(ByteStream& aStream);
 	};
 
+	TE_STRUCT_NAME_MATCHES;
 	struct EntitySpawner final {
 		static constexpr std::array<uint32_t, 3> kHeader = { 1, 4, 2 };
 
@@ -156,6 +160,7 @@ namespace aurora {
 		void deserialize(ByteStream& aStream);
 	};
 
+	TE_STRUCT_NAME_MATCHES;
 	struct SequinDrawer final {
 		static constexpr std::array<uint32_t, 3> kHeader = { 7, 4, 1 };
 
@@ -191,6 +196,7 @@ namespace aurora {
 		void deserialize(ByteStream& aStream);
 	};
 
+	TE_STRUCT_NAME_MATCHES;
 	struct SequinGate final {
 		struct GateEntry {
 			uint32_t bucketHash;
@@ -229,6 +235,7 @@ namespace aurora {
 		void deserialize(ByteStream& aStream);
 	};
 
+	TE_STRUCT_NAME_MATCHES;
 	struct SequinMaster final {
 		static constexpr std::array<uint32_t, 4> kHeader = { 33, 33, 4, 2 };
 
@@ -284,6 +291,7 @@ namespace aurora {
 		void deserialize(ByteStream& aStream);
 	};
 
+	TE_STRUCT_NAME_MATCHES;
 	struct SequinLevel final {
 		static constexpr std::array<uint32_t, 4> kHeader = { 51, 33, 4, 2 };
 
@@ -346,6 +354,7 @@ namespace aurora {
 		std::string name;
 	};
 
+	TE_STRUCT_NAME_MATCHES;
 	struct Path final {
 		static constexpr std::array<uint32_t, 3> kHeader = { 41, 4, 1 };
 

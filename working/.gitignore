@@ -2,3 +2,4 @@ imgui.ini
 config.yaml
 # If there are new hashes, explicitly add hashtable.yaml to the staged files
 hashtable.yaml
+thumper/
