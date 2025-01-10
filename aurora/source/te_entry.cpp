@@ -155,6 +155,8 @@ void imgui_uninit() {
 
 std::vector<aurora::ObjlibLevel> gLevels;
 
+#include <unordered_set>
+
 void read_all_leafs(std::optional<std::filesystem::path> const& aThumperPath) {
 
 #if 0
@@ -242,13 +244,13 @@ public:
     std::vector<Level> mLevels;
 
     struct ViewingContext final {
-        aurora::Leaf* pLeaf = nullptr;
+        aurora::SequinLeaf* pLeaf = nullptr;
         std::string leafTitle;
 
-        aurora::Samp* pSample = nullptr;
+        aurora::Sample* pSample = nullptr;
         std::string sampleTitle;
 
-        aurora::Spn* pSpn = nullptr;
+        aurora::EntitySpawner* pSpn = nullptr;
         std::string spnTitle;
 
         aurora::SequinMaster* pMaster = nullptr;
@@ -257,7 +259,7 @@ public:
         aurora::SequinDrawer* pDrawer = nullptr;
         std::string drawerTitle;
 
-        aurora::Gate* pGate = nullptr;
+        aurora::SequinGate* pGate = nullptr;
         std::string gateTitle;
 
         MemoryEditor memoryEditor;
@@ -794,9 +796,21 @@ void Application::run() {
     uninit();
 }
 
+
+
 void Application::update() {
     if (ImGui::BeginMainMenuBar()) {
         if (ImGui::BeginMenu("File")) {
+            ImGui::MenuItem("New Aurora Project", nullptr, nullptr, false);
+
+            ImGui::Separator();
+
+            ImGui::MenuItem("Import Thumper Content", nullptr, nullptr, false);
+            ImGui::MenuItem("Import TCLE 2.x Level", nullptr, nullptr, false);
+            ImGui::MenuItem("Import TCLE 3.0 Level", nullptr, nullptr, false);
+
+            ImGui::Separator();
+
             if (ImGui::MenuItem("Exit", ImGui::GetKeyChordName(ImGuiMod_Alt | ImGuiKey_F4))) {
                 mRunning = false;
             }
@@ -842,6 +856,161 @@ void Application::update() {
 
         ImGui::EndMainMenuBar();
     }
+
+    static aurora::SequinMaster master{};
+
+#if 0
+    std::unordered_set<std::string> pathGameplay;
+
+    for (auto& level : gLevels) {
+        for (auto& master : level._masters) {
+            pathGameplay.insert(master.timeUnit);
+        }
+    }
+#endif
+
+    auto warning = [](char const* message) {
+        ImGui::GetForegroundDrawList()->AddRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), IM_COL32(255, 255, 0, 255));
+
+        ImGui::PushStyleColor(ImGuiCol_PopupBg, ImLerp(ImGui::GetStyle().Colors[ImGuiCol_PopupBg], ImVec4(1.0f, 1.0f, 0.0f, 1.0f), 0.15f));
+
+        if (ImGui::BeginItemTooltip()) {
+            ImGui::TextUnformatted(message);
+            ImGui::EndTooltip();
+        }
+
+        ImGui::PopStyleColor();
+    };
+
+    auto error = [](char const* message) {
+        ImGui::GetForegroundDrawList()->AddRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), IM_COL32(255, 0, 0, 255));
+
+        ImGui::PushStyleColor(ImGuiCol_PopupBg, ImLerp(ImGui::GetStyle().Colors[ImGuiCol_PopupBg], ImVec4(1.0f, 0.0f, 0.0f, 1.0f), 0.15f));
+
+        if (ImGui::BeginItemTooltip()) {
+            ImGui::BringWindowToDisplayFront(ImGui::GetCurrentWindow());
+            ImGui::TextUnformatted(message);
+            ImGui::EndTooltip();
+        }
+
+        ImGui::PopStyleColor();
+        };
+
+    if (ImGui::Begin("New MasterSequin Editor", nullptr, ImGuiWindowFlags_MenuBar)) {
+        static bool advancedOptions = false;
+
+        if (ImGui::BeginMenuBar()) {
+
+            if (ImGui::BeginMenu("View")) {
+                ImGui::MenuItem("Advanced options", nullptr, &advancedOptions);
+
+                ImGui::EndMenu();
+            }
+
+            ImGui::EndMenuBar();
+        }
+
+        if (advancedOptions) {
+            ImGui::InputInt4("Header", reinterpret_cast<int*>(master.header.data()));
+            for (int i = 0; i < master.kHeader.size(); ++i)
+                if (master.header[i] != aurora::SequinMaster::kHeader[i])
+                    error("Invalid header values");
+
+            ImGui::InputText("Time Unit", &master.timeUnit);
+            if (ImGui::BeginPopupContextItem()) {
+
+                std::array options = {
+                    "kTimeBeats",
+                    "kTimeSeconds",
+                    "kTimeBeatsRealtime",
+                    "kTimeSecondsRealtime"
+                };
+
+                for (auto& option : options) {
+                    if (ImGui::Selectable(option)) {
+                        master.timeUnit = option;
+                        ImGui::CloseCurrentPopup();
+                    }
+                }
+
+                ImGui::EndPopup();
+            }
+
+            if (master.timeUnit != "kTimeBeats") warning("Only known valid value for .master is `kTimeBeats`");
+
+            ImGui::InputScalar("Unknown Field 0", ImGuiDataType_U32, &master.unknown0);
+            if (master.unknown0 != 1) warning("This field is using an undocumented value. Known values are `1`");
+
+            ImGui::InputScalar("Unknown Field 1", ImGuiDataType_U32, &master.unknown1);
+            if (master.unknown1 != 0) warning("This field is using an undocumented value. Known values are `0`");
+        }
+       
+
+        ImGui::InputText("Skybox", &master.skybox);
+        ImGui::InputText("Intro", &master.introLvl);
+        ImGui::InputText("Checkpoint", &master.checkpointLvl);
+
+        if (advancedOptions) {
+            ImGui::InputText("Gameplay", &master.pathGameplay);
+            if (master.pathGameplay != "path.gameplay") warning("This field is using an undocumented value. Known values are `path.gameplay`");
+        }
+
+        ImGui::BeginDisabled(master.sublevels.size() == 0);
+        if (ImGui::SmallButton("-")) master.sublevels.pop_back();
+        ImGui::EndDisabled();
+        ImGui::SameLine();
+        if (ImGui::SmallButton("+")) {
+            master.sublevels.emplace_back();
+            master.sublevels.back().playPlus = true;
+            master.sublevels.back().isCheckpoint = true;
+        }
+
+        static size_t selectedIdx = 0;
+
+        ImGui::Columns(2);
+
+        for (int i = 0; i < master.sublevels.size(); ++i) {
+            auto& level = master.sublevels[i];
+            std::string name = level.gateName.empty() ? level.lvlName : level.gateName;
+            if (name.empty()) name = std::format("[{}]", i);
+            ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_Leaf;
+            if (i == selectedIdx) flags |= ImGuiTreeNodeFlags_Selected;
+            if (ImGui::TreeNodeEx(name.c_str(), flags)) {
+                ImGui::TreePop();
+            }
+
+            if (ImGui::IsItemActivated()) selectedIdx = i;
+        }
+
+        ImGui::NextColumn();
+
+        if (!master.sublevels.empty() && selectedIdx < master.sublevels.size()) {
+            ImGui::PushID("SubLevel");
+
+            auto& level = master.sublevels[selectedIdx];
+
+
+            ImGui::InputText("SequinLevel", &level.lvlName);
+            if (!level.lvlName.empty() && !level.gateName.empty()) warning("Both gate and level are defined, Thumper will ignore the level field");
+
+            ImGui::InputText("Gate", &level.gateName);
+            
+            ImGui::InputText("Leader", &level.checkpointLeaderLvlName);
+            ImGui::InputText("Rest Level", &level.restLvlName);
+            ImGui::Checkbox("Checkpoint", &level.isCheckpoint);
+            ImGui::SameLine();
+            ImGui::Checkbox("Play plus", &level.playPlus);
+            if (advancedOptions) {
+                ImGui::DragScalar("Unknown Field 0", ImGuiDataType_U8, &level.unknownBool0);
+                ImGui::DragScalar("Unknown Field 1", ImGuiDataType_U8, &level.unknownBool1);
+                ImGui::DragScalar("Unknown Field 2", ImGuiDataType_U32, &level.unknown0);
+                ImGui::DragScalar("Unknown Field 3", ImGuiDataType_U8, &level.unknownBool2);
+            }
+
+            ImGui::PopID();
+        }
+    }
+    ImGui::End();
 
     if (mViewDebugInfo) {
         if (ImGui::Begin("Debug", &mViewDebugInfo)) {

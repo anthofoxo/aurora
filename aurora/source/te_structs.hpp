@@ -9,15 +9,18 @@
 #include <string>
 
 namespace aurora {
+	bool is_known_step_type(std::string_view aStepType);
+	bool is_known_tutorial_type(std::string_view aTutorial);
+
 	enum struct DeclarationType : uint32_t {
-		kLeaf = 0xce7e85f6, // SequinLeaf
-		kSamp = 0x7aa8f390, // Sample
-		kSpn = 0xd897d5db, // EntitySpawner
-		kMaster = 0x490780b9, // SequinMaster
-		kDrawer = 0xd3058b5d, // SequinDrawer
-		kGate = 0xaa63a508, // SequinGate
-		kLvl = 0xbcd17473, // SequinLevel
-		kPath = 0x4890a3f6,
+		kLeaf = hash("SequinLeaf"),
+		kSamp = hash("Sample"),
+		kSpn = hash("EntitySpawner"),
+		kMaster = hash("SequinMaster"),
+		kDrawer = hash("SequinDrawer"),
+		kGate = hash("SequinGate"),
+		kLvl = hash("SequinLevel"),
+		kPath = hash("Path"),
 	};
 
 	struct Datapoint final {
@@ -35,8 +38,6 @@ namespace aurora {
 	};
 
 	struct Trait final {
-		
-
 		std::string object;
 		std::vector<TraitSelector> selectors;
 		uint32_t datatype;
@@ -69,10 +70,12 @@ namespace aurora {
 		void deserialize(ByteStream& aStream);
 	};
 
-	struct SampleEntry final {	// correct
+	struct SampleEntry final {
 		std::string sampleName;
 		uint32_t loopBeats;
 		uint32_t unknown2;
+
+		void deserialize(ByteStream& aStream);
 	};
 
 	struct Subpath final {
@@ -80,31 +83,7 @@ namespace aurora {
 		uint32_t unknown2;
 	};
 
-	struct LvlLeafSequin final {
-		uint32_t beatCount;
-		uint8_t unknownBool1;
-		std::string leafName;
-		std::string defaultPath;
-		std::vector<Subpath> subpaths;
-		std::string stepType;	//available options are		kStepAny	kStepFirst	kStepGameplay	kStepLast	kStepProp
-
-		uint32_t unknown1;
-
-		Transform transform;
-
-
-		uint8_t unknownBool2;
-		uint8_t unknownBool3;
-		uint8_t continuation;
-		
-		std::vector<SampleEntry> sampNames;
-		
-
-		void deserialize(ByteStream& aStream);
-	};
-
-
-	struct Leaf final {
+	struct SequinLeaf final {
 		static constexpr std::array<uint32_t, 4> kHeader = { 34, 33, 4, 2 };
 
 		std::string _declaredName;
@@ -127,7 +106,7 @@ namespace aurora {
 		void deserialize(ByteStream& aStream);
 	};
 
-	struct Samp final {
+	struct Sample final {
 		static constexpr std::array<uint32_t, 2> kHeader = { 12, 4 };
 
 		std::string _declaredName;
@@ -152,14 +131,14 @@ namespace aurora {
 		void deserialize(ByteStream& aStream);
 	};
 
-	struct Spn final {
+	struct EntitySpawner final {
 		static constexpr std::array<uint32_t, 3> kHeader = { 1, 4, 2 };
 
 		std::string _declaredName;
 		size_t _beginOffset = 0;
 		size_t _endOffset = 0;
 
-		uint32_t header[3]; // 1, 4, 2
+		uint32_t header[3];
 		uint32_t hash0; //EditStateComp
 		
 		//WriteXfmComp
@@ -196,26 +175,23 @@ namespace aurora {
 	};
 
 	struct SequinMasterLvl final {
-		std::string lvlName;	//can be 00 00 00 00 if there IS a boss lvl here
-		std::string gateName;	//can be 00 00 00 00 if there is no boss lvl here
+		std::string lvlName;
+		std::string gateName;
 		bool isCheckpoint;
 		std::string checkpointLeaderLvlName;
 		std::string restLvlName;
 
-		//what the heck are these
 		uint8_t unknownBool0;
 		uint8_t unknownBool1;
-		uint32_t unknown0;		//either an int or 4 bools.
+		uint32_t unknown0;
 		uint8_t unknownBool2;
-		//uint8_t unknownBool3;
-		
 
 		bool playPlus;
 
 		void deserialize(ByteStream& aStream);
 	};
 
-	struct Gate final {
+	struct SequinGate final {
 		struct GateEntry {
 			uint32_t bucketHash;
 			std::string lvlName;
@@ -253,7 +229,6 @@ namespace aurora {
 		void deserialize(ByteStream& aStream);
 	};
 
-	//using level 2's sequin master as the example, offset 0x346B
 	struct SequinMaster final {
 		static constexpr std::array<uint32_t, 4> kHeader = { 33, 33, 4, 2 };
 
@@ -261,36 +236,55 @@ namespace aurora {
 		size_t _beginOffset = 0;
 		size_t _endOffset = 0;
 
-		uint32_t header[4]; //33, 33, 4, 2
+		std::array<uint32_t, 4> header = kHeader;
 		uint32_t hash0;
-		uint32_t unknown0;
+		uint32_t unknown0 = 1;
 		uint32_t hash1;
-		std::string timeUnit;
+		std::string timeUnit = "kTimeBeats";
 		uint32_t hash2;		//editstatecomp
-		uint32_t unknown1;
-		float unknown2;		//160
+		uint32_t unknown1 = 0;
+		float unknown2;
 		std::string skybox;
 		std::string introLvl;
 
 		std::vector<SequinMasterLvl> sublevels;
 
-		//footer
-		uint8_t footer1;	//False
-		uint8_t footer2;	//True
-		uint32_t footer3;	//3
-		uint32_t footer4;	//50
-		uint32_t footer5;	//8
-		uint32_t footer6;	//15
-		float footer7;		//0.6f
-		float footer8;		//0.5f
-		float footer9;		//0.5f
+		uint8_t footer1;
+		uint8_t footer2;
+		uint32_t footer3;
+		uint32_t footer4;
+		uint32_t footer5;
+		uint32_t footer6;
+		float footer7;
+		float footer8;
+		float footer9;
 		std::string checkpointLvl;
-		std::string pathGameplay;	//I haven't seen this change, it's always "path.gameplay"
+		std::string pathGameplay = "path.gameplay";
 
 		void deserialize(ByteStream& aStream);
 	};
 
-	struct Lvl final {
+	struct LvlLeafSequin final {
+		uint32_t unknown0;
+		uint32_t beatCount;
+		uint8_t unknownBool1;
+		std::string leafName;
+		std::string defaultPath;
+		std::vector<Subpath> subpaths;
+		std::string stepType; // see: is_known_step_type
+
+		uint32_t unknown1;
+
+		Transform transform;
+
+		uint8_t unknownBool2;
+		uint8_t unknownBool3;
+		uint8_t continuation;
+
+		void deserialize(ByteStream& aStream);
+	};
+
+	struct SequinLevel final {
 		static constexpr std::array<uint32_t, 4> kHeader = { 51, 33, 4, 2 };
 
 		std::string _declaredName;
@@ -309,12 +303,13 @@ namespace aurora {
 		uint32_t unknown2;
 		std::string phaseMoveType;
 		uint32_t unknown3;
-		uint32_t unknown4;
 		uint8_t unknown5;
 
 		// One of the rare cases where the size of the array size isnt first,
 		// only way we currently know about this is via a continuation byte
 		std::vector<LvlLeafSequin> leafSequin;
+
+		std::vector<SampleEntry> sampNames;
 
 		uint8_t unknownBool5;
 
@@ -324,8 +319,6 @@ namespace aurora {
 		std::string kNumTraitType;	//available options are		kNumTraitInterps	kNumTraitTypes
 		uint8_t unknownBool6;
 		std::string tutorialType; // See: is_known_tutorial_type
-
-		//footer (maybe????)
 
 		float footer1;
 		float footer2;
@@ -353,8 +346,6 @@ namespace aurora {
 		std::string name;
 	};
 
-
-
 	struct Path final {
 		static constexpr std::array<uint32_t, 3> kHeader = { 41, 4, 1 };
 
@@ -377,7 +368,6 @@ namespace aurora {
 		uint32_t unknown7;
 		uint8_t unknown8;
 		uint8_t unknown9;
-		//uint32_t decCount; //2
 		std::vector<std::string> decorators;
 
 		bool unknownBool1;
@@ -387,13 +377,13 @@ namespace aurora {
 
 	struct ObjlibLevel final {
 		std::vector<std::byte> _bytes;
-		std::vector<Leaf> _leafs;
-		std::vector<Samp> _samps;
-		std::vector<Spn> _spns;
+		std::vector<SequinLeaf> _leafs;
+		std::vector<Sample> _samps;
+		std::vector<EntitySpawner> _spns;
 		std::vector<SequinMaster> _masters;
 		std::vector<SequinDrawer> _drawers;
-		std::vector<Lvl> _lvls;
-		std::vector<Gate> _gates;
+		std::vector<SequinLevel> _lvls;
+		std::vector<SequinGate> _gates;
 		std::vector<Path> _paths;
 
 		uint32_t filetype; // 0x8

@@ -5,6 +5,26 @@
 #include <cstdint>
 
 namespace aurora {
+    
+    template<size_t S>
+    consteval uint32_t hash(char const(&aStr)[S]) {
+        uint32_t h = 0x811c9dc5;
+        char const* str = aStr;
+        unsigned int size = S - 1;
+
+        while (size > 0) {
+            size--;
+            h = (h ^ *str) * 0x1000193;
+            str++;
+        }
+
+        h *= 0x2001;
+        h = (h ^ (h >> 0x7)) * 0x9;
+        h = (h ^ (h >> 0x11)) * 0x21;
+
+        return h;
+    }
+
     constexpr uint32_t hash(unsigned char const* array, unsigned int size) {
         uint32_t h = 0x811c9dc5;
 
