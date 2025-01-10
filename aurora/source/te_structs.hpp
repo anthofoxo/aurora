@@ -356,20 +356,21 @@ namespace aurora {
 
 	TE_STRUCT_NAME_MATCHES;
 	struct Path final {
-		static constexpr std::array<uint32_t, 3> kHeader = { 41, 4, 1 };
+		static constexpr std::array<uint32_t, 2> kHeader = { 41, 4 };
 
 		std::string _declaredName;
 		size_t _beginOffset = 0;
 		size_t _endOffset = 0;
 
-		uint32_t header[3];
+		uint32_t header[2];
+		uint32_t unknown0;
 		uint32_t hash0; //editstatecomp
 
 		f32vec3 scale0;
 
 		f32vec3 scale1;
 
-		uint32_t unknown6;
+		std::optional<uint32_t> unknown6; // Exists if unknown0 is ==1
 
 		std::string meshName; //lattice_5.mesh
 		bool unknownBool0;

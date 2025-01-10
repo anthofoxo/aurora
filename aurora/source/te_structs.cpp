@@ -188,7 +188,9 @@ namespace aurora {
 
                 auto it = std::search(aStream.mData.begin() + aStream.mOffset, aStream.mData.end(), headerBytes.begin(), headerBytes.end());
                 if (it != aStream.mData.end()) {
-                    aStream.advance(std::distance(aStream.mData.begin() + aStream.mOffset, it));
+                    auto jump = std::distance(aStream.mData.begin() + aStream.mOffset, it);
+                    // if (jump != 0) __debugbreak(); // Non zero jump, validate contents
+                    aStream.advance(jump);
 
                     declaration._definitionOffset = aStream.mOffset;
                     SequinLeaf definition;
@@ -204,18 +206,18 @@ namespace aurora {
             }
             else if (declaration.type == DeclarationType::kSamp) {
                 auto headerBytes = std::as_bytes(std::span(Sample::kHeader));
-
+            
                 auto it = std::search(aStream.mData.begin() + aStream.mOffset, aStream.mData.end(), headerBytes.begin(), headerBytes.end());
                 if (it != aStream.mData.end()) {
                     aStream.advance(std::distance(aStream.mData.begin() + aStream.mOffset, it));
-
+            
                     declaration._definitionOffset = aStream.mOffset;
                     Sample definition;
                     definition._declaredName = declaration.name;
                     definition._beginOffset = aStream.mOffset;
                     definition.deserialize(aStream);
                     definition._endOffset = aStream.mOffset;
-
+            
                     write_content(origin, definition._declaredName, std::span<std::byte const>(aStream.mData.data() + definition._beginOffset, definition._endOffset - definition._beginOffset));
                     _samps.push_back(std::move(definition));
                 }
@@ -223,116 +225,116 @@ namespace aurora {
             }
             else if (declaration.type == DeclarationType::kSpn) {
                 auto headerBytes = std::as_bytes(std::span(EntitySpawner::kHeader));
-
+            
                 auto it = std::search(aStream.mData.begin() + aStream.mOffset, aStream.mData.end(), headerBytes.begin(), headerBytes.end());
                 if (it != aStream.mData.end()) {
                     aStream.advance(std::distance(aStream.mData.begin() + aStream.mOffset, it));
-
+            
                     declaration._definitionOffset = aStream.mOffset;
                     EntitySpawner definition;
                     definition._declaredName = declaration.name;
                     definition._beginOffset = aStream.mOffset;
                     definition.deserialize(aStream);
                     definition._endOffset = aStream.mOffset;
-
+            
                     write_content(origin, definition._declaredName, std::span<std::byte const>(aStream.mData.data() + definition._beginOffset, definition._endOffset - definition._beginOffset));
                     _spns.push_back(std::move(definition));
                 }
             }
             else if (declaration.type == DeclarationType::kMaster) {
                 std::span<std::byte const> headerBytes = std::as_bytes(std::span(SequinMaster::kHeader));
-
+            
                 auto it = std::search(aStream.mData.begin() + aStream.mOffset, aStream.mData.end(), headerBytes.begin(), headerBytes.end());
                 if (it != aStream.mData.end()) {
                     aStream.advance(std::distance(aStream.mData.begin() + aStream.mOffset, it));
-
+            
                     declaration._definitionOffset = aStream.mOffset;
                     SequinMaster definition;
                     definition._declaredName = declaration.name;
                     definition._beginOffset = aStream.mOffset;
                     definition.deserialize(aStream);
                     definition._endOffset = aStream.mOffset;
-
+            
                     write_content(origin, definition._declaredName, std::span<std::byte const>(aStream.mData.data() + definition._beginOffset, definition._endOffset - definition._beginOffset));
                     _masters.push_back(std::move(definition));
                 }
             }
             else if (declaration.type == DeclarationType::kDrawer) {
                 std::span<std::byte const> headerBytes = std::as_bytes(std::span(SequinDrawer::kHeader));
-
+            
                 auto it = std::search(aStream.mData.begin() + aStream.mOffset, aStream.mData.end(), headerBytes.begin(), headerBytes.end());
                 if (it != aStream.mData.end()) {
                     aStream.advance(std::distance(aStream.mData.begin() + aStream.mOffset, it));
-
+            
                     declaration._definitionOffset = aStream.mOffset;
                     SequinDrawer definition;
                     definition._declaredName = declaration.name;
                     definition._beginOffset = aStream.mOffset;
                     definition.deserialize(aStream);
                     definition._endOffset = aStream.mOffset;
-
+            
                     write_content(origin, definition._declaredName, std::span<std::byte const>(aStream.mData.data() + definition._beginOffset, definition._endOffset - definition._beginOffset));
                     _drawers.push_back(std::move(definition));
                 }
-
+            
             }
             else if (declaration.type == DeclarationType::kGate) {
                 std::span<std::byte const> headerBytes = std::as_bytes(std::span(SequinGate::kHeader));
-
+            
                 auto it = std::search(aStream.mData.begin() + aStream.mOffset, aStream.mData.end(), headerBytes.begin(), headerBytes.end());
                 if (it != aStream.mData.end()) {
                     aStream.advance(std::distance(aStream.mData.begin() + aStream.mOffset, it));
-
+            
                     declaration._definitionOffset = aStream.mOffset;
                     SequinGate definition;
                     definition._declaredName = declaration.name;
                     definition._beginOffset = aStream.mOffset;
                     definition.deserialize(aStream);
                     definition._endOffset = aStream.mOffset;
-
+            
                     write_content(origin, definition._declaredName, std::span<std::byte const>(aStream.mData.data() + definition._beginOffset, definition._endOffset - definition._beginOffset));
                     _gates.push_back(std::move(definition));
                 }
-
+            
             }
             else if (declaration.type == DeclarationType::kLvl) {
                 std::span<std::byte const> headerBytes = std::as_bytes(std::span(SequinLevel::kHeader));
-
+            
                 auto it = std::search(aStream.mData.begin() + aStream.mOffset, aStream.mData.end(), headerBytes.begin(), headerBytes.end());
                 if (it != aStream.mData.end()) {
                     aStream.advance(std::distance(aStream.mData.begin() + aStream.mOffset, it));
-
+            
                     declaration._definitionOffset = aStream.mOffset;
                     SequinLevel definition;
                     definition._declaredName = declaration.name;
                     definition._beginOffset = aStream.mOffset;
                     definition.deserialize(aStream);
                     definition._endOffset = aStream.mOffset;
-
+            
                     write_content(origin, definition._declaredName, std::span<std::byte const>(aStream.mData.data() + definition._beginOffset, definition._endOffset - definition._beginOffset));
                     _lvls.push_back(std::move(definition));
                 }
-
+            
             }
 
             else if (declaration.type == DeclarationType::kPath) {
                 std::span<std::byte const> headerBytes = std::as_bytes(std::span(Path::kHeader));
-
+            
                 auto it = std::search(aStream.mData.begin() + aStream.mOffset, aStream.mData.end(), headerBytes.begin(), headerBytes.end());
                 if (it != aStream.mData.end()) {
                     aStream.advance(std::distance(aStream.mData.begin() + aStream.mOffset, it));
-
+            
                     declaration._definitionOffset = aStream.mOffset;
                     Path definition;
                     definition._declaredName = declaration.name;
                     definition._beginOffset = aStream.mOffset;
                     definition.deserialize(aStream);
                     definition._endOffset = aStream.mOffset;
-
+            
                     write_content(origin, definition._declaredName, std::span<std::byte const>(aStream.mData.data() + definition._beginOffset, definition._endOffset - definition._beginOffset));
                     _paths.push_back(std::move(definition));
                 }
-
+            
             }
         }
 
@@ -666,13 +668,27 @@ namespace aurora {
             assert(header[i] = aStream.read_u32() == kHeader[i]);
         }
 
+        unknown0 = aStream.read_u32();
+        assert(unknown0 < 2);
+
         hash0 = aStream.read_u32();
 
         scale0 = aStream.read_f32vec3();
         scale1 = aStream.read_f32vec3();
-        unknown6 = aStream.read_u32();
+
+        if (unknown0 == 1) {
+            unknown6 = aStream.read_u32();
+        }
+
+        if (unknown0 == 0) {
+
+            __debugbreak();
+        }
 
         meshName = aStream.read_str();
+
+        
+
         unknownBool0 = aStream.read_u8();
         pathInterpType = aStream.read_str();
         unknown7 = aStream.read_u32();
