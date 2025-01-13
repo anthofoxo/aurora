@@ -4,6 +4,9 @@
 #include <span>
 #include <iostream>
 
+#include <imgui.h>
+#include <misc/cpp/imgui_stdlib.h>
+
 namespace aurora {
     bool is_known_step_type(std::string_view aStepType) {
         if (aStepType == "kStepAny") return true;
@@ -135,6 +138,24 @@ namespace aurora {
         unknown3 = aStream.read_u32();
         unknown4 = aStream.read_u32();
         unknown5 = aStream.read_u32();
+    }
+
+    void PathDecorator::deserialize(ByteStream& aStream) {
+        for (size_t i = 0; i < kHeader.size(); ++i) {
+            assert(header[i] = aStream.read_u32() == kHeader[i]);
+        }
+ 
+        unknown0 = aStream.read_u32();
+        hash0 = aStream.read_u32();
+        unknown1 = aStream.read_u32();
+        condition = aStream.read_str();
+        stepType = aStream.read_str();
+        mesh = aStream.read_str();
+        unknown3 = aStream.read_u8();
+        pathScaleInterp = aStream.read_str();
+        unknown4 = aStream.read_u8();
+        unknown5 = aStream.read_u8();
+        scale = aStream.read_f32vec3();
     }
 
     void write_content(std::string origin, std::string declaredName, std::span<std::byte const> data) {
@@ -336,6 +357,30 @@ namespace aurora {
                 }
             
             }
+
+#if 0
+            else if (declaration.type == DeclarationType::kDec) {
+                auto headerBytes = std::as_bytes(std::span(PathDecorator::kHeader));
+
+                auto it = std::search(aStream.mData.begin() + aStream.mOffset, aStream.mData.end(), headerBytes.begin(), headerBytes.end());
+                if (it != aStream.mData.end()) {
+                    auto jump = std::distance(aStream.mData.begin() + aStream.mOffset, it);
+                    aStream.advance(jump);
+
+                    declaration._definitionOffset = aStream.mOffset;
+                    PathDecorator definition;
+                    definition._declaredName = declaration.name;
+                    definition._beginOffset = aStream.mOffset;
+                    definition.deserialize(aStream);
+                    definition._endOffset = aStream.mOffset;
+
+                    write_content(origin, definition._declaredName, std::span<std::byte const>(aStream.mData.data() + definition._beginOffset, definition._endOffset - definition._beginOffset));
+                    _pathdecorators.push_back(std::move(definition));
+
+                    std::cout << declaration.name << '\n';
+                }
+            }
+#endif
         }
 
 
@@ -416,6 +461,98 @@ namespace aurora {
        
 
         // Footer
+    }
+
+    void Sample::on_gui() {
+        ImGui::InputText("Path Mode", &samplePlayMode);
+        if (ImGui::BeginPopupContextItem()) {
+            static std::array items = {
+                "kSampleOneOff",
+                "kSampleDynamic",
+            };
+
+            for (auto& item : items) {
+                if (ImGui::Selectable(item)) {
+                    samplePlayMode = item;
+                    ImGui::CloseCurrentPopup();
+                }
+            }
+
+            ImGui::EndPopup();
+        }
+
+        ImGui::InputText("Path", &filePath);
+        ImGui::SliderFloat("Volume", &volume, 0.0f, 2.0f);
+        ImGui::SliderFloat("Pitch", &pitch, 0.0f, 2.0f);
+        ImGui::SliderFloat("Pan", &pan, -1.0f, 1.0f);
+        ImGui::DragFloat("Offset (ms)", &offset);
+
+        ImGui::InputText("Channel Group", &channelGroup);
+        if (ImGui::BeginPopupContextItem()) {
+            static std::array items = {
+                "base.ch",
+                "base_credits.ch",
+                "bass_cut.ch",
+                "beat_time.ch",
+                "beneath_ice.ch",
+                "carve.ch",
+                "checkpoint_hud.ch",
+                "death_sfx.ch",
+                "DF.ch",
+                "dissonant_bursts.ch",
+                "effects.ch",
+                "effects_echo.ch",
+                "effects_echoflange.ch",
+                "effects_flanger.ch",
+                "effects_loud.ch",
+                "effects_tremelo_2hz.ch",
+                "flutter_grind_wet.ch",
+                "french_horn_swells.ch",
+                "grind_thump_pitch.ch",
+                "hI.ch",
+                "i.ch",
+                "master.ch",
+                "master_realtime.ch",
+                "Master_uncompressed.ch",
+                "music_fade.ch",
+                "once_rises.ch",
+                "pound_hit.ch",
+                "rail_drone_left.ch",
+                "rail_drone_right.ch",
+                "rises.ch",
+                "rises_1_1.ch",
+                "rise_delay.ch",
+                "rise_delay_1_1.ch",
+                "rumble.ch",
+                "scrape_drone.ch",
+                "scrape_sfx.ch",
+                "sequin.ch",
+                "streak_layer.ch",
+                "swooshes.ch",
+                "thumps.ch",
+                "thumps_accents.ch",
+                "thumps_realtime.ch",
+                "thump_hit.ch",
+                "tunnel_whooshes.ch",
+                "turn_anticipation.ch",
+                "turn_auto.ch",
+                "turn_strike.ch",
+                "ui.ch",
+                "wail_delay.ch",
+                "white_noise.ch",
+                "wind.ch",
+                "_m.ch",
+            };
+
+            for (auto& item : items) {
+                if (ImGui::Selectable(item)) {
+                    channelGroup = item;
+                    ImGui::CloseCurrentPopup();
+                }
+            }
+
+            ImGui::EndPopup();
+        }
     }
 
     void Sample::deserialize(ByteStream& aStream) {

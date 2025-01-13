@@ -153,10 +153,11 @@ void imgui_uninit() {
     ImGui::DestroyContext();
 }
 
-std::vector<aurora::ObjlibLevel> gLevels;
+//std::vector<aurora::ObjlibLevel> gLevels;
 
 #include <unordered_set>
 
+#if 0
 void read_all_leafs(std::optional<std::filesystem::path> const& aThumperPath) {
 
 #if 0
@@ -209,6 +210,7 @@ void read_all_leafs(std::optional<std::filesystem::path> const& aThumperPath) {
     }
 #endif
 }
+#endif
 
 class Application final {
 public:
@@ -641,6 +643,46 @@ public:
     }
 };
 
+void import_thumper_content() {
+    std::filesystem::path thumperCachePath;
+
+    {
+        char const* filter = "THUMPER_*.exe";
+        char* selection = tinyfd_openFileDialog("Select your Thumper executable", nullptr, 1, &filter, nullptr, false);
+        if (!selection) return;
+        thumperCachePath = std::filesystem::path(selection).parent_path() / "cache";
+    }
+
+    std::string_view paths[] = {
+        "Alevels/title_screen.objlib",
+        "Alevels/demo.objlib",
+        "Alevels/level2/level_2a.objlib",
+        "Alevels/level3/level_3a.objlib",
+        "Alevels/level4/level_4a.objlib",
+        "Alevels/level5/level_5a.objlib",
+        "Alevels/level6/level_6.objlib",
+        "Alevels/level7/level_7a.objlib",
+        "Alevels/level8/level_8a.objlib",
+        "Alevels/level9/level_9a.objlib",
+    };
+
+    for (auto const& pathUnhashed : paths) {
+        std::filesystem::path objlibPath = thumperCachePath / std::format("{:x}.pc", aurora::hash(pathUnhashed));
+
+        if (!std::filesystem::exists(objlibPath)) {
+            std::cout << "File " << pathUnhashed << " (" << objlibPath << ") doesnt exist.\n";
+            continue;
+        }
+
+        aurora::ByteStream stream = aurora::ByteStream(objlibPath);
+        aurora::ObjlibLevel level;
+        level._bytes = stream.mData;
+        level.deserialize(stream);
+        level._bytes = std::move(stream.mData);
+    }
+}
+
+
 void Application::init() {
     // Read configs
     try {
@@ -735,7 +777,7 @@ void Application::init() {
     }
 
     aurora::reload_hashtable();
-    read_all_leafs(mThumperPath);
+    //read_all_leafs(mThumperPath);
 }
 
 void Application::uninit() {
@@ -796,7 +838,42 @@ void Application::run() {
     uninit();
 }
 
+struct SampleEditor final {
+    std::string editorName;
+    aurora::Sample sample;
+    std::filesystem::path path;
 
+    void load(std::filesystem::path const& aPath) {
+        path = aPath;
+        aurora::ByteStream stream = aurora::ByteStream(aPath);
+        sample.deserialize(stream);
+        editorName = path_to_string(std::filesystem::relative(aPath, std::filesystem::current_path()));
+    }
+
+    bool on_gui() {
+        bool opened = true;
+
+        if (ImGui::Begin(editorName.c_str(), &opened, ImGuiWindowFlags_MenuBar)) {
+            if (ImGui::BeginMenuBar()) {
+                if (ImGui::BeginMenu("File")) {
+                    ImGui::MenuItem("Save", nullptr, nullptr, false);
+
+                    ImGui::EndMenu();
+                }
+
+                ImGui::EndMenuBar();
+            }
+
+            sample.on_gui();
+        }
+
+        ImGui::End();
+
+        return opened;
+    }
+};
+
+std::vector<SampleEditor> gSampleEditors;
 
 void Application::update() {
     if (ImGui::BeginMainMenuBar()) {
@@ -805,7 +882,23 @@ void Application::update() {
 
             ImGui::Separator();
 
-            ImGui::MenuItem("Import Thumper Content", nullptr, nullptr, false);
+            if (ImGui::BeginMenu("Open")) {
+                if (ImGui::MenuItem("Sample")) {
+                    char const* filter = "*.samp";
+                    char* selection = tinyfd_openFileDialog("Select sample binary", nullptr, 1, &filter, nullptr, false);
+                    gSampleEditors.emplace_back();
+                    gSampleEditors.back().load(selection);
+                }
+
+                ImGui::EndMenu();
+            }
+
+            ImGui::Separator();
+
+            if (ImGui::MenuItem("Import Thumper Content")) {
+                import_thumper_content();
+            }
+
             ImGui::MenuItem("Import TCLE 2.x Level", nullptr, nullptr, false);
             ImGui::MenuItem("Import TCLE 3.0 Level", nullptr, nullptr, false);
 
@@ -855,6 +948,16 @@ void Application::update() {
         }
 
         ImGui::EndMainMenuBar();
+    }
+
+    for (auto it = gSampleEditors.begin(); it != gSampleEditors.end();) {
+        bool opened = it->on_gui();
+        if (!opened) {
+            it = gSampleEditors.erase(it);
+        }
+        else {
+            ++it;
+        }
     }
 
     static aurora::SequinMaster master{};
@@ -1023,6 +1126,7 @@ void Application::update() {
     hash_panel(mShowHashPanel);
     about_panel(mIconTexture, mShowAboutPanel);
 
+#if 0
     if (ImGui::Begin("Parsed Objlibs")) {
         for (auto& level : gLevels) {
              if (ImGui::TreeNode(level.origin.c_str())) {
@@ -1223,6 +1327,7 @@ void Application::update() {
         }
     }
     ImGui::End();
+#endif
 
     gui_memory_editor();    
     gui_sample_viewer();

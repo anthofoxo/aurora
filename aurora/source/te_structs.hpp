@@ -22,6 +22,7 @@ namespace aurora {
 		kGate = hash("SequinGate"),
 		kLvl = hash("SequinLevel"),
 		kPath = hash("Path"),
+		kDec = hash("PathDecorator"),
 	};
 
 	struct Datapoint final {
@@ -131,6 +132,7 @@ namespace aurora {
 		float offset;
 		std::string channelGroup;
 
+		void on_gui();
 		void deserialize(ByteStream& aStream);
 	};
 
@@ -385,6 +387,30 @@ namespace aurora {
 		void deserialize(ByteStream& aStream);
 	};
 
+	TE_STRUCT_NAME_MATCHES;
+	struct PathDecorator final {
+		static constexpr std::array<uint32_t, 2> kHeader = { 37, 4 };
+
+		std::string _declaredName;
+		size_t _beginOffset = 0;
+		size_t _endOffset = 0;
+
+		uint32_t header[2];
+		uint32_t unknown0;
+		uint32_t hash0;
+		uint32_t unknown1;
+		std::string condition;
+		std::string stepType;
+		std::string mesh;
+		uint8_t unknown3;
+		std::string pathScaleInterp;
+		uint8_t unknown4;
+		uint8_t unknown5;
+		f32vec3 scale;
+
+		void deserialize(ByteStream& aStream); // INCOMPLETE READER
+	};
+
 	struct ObjlibLevel final {
 		std::vector<std::byte> _bytes;
 		std::vector<SequinLeaf> _leafs;
@@ -395,6 +421,7 @@ namespace aurora {
 		std::vector<SequinLevel> _lvls;
 		std::vector<SequinGate> _gates;
 		std::vector<Path> _paths;
+		std::vector<PathDecorator> _pathdecorators;
 
 		uint32_t filetype; // 0x8
 		uint32_t objlibType; // 0x19621c9d
