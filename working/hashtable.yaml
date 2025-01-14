@@ -1,4 +1,15 @@
 known:
+# Level sections
+- Alevels/demo.sec
+- Alevels/level2/level_2a.sec
+- Alevels/level3/level_3a.sec
+- Alevels/level4/level_4a.sec
+- Alevels/level5/level_5a.sec
+- Alevels/level6/level_6.sec
+- Alevels/level7/level_7a.sec
+- Alevels/level8/level_8a.sec
+- Alevels/level9/level_9a.sec
+# Level objlibs
 - Alevels/demo.objlib
 - Alevels/level2/level_2a.objlib
 - Alevels/level3/level_3a.objlib
@@ -9,6 +20,7 @@ known:
 - Alevels/level8/level_8a.objlib
 - Alevels/level9/level_9a.objlib
 - Alevels/title_screen.objlib
+# Other
 - alpha
 - ambient_color
 - aurora.ent
@@ -263,6 +275,34 @@ known:
 - win_checkpoint_silent
 - win_debris.ent
 - zillapede_gate.ent
+# Language keys
+- achievements
+- cancel
+- continue
+- level1
+- level2
+- level3
+- level4
+- level5
+- level6
+- level7
+- level8
+- level9
+- loading
+- locked
+- no
+- rank
+- resolution
+- yes
+# Structs
+- EntitySpawner
+- Path
+- Sample
+- SequinDrawer
+- SequinGate
+- SequinLeaf
+- SequinLevel
+- SequinMaster
 unknown:
   0x5232f8f9: .anim Objects
   0x7dd6b7d8: .bend Objects
@@ -279,12 +319,8 @@ unknown:
   0x6222e06f: .flt Objects
   0x993811f5: .flt Objects
   0xc2fd0a11: .gameplay Objects
-  0xaa63a508: .gate Objects
   0xc2aaec43: .grp Objects
-  0xce7e85f6: .leaf Objects
   0x711a2715: .light Objects
-  0xbcd17473: .lvl Objects
-  0x490780b9: .master Objects
   0x1a5812f6: .mastering Objects
   0x7ba5c8e0: .mat Objects
   0xbf69f115: .mesh Objects
@@ -293,13 +329,9 @@ unknown:
   0x9d1c6219: Obj.objlib Objects
   0x0b374d9e: Level.objlib Objects
   0xe674624f: Avatar.objlib Objects
-  0x4890a3f6: .path Objects
   0x745dd78b: .playspace Objects
   0x230da622: .pulse Objects
-  0x7aa8f390: .samp Objects
-  0xd3058b5d: .sdraw / .drawer Objects
   0xcac934cf: .sh Objects
-  0xd897d5db: .spn Objects
   0xd955fdc6: .st Objects
   0xe7b3aadb: .steer Objects
   0x96ba8a70: .tex Objects
