@@ -54,9 +54,10 @@ struct Level {
 };
 
 
-void hash_panel(bool& open) {
+void hash_panel(bool& open, std::filesystem::path const& aCachePath) {
     static std::string input = "type input here";
     static uint32_t hash = aurora::hash(input);
+    static bool hasHashFile = false;
 
     static std::string revinput = "type hash here";
     static std::string revresult = "<unknown>";
@@ -65,8 +66,14 @@ void hash_panel(bool& open) {
 
     if (ImGui::Begin("Hash Panel", &open)) {
         ImGui::SeparatorText("Hasher");
-        if (ImGui::InputText("Input", &input)) hash = aurora::hash(input);
+        if (ImGui::InputText("Input", &input)) {
+            hash = aurora::hash(input);
+
+            // .pc scan
+            hasHashFile = std::filesystem::exists(aCachePath / std::format("{:x}.pc", hash));
+        }
         ImGui::Text("0x%02x", hash);
+        if(hasHashFile)ImGui::TextUnformatted("This hash matches an existing .pc file");
 
         ImGui::SeparatorText("Hash Lookup");
         if (ImGui::InputText("Lookup Hash", &revinput)) {
@@ -157,7 +164,70 @@ std::vector<aurora::ObjlibLevel> gLevels;
 
 #include <unordered_set>
 
+struct LanguageEntry final {
+    uint32_t key;
+    uint32_t offset;
+    std::string value;
+};
+
+std::vector<LanguageEntry> lang;
+
+struct LevelListEntry final {
+    std::string languageKey;
+    uint32_t unknown0;
+    std::string objlib;
+    std::string unlocks;
+    uint8_t unknown1;
+    uint8_t unknown2;
+    uint8_t unknown3;
+    uint32_t unknown4;
+    uint32_t unknown5;
+};
+
+std::vector<LevelListEntry> levelEntries;
+
 void read_all_leafs(std::optional<std::filesystem::path> const& aThumperPath) {
+
+    {
+        aurora::ByteStream stream = aurora::ByteStream(aThumperPath.value() / "cache" / "f78b7d78.pc");
+        stream.read_u32();
+        levelEntries.resize(stream.read_u32());
+
+        for (int i = 0; i < levelEntries.size(); ++i) {
+            
+            levelEntries[i].languageKey = stream.read_str();
+            levelEntries[i].unknown0 = stream.read_u32();
+            levelEntries[i].objlib = stream.read_str();
+            levelEntries[i].unlocks = stream.read_str();
+            levelEntries[i].unknown1 = stream.read_u8();
+            levelEntries[i].unknown2 = stream.read_u8();
+            levelEntries[i].unknown3 = stream.read_u8();
+            levelEntries[i].unknown4 = stream.read_u32();
+            levelEntries[i].unknown5 = stream.read_u32();
+        }
+    }
+
+
+    {
+        aurora::ByteStream stream = aurora::ByteStream(aThumperPath.value() / "cache" / "2e7b0500.pc");
+        stream.read_u32();
+        auto cstringcount = stream.read_u32();
+        auto countB = stream.read_u32();
+
+        uint32_t accCount = 0;
+
+        for (int i = 0; i < cstringcount; ++i) {
+            std::string string = std::string(stream.charhead());
+            stream.advance(string.size() + 1);
+            accCount += string.size() + 1;
+            lang.emplace_back(0, 0, string);
+        }
+
+        for (int i = 0; i < cstringcount; ++i) {
+            lang[i].key = stream.read_u32();
+            lang[i].offset = stream.read_u32();
+        }
+    }
 
 #if 0
     std::vector<std::filesystem::path> targets;
@@ -228,6 +298,8 @@ public:
     std::optional<std::filesystem::path> mThumperPath;
 
     bool mShowHashPanel = false;
+    bool mShowStringEditor = false;
+    bool mShowLevelListEditor = false;
     bool mShowAboutPanel = false;
     bool mShowDifficultyExplanation = false;
     bool mModMode = false;
@@ -820,6 +892,9 @@ void Application::update() {
 
         if (ImGui::BeginMenu("View")) {
             ImGui::MenuItem("Hash Panel", nullptr, &mShowHashPanel);
+            ImGui::MenuItem("String Editor", nullptr, &mShowStringEditor);
+            ImGui::MenuItem("Level List Editor", nullptr, &mShowLevelListEditor);
+            
             ImGui::MenuItem("Hex Editor", nullptr, &mViewHexEditor);
             ImGui::MenuItem("Debug Information", nullptr, &mViewDebugInfo);
             ImGui::Separator();
@@ -1020,7 +1095,158 @@ void Application::update() {
         ImGui::End();
     }
 
-    hash_panel(mShowHashPanel);
+    if (mShowStringEditor) {
+        if (ImGui::Begin("String Editor", &mShowStringEditor, ImGuiWindowFlags_MenuBar)) {
+            bool showModal = false;
+
+            if (ImGui::BeginMenuBar()) {
+                if (ImGui::BeginMenu("File")) {
+                    if (ImGui::MenuItem("Add New Key")) {
+                        showModal = true;
+                    }
+
+                    if (ImGui::MenuItem("Overwrite existing")) {
+
+
+                        aurora::ByteStream stream = aurora::ByteStream();
+
+                        for (auto& langEntry : lang) {
+                            langEntry.offset = stream.mData.size();
+                            stream.write_cstr(langEntry.value);
+                        }
+
+                        auto cstringarrSize = stream.mData.size();
+
+                        for (auto& langEntry : lang) {
+                            stream.write_u32(langEntry.key);
+                            stream.write_u32(langEntry.offset);
+                        }
+
+                        aurora::ByteStream headings;
+                        headings.write_u32(6);
+                        headings.write_u32(lang.size());
+                        headings.write_u32(cstringarrSize);
+
+                        if (!std::filesystem::exists(mThumperPath.value() / "cache" / "2e7b0500.pc.aur_bak")) {
+                            std::filesystem::copy_file(mThumperPath.value() / "cache" / "2e7b0500.pc", mThumperPath.value() / "cache" / "2e7b0500.pc.aur_bak");
+                        }
+
+                        std::ofstream output = std::ofstream(mThumperPath.value() / "cache" / "2e7b0500.pc", std::ios::out | std::ios::binary);
+                        output.write(reinterpret_cast<char const*>(headings.mData.data()), headings.mData.size());
+                        output.write(reinterpret_cast<char const*>(stream.mData.data()), stream.mData.size());
+
+
+                    }
+
+                    ImGui::EndMenu();
+                }
+
+                ImGui::EndMenuBar();
+            }
+
+            for (auto& langEntry : lang) {
+                ImGui::PushID(&langEntry);
+                ImGui::InputText(aurora::rev_hash(langEntry.key).c_str(), &langEntry.value);
+                ImGui::PopID();
+            }
+
+            if (showModal) {
+                ImGui::OpenPopup("AddStringKeyModal");
+                showModal = false;
+            }
+
+            if (ImGui::BeginPopupModal("AddStringKeyModal", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
+                static std::string inputKey;
+                static std::string value;
+                ImGui::InputText("Key", &inputKey);
+                ImGui::InputText("Value", &value);
+
+                if (ImGui::Button("Add")) {
+                    lang.emplace_back(aurora::hash(inputKey), 0, value);
+                    ImGui::CloseCurrentPopup();
+                }
+
+                ImGui::SameLine();
+
+                if (ImGui::Button("Close")) {
+                    ImGui::CloseCurrentPopup();
+                }
+
+
+                ImGui::EndPopup();
+            }
+
+        }
+        ImGui::End();
+    }
+
+    if (mShowLevelListEditor) {
+        if (ImGui::Begin("Level List Editor", &mShowLevelListEditor, ImGuiWindowFlags_MenuBar)) {
+            if (ImGui::BeginMenuBar()) {
+                if (ImGui::BeginMenu("File")) {
+
+
+                    if (ImGui::MenuItem("Overwrite existing")) {
+                        aurora::ByteStream stream = aurora::ByteStream();
+                        stream.write_u32(16);
+                        stream.write_u32(levelEntries.size());
+
+                        for (auto& entry : levelEntries) {
+                            stream.write_str(entry.languageKey);
+                            stream.write_u32(entry.unknown0);
+                            stream.write_str(entry.objlib);
+                            stream.write_str(entry.unlocks);
+                            stream.write_u8(entry.unknown1);
+                            stream.write_u8(entry.unknown2);
+                            stream.write_u8(entry.unknown3);
+                            stream.write_u32(entry.unknown4);
+                            stream.write_u32(entry.unknown5);
+                        }
+
+                        if (!std::filesystem::exists(mThumperPath.value() / "cache" / "f78b7d78.pc.aur_bak")) {
+                            std::filesystem::copy_file(mThumperPath.value() / "cache" / "f78b7d78.pc", mThumperPath.value() / "cache" / "f78b7d78.pc.aur_bak");
+                        }
+
+                        std::ofstream output = std::ofstream(mThumperPath.value() / "cache" / "f78b7d78.pc", std::ios::out | std::ios::binary);
+                        output.write(reinterpret_cast<char const*>(stream.mData.data()), stream.mData.size());
+                    }
+
+                    ImGui::EndMenu();
+                }
+
+                ImGui::EndMenuBar();
+            }
+
+            if (ImGui::Button("Add")) {
+                levelEntries.emplace_back("customs.null", 0, "unknown.objlib", "", 1, 1, 0, 5, 15);
+            }
+
+            for (auto& entry : levelEntries) {
+                ImGui::PushID(&entry);
+
+                if (ImGui::CollapsingHeader(entry.languageKey.c_str())) {
+                    ImGui::InputText("Translation Key", &entry.languageKey);
+                    ImGui::InputScalar("Unknown 0", ImGuiDataType_U32, &entry.unknown0);
+                    ImGui::InputText("Objlib", &entry.objlib);
+                    ImGui::InputText("Unlocks", &entry.unlocks);
+                    ImGui::InputScalar("Unknown 1", ImGuiDataType_U8, &entry.unknown1);
+                    ImGui::InputScalar("Unknown 2", ImGuiDataType_U8, &entry.unknown2);
+                    ImGui::InputScalar("Unknown 3", ImGuiDataType_U8, &entry.unknown3);
+                    ImGui::InputScalar("Unknown 4", ImGuiDataType_U32, &entry.unknown4);
+                    ImGui::InputScalar("Unknown 5", ImGuiDataType_U32, &entry.unknown5);
+                }
+
+                ImGui::PopID();
+            }
+        }
+        ImGui::End();
+    }
+
+
+    ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+    ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+
+    hash_panel(mShowHashPanel, mThumperPath.value() / "cache");
     about_panel(mIconTexture, mShowAboutPanel);
 
     if (ImGui::Begin("Parsed Objlibs")) {

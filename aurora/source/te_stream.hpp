@@ -47,24 +47,32 @@ namespace aurora {
 		inline Transform read_transform() { auto val = poke_transform(); advance(sizeof(Transform)); return val; }
 
 		// Write apis ignore stream offset/mark
-		inline void write_bool(bool v) { size_t current = mData.size(); for (auto i = 0; i < sizeof(v); ++i) mData.emplace_back(0); *reinterpret_cast<uint8_t*>(mData.data() + current) = v; }
-		inline void write_s8(int8_t v) { size_t current = mData.size(); for (auto i = 0; i < sizeof(v); ++i) mData.emplace_back(0); *reinterpret_cast<int8_t*>(mData.data() + current) = v; }
-		inline void write_u8(uint8_t v) { size_t current = mData.size(); for (auto i = 0; i < sizeof(v); ++i) mData.emplace_back(0); *reinterpret_cast<uint8_t*>(mData.data() + current) = v; }
-		inline void write_s16(int16_t v) { size_t current = mData.size(); for (auto i = 0; i < sizeof(v); ++i) mData.emplace_back(0); *reinterpret_cast<int32_t*>(mData.data() + current) = v; }
-		inline void write_u16(uint16_t v) { size_t current = mData.size(); for (auto i = 0; i < sizeof(v); ++i) mData.emplace_back(0); *reinterpret_cast<uint16_t*>(mData.data() + current) = v; }
-		inline void write_s32(int32_t v) { size_t current = mData.size(); for (auto i = 0; i < sizeof(v); ++i) mData.emplace_back(0); *reinterpret_cast<int32_t*>(mData.data() + current) = v; }
-		inline void write_u32(uint32_t v) { size_t current = mData.size(); for (auto i = 0; i < sizeof(v); ++i) mData.emplace_back(0); *reinterpret_cast<uint32_t*>(mData.data() + current) = v; }
-		inline void write_f32(float v) { size_t current = mData.size(); for (auto i = 0; i < sizeof(v); ++i) mData.emplace_back(0); *reinterpret_cast<float*>(mData.data() + current) = v; }
-		inline void write_u32vec3(u32vec3 const& v) { size_t current = mData.size(); for (auto i = 0; i < sizeof(v); ++i) mData.emplace_back(0); *reinterpret_cast<u32vec3*>(mData.data() + current) = v; }
-		inline void write_f32vec3(f32vec3 const& v) { size_t current = mData.size(); for (auto i = 0; i < sizeof(v); ++i) mData.emplace_back(0); *reinterpret_cast<f32vec3*>(mData.data() + current) = v; }
-		inline void write_f32vec4(f32vec4 const& v) { size_t current = mData.size(); for (auto i = 0; i < sizeof(v); ++i) mData.emplace_back(0); *reinterpret_cast<f32vec4*>(mData.data() + current) = v; }
-		inline void write_transform(Transform const& v) { size_t current = mData.size(); for (auto i = 0; i < sizeof(v); ++i) mData.emplace_back(0); *reinterpret_cast<Transform*>(mData.data() + current) = v; }
+		inline void write_bool(bool v) { size_t current = mData.size(); for (auto i = 0; i < sizeof(v); ++i) mData.emplace_back(static_cast<std::byte>(0)); *reinterpret_cast<bool*>(mData.data() + current) = v; }
+		inline void write_s8(int8_t v) { size_t current = mData.size(); for (auto i = 0; i < sizeof(v); ++i) mData.emplace_back(static_cast<std::byte>(0)); *reinterpret_cast<int8_t*>(mData.data() + current) = v; }
+		inline void write_u8(uint8_t v) { size_t current = mData.size(); for (auto i = 0; i < sizeof(v); ++i) mData.emplace_back(static_cast<std::byte>(0)); *reinterpret_cast<uint8_t*>(mData.data() + current) = v; }
+		inline void write_s16(int16_t v) { size_t current = mData.size(); for (auto i = 0; i < sizeof(v); ++i) mData.emplace_back(static_cast<std::byte>(0)); *reinterpret_cast<int32_t*>(mData.data() + current) = v; }
+		inline void write_u16(uint16_t v) { size_t current = mData.size(); for (auto i = 0; i < sizeof(v); ++i) mData.emplace_back(static_cast<std::byte>(0)); *reinterpret_cast<uint16_t*>(mData.data() + current) = v; }
+		inline void write_s32(int32_t v) { size_t current = mData.size(); for (auto i = 0; i < sizeof(v); ++i) mData.emplace_back(static_cast<std::byte>(0)); *reinterpret_cast<int32_t*>(mData.data() + current) = v; }
+		inline void write_u32(uint32_t v) { size_t current = mData.size(); for (auto i = 0; i < sizeof(v); ++i) mData.emplace_back(static_cast<std::byte>(0)); *reinterpret_cast<uint32_t*>(mData.data() + current) = v; }
+		inline void write_f32(float v) { size_t current = mData.size(); for (auto i = 0; i < sizeof(v); ++i) mData.emplace_back(static_cast<std::byte>(0)); *reinterpret_cast<float*>(mData.data() + current) = v; }
+		inline void write_u32vec3(u32vec3 const& v) { size_t current = mData.size(); for (auto i = 0; i < sizeof(v); ++i) mData.emplace_back(static_cast<std::byte>(0)); *reinterpret_cast<u32vec3*>(mData.data() + current) = v; }
+		inline void write_f32vec3(f32vec3 const& v) { size_t current = mData.size(); for (auto i = 0; i < sizeof(v); ++i) mData.emplace_back(static_cast<std::byte>(0)); *reinterpret_cast<f32vec3*>(mData.data() + current) = v; }
+		inline void write_f32vec4(f32vec4 const& v) { size_t current = mData.size(); for (auto i = 0; i < sizeof(v); ++i) mData.emplace_back(static_cast<std::byte>(0)); *reinterpret_cast<f32vec4*>(mData.data() + current) = v; }
+		inline void write_transform(Transform const& v) { size_t current = mData.size(); for (auto i = 0; i < sizeof(v); ++i) mData.emplace_back(static_cast<std::byte>(0)); *reinterpret_cast<Transform*>(mData.data() + current) = v; }
+		
 
 		inline void write_str(std::string const& v) {
 			write_u32(v.size());
 			size_t current = mData.size();
-			for (auto i = 0; i < v.size(); ++i) mData.emplace_back(0);
+			for (auto i = 0; i < v.size(); ++i) mData.emplace_back(static_cast<std::byte>(0));
 			memcpy(mData.data() + current, v.data(), v.size());
+		}
+
+		inline void write_cstr(std::string const& v) {
+			size_t current = mData.size();
+			for (auto i = 0; i < v.size(); ++i) mData.emplace_back(static_cast<std::byte>(0));
+			memcpy(mData.data() + current, v.data(), v.size());
+			write_u8(0);
 		}
 		// ---
 
