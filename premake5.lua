@@ -4,15 +4,15 @@ configurations { "debug", "release" }
 
 flags "MultiProcessorCompile"
 language "C++"
-cppdialect "C++latest"
+cppdialect "C++23"
 cdialect "C17"
 staticruntime "On"
 stringpooling "On"
 editandcontinue "On"
 
 kind "StaticLib"
-targetdir "%{wks.location}/bin/%{cfg.buildcfg}"
-objdir "%{wks.location}/bin_int/%{cfg.buildcfg}"
+targetdir "%{wks.location}/bin/%{cfg.system}_%{cfg.buildcfg}"
+objdir "%{wks.location}/bin_int/%{cfg.system}_%{cfg.buildcfg}"
 
 filter "configurations:debug"
 runtime "Debug"

@@ -10,3 +10,6 @@
 [submodule "vendor/tinyfd"]
 	path = vendor/tinyfd
 	url = https://git.code.sf.net/p/tinyfiledialogs/code
+[submodule "vendor/spdlog"]
+	path = vendor/spdlog
+	url = https://github.com/gabime/spdlog

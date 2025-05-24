@@ -17,6 +17,7 @@ includedirs {
 	"%{wks.location}/vendor/imgui",
 	"%{wks.location}/vendor/lua/src",
 	"%{wks.location}/vendor/tinyfd",
+	"%{wks.location}/vendor/spdlog/include",
 }
 
 links {
