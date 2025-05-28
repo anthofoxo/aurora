@@ -600,17 +600,6 @@ int lua_print(lua_State* L) {
 	return 0;
 }
 
-void run_test() {
-	lua_State* L = luaL_newstate();
-	luaL_openlibs(L);
-
-	lua_register(L, "print", &lua_print); // replace default print with our console print
-	lua_register(L, "thumper_hash", &lua_thumper_hash);
-
-	luaL_dofile(L, "startup.lua");
-	lua_close(L);
-}
-
 void cache_scan(std::unordered_set<std::string>& pcFileStorage) {
 	console.items.push_back("Scanning cache...");
 
@@ -633,18 +622,24 @@ std::unordered_set<std::string> pcFileStorage;
 
 #include "lua_api.hpp"
 
+int aurora_rhash(lua_State* L) {
+	auto it = gHashtable.find(luaL_checkinteger(L, 1));
+	if (it != gHashtable.end()) {
+		lua_pushlstring(L, it->second.data(), it->second.size());
+		return 1;
+	}
+
+	lua_pushnil(L);
+	return 1;
+}
+
 namespace aurora {
 void main() {
 
 
 lua_State* L = luaL_newstate();
 
-	
-
 	{
-
-
-		
 		luaL_openlibs(L);
 		lua_register(L, "print", &lua_print);
 		aurora::register_plugin_api(L);
@@ -652,6 +647,9 @@ lua_State* L = luaL_newstate();
 		lua_getglobal(L, "Aurora");
 		lua_pushcfunction(L, &lua_thumper_hash);
 		lua_setfield(L, -2, "hash");
+
+		lua_pushcfunction(L, &aurora_rhash);
+		lua_setfield(L, -2, "rhash");
 
 		lua_pushcfunction(L, [](lua_State* L)-> int {
 			lua_pushboolean(L, pcFileStorage.contains(luaL_checkstring(L, 1)));
@@ -715,10 +713,6 @@ lua_State* L = luaL_newstate();
 	validate_executables();
 	cache_scan(pcFileStorage);
 
-	console.items.push_back("Run startup script");
-	run_test();
-	console.items.push_back("Done");
-
 	// gHashtable
 	console.items.push_back("Loading hashtable...");
 	{
@@ -726,7 +720,6 @@ lua_State* L = luaL_newstate();
 		luaL_openlibs(L);
 
 		lua_register(L, "print", &lua_print); // replace default print with our console print
-		lua_register(L, "thumper_hash", &lua_thumper_hash);
 		lua_register(L, "aurora_hash", &lua_thumper_hash);
 
 		if (luaL_dofile(L, "hashtable.lua") != LUA_OK) {
