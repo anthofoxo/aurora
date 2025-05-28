@@ -1,5 +1,6 @@
 #include <exception>
 #include <cstdlib>
+#include <iostream>
 
 #include <tinyfiledialogs.h>
 
@@ -24,6 +25,7 @@ int main(int, char**)
 		return EXIT_SUCCESS;
 	}
 	catch (std::exception const& e) {
+		std::cerr << e.what() << '\n';
 		tinyfd_messageBox("Critial Error", e.what(), "ok", "error", 1);
 		return EXIT_FAILURE;
 	}

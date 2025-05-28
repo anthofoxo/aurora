@@ -629,8 +629,220 @@ void cache_scan(std::unordered_set<std::string>& pcFileStorage) {
 
 }
 
+int lua_aurora_directory_iterator(lua_State* L) {
+	char const* directory = luaL_checkstring(L, 1);
+
+	if (!std::filesystem::exists(directory)) {
+		lua_pushnil(L);
+		return 1;
+	}
+
+	lua_newtable(L);
+	std::size_t index = 1;
+
+	for(auto const& entry : std::filesystem::directory_iterator(directory)) {
+		std::u8string const string = entry.path().generic_u8string();
+		lua_pushlstring(L, reinterpret_cast<char const*>(string.data()), std::distance(string.begin(), string.end()));
+		lua_rawseti(L, -2, index++);
+	}
+
+	return 1;
+}
+
+int lua_aurora_is_regular_file(lua_State* L) {
+	lua_pushboolean(L, std::filesystem::is_regular_file(luaL_checkstring(L, 1)));
+	return 1;
+}
+
+std::unordered_set<std::string> pcFileStorage;
+
 namespace aurora {
 void main() {
+
+
+	
+lua_State* L = luaL_newstate();
+
+	
+
+	{
+
+
+		
+		luaL_openlibs(L);
+
+		lua_register(L, "print", &lua_print);
+
+		lua_newtable(L);
+
+		lua_pushcfunction(L, &lua_aurora_directory_iterator);
+		lua_setfield(L, -2, "directory_iterator");
+
+		lua_pushcfunction(L, &lua_aurora_is_regular_file);
+		lua_setfield(L, -2, "is_regular_file");
+
+		lua_pushcfunction(L, &lua_thumper_hash);
+		lua_setfield(L, -2, "hash");
+
+		lua_pushcfunction(L, [](lua_State* L)->int{
+			throw std::runtime_error(lua_tostring(L, -1));
+			return 0;
+		});
+		lua_setfield(L, -2, "throw");
+
+		lua_pushcfunction(L, [](lua_State* L)-> int {
+			lua_pushboolean(L, pcFileStorage.contains(luaL_checkstring(L, 1)));
+			return 1;
+		});
+		lua_setfield(L, -2, "cache_hit");
+
+		lua_setglobal(L, "Aurora");
+
+		lua_newtable(L);
+		lua_pushcfunction(L, [](lua_State* L) -> int {
+			char const* title = luaL_checkstring(L, 1);
+
+			lua_rawgeti(L, 2, 1);
+			bool open = lua_toboolean(L, -1);
+			lua_pop(L, 1);
+
+			bool retValue = ImGui::Begin(title, &open);
+
+			lua_pushboolean(L, open);
+			lua_rawseti(L, 2, 1);
+
+			lua_pushboolean(L, retValue);
+			return 1;
+		});
+		lua_setfield(L, -2, "Begin");
+
+		lua_pushcfunction(L, [](lua_State* L) -> int {
+			ImGui::End();
+			return 0;
+		});
+		lua_setfield(L, -2, "End");
+
+		lua_pushcfunction(L, [](lua_State* L) -> int {
+			lua_pushboolean(L, ImGui::BeginMainMenuBar());
+			return 1;
+		});
+		lua_setfield(L, -2, "BeginMainMenuBar");
+
+		lua_pushcfunction(L, [](lua_State* L) -> int {
+			ImGui::EndMainMenuBar();
+			return 0;
+		});
+		lua_setfield(L, -2, "EndMainMenuBar");
+
+		lua_pushcfunction(L, [](lua_State* L) -> int {
+			ImGui::EndMenu();
+			return 0;
+		});
+		lua_setfield(L, -2, "EndMenu");
+
+		lua_pushcfunction(L, [](lua_State* L) -> int {
+			ImGui::SeparatorText(luaL_checkstring(L, 1));
+			return 0;
+		});
+		lua_setfield(L, -2, "SeparatorText");
+
+
+
+		lua_pushcfunction(L, [](lua_State* L) -> int {
+			lua_pushboolean(L, ImGui::BeginMenu(luaL_checkstring(L, 1)));
+			return 1;
+		});
+		lua_setfield(L, -2, "BeginMenu");
+
+		lua_pushcfunction(L, [](lua_State* L) -> int {
+			ImGui::TextUnformatted(luaL_checkstring(L, 1));
+			return 0;
+		});
+		lua_setfield(L, -2, "TextUnformatted");
+
+		
+
+
+		lua_pushcfunction(L, [](lua_State* L) -> int {
+			lua_rawgeti(L, 2, 1);
+			std::string text = lua_tostring(L, -1);
+			lua_pop(L, 1);
+			bool result = ImGui::InputText(luaL_checkstring(L, 1), &text);
+			lua_pushstring(L, text.c_str());
+			lua_rawseti(L, 2, 1);
+
+			lua_pushboolean(L, result);
+			return 1;
+		});
+		lua_setfield(L, -2, "InputText");
+
+		lua_pushcfunction(L, [](lua_State* L) -> int {
+			int numArgs = lua_gettop(L);
+			lua_getglobal(L, "string");
+			lua_getfield(L, -1, "format");
+			lua_remove(L, -2);
+			lua_insert(L, 1);
+			lua_pcall(L, numArgs, 1, 0);
+			ImGui::Text("%s", lua_tostring(L, -1));
+			return 0;
+		});
+		lua_setfield(L, -2, "Text");
+
+		lua_pushcfunction(L, [](lua_State* L) -> int {
+			int numArgs = lua_gettop(L);
+			lua_getglobal(L, "string");
+			lua_getfield(L, -1, "format");
+			lua_remove(L, -2);
+			lua_insert(L, 1);
+			lua_pcall(L, numArgs, 1, 0);
+			ImGui::BulletText("%s", lua_tostring(L, -1));
+			return 0;
+		});
+		lua_setfield(L, -2, "BulletText");
+
+		lua_pushcfunction(L, [](lua_State* L) -> int {
+			int numArgs = lua_gettop(L);
+			lua_getglobal(L, "string");
+			lua_getfield(L, -1, "format");
+			lua_remove(L, -2);
+			lua_insert(L, 1);
+			lua_pcall(L, numArgs, 1, 0);
+			ImGui::TextWrapped("%s", lua_tostring(L, -1));
+			return 0;
+		});
+		lua_setfield(L, -2, "TextWrapped");
+
+		lua_pushcfunction(L, [](lua_State* L) -> int {
+			char const* label = luaL_checkstring(L, 1);
+			// idx 2 unused
+			// idx 4 unused
+			
+			lua_rawgeti(L, 3, 1);
+			bool selected = lua_toboolean(L, -1);
+			lua_pop(L, 1);
+
+			bool returnvalue = ImGui::MenuItem(label, nullptr, &selected, true);
+
+			lua_pushboolean(L, selected);
+			lua_rawseti(L, 3, 1);
+
+			lua_pushboolean(L, returnvalue);
+			return 1;
+		});
+		lua_setfield(L, -2, "MenuItem");
+
+		lua_setglobal(L, "ImGui");
+
+
+		if (luaL_dofile(L, "boot.lua") != LUA_OK) {
+			console.items.push_back(lua_tostring(L, -1));
+			std::cout << lua_tostring(L, -1) << '\n';
+		}
+
+		
+	}
+
+
 	// Load configs
 	{
 		console.items.push_back("Loading aurora config");
@@ -672,7 +884,7 @@ void main() {
 	bool viewHelp = false;
 	bool open = true;
 
-	std::unordered_set<std::string> pcFileStorage;
+	
 	validate_executables();
 	cache_scan(pcFileStorage);
 
@@ -821,6 +1033,10 @@ void main() {
 			ImGui::EndMainMenuBar();
 		}
 
+		if (lua_getfield(L, -1, "OnUpdate") == LUA_TFUNCTION) {
+			lua_pcall(L, 0, 0, 0);
+		} else lua_pop(L, 1);
+
 		help(viewHelp);
 		tools_hasher(toolsHasher, pcFileStorage);
 		tools_binary_search(toolsBinarySearch);
@@ -838,6 +1054,7 @@ void main() {
 		glfwSwapBuffers(window);
 	}
 
+	lua_close(L);
 	ImGui_ImplOpenGL3_Shutdown();
 	ImGui_ImplGlfw_Shutdown();
 	ImGui::DestroyContext();
