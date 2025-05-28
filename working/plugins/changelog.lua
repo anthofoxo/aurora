@@ -1,6 +1,6 @@
 local changelogs = {
 	{
-		version = "v0.0.4-a.2+wip",
+		version = "v0.0.4-a.2",
 		items = {
 			"Updated font files to noto sans",
 			"Hex viewer how has a monospace font",
