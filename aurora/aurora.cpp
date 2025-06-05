@@ -361,27 +361,6 @@ std::uint32_t thumper_hash(std::span<std::byte const> bytes) {
 }
 
 #include <unordered_set>
-
-void tools_hasher(bool& aOpen, std::unordered_set<std::string> const& aFileList) {
-	static std::string input;
-	static std::uint32_t output = thumper_hash(std::span((std::byte*)input.data(), input.size()));
-	static bool exists = false;
-
-	if (!aOpen) return;
-
-	if (ImGui::Begin("Hasher", &aOpen)) {
-		if (ImGui::InputText("Input", &input)) {
-			std::string parsed = unescape_hex_string(input);
-			output = thumper_hash(std::span((std::byte*)parsed.data(), parsed.size()));
-			exists = aFileList.contains(fmt::format("{:x}.pc", output));
-		}
-
-		ImGui::TextUnformatted(fmt::format("0x{:x}", output).c_str());
-		if (exists) ImGui::TextUnformatted("This hash matches a .pc file");
-	}
-	ImGui::End();
-}
-
 #include <optional>
 #include <future>
 
@@ -675,10 +654,8 @@ lua_State* L = luaL_newstate();
 		}
 	}
 
-	bool toolsHasher = false;
 	bool toolsBinarySearch = false;
 	bool open = true;
-
 	
 	validate_executables();
 	cache_scan(pcFileStorage);
@@ -804,8 +781,6 @@ lua_State* L = luaL_newstate();
 					}
 				}
 				
-
-				ImGui::MenuItem("Hasher", nullptr, &toolsHasher);
 				ImGui::MenuItem("Binary Search", nullptr, &toolsBinarySearch, !kThumperDirectory.empty());
 				
 
@@ -819,7 +794,6 @@ lua_State* L = luaL_newstate();
 			lua_pcall(L, 0, 0, 0);
 		} else lua_pop(L, 1);
 
-		tools_hasher(toolsHasher, pcFileStorage);
 		tools_binary_search(toolsBinarySearch);
 
 		console.draw("Console", &open);
