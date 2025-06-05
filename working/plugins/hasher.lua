@@ -10,7 +10,8 @@ return {
 		title = "Hasher",
 		OnGui = function()
 			if ImGui.InputText("Input", input) then
-				output = Aurora.hash(Aurora.unbox(input))
+				local unescaped = Aurora.unescape(Aurora.unbox(input))
+				output = Aurora.hash(unescaped)
 				cacheHit = Aurora.cache_hit(string.format("%x.pc", output))
 				rhashHit = Aurora.rhash(output)
 			end

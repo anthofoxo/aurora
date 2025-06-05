@@ -322,6 +322,8 @@ struct ExampleAppConsole {
 
 ExampleAppConsole console;
 
+
+
 std::string unescape_hex_string(const std::string& input) {
 	std::stringstream output;
 	for (size_t i = 0; i < input.length(); ++i) {
@@ -428,7 +430,7 @@ void tools_binary_search(bool& aOpen) {
 
 		ImGui::SetNextItemShortcut(ImGuiMod_Ctrl | ImGuiKey_F);
 		if (ImGui::InputText("Input", &input, ImGuiInputTextFlags_EnterReturnsTrue)) {
-			if (!future) {
+			if (input.size() > 0 && !future) {
 				future = std::async(std::launch::async, [](std::string input) {
 					Result result;
 					
@@ -535,38 +537,6 @@ void tools_binary_search(bool& aOpen) {
 	ImGui::End();
 }
 
-void help(bool& aOpen) {
-	if (!aOpen) return;
-
-	if (ImGui::Begin("Help", &aOpen)) {
-		if (ImGui::CollapsingHeader("Overview")) {
-			ImGui::TextWrapped("%s", "Aurora is an early developement, detailed Thumper decompilation, editor, and exploratory tool. *this is not for casual users*.");
-
-			ImGui::TextWrapped("%s", "Aurora operated directly on the raw Thumper game content with no intermediate formats. This makes is possible the mod and edit Thumper content without converting between tools.");
-
-			ImGui::TextWrapped("%s", "Aurora has a growing collection of tools to assist in reverse enginnering Thumper.");
-		}
-
-		if (ImGui::CollapsingHeader("Standard Input")) {
-			ImGui::TextWrapped("%s", "Before discussing the tools, you should understand the expected inputs. In many cases in text fields, non-ascii characters may be needed. To do this the \\x prefix is used followed by two characters which represent a byte in hex. When passed into functions, this will be directly interpreted as that byte. This is standard hex escape syntax as seen in lua, c#, c++ and likely many other languages.");
-			ImGui::TextWrapped("%s", "For example:");
-			ImGui::BulletText("%s", "Alevels/demo.objlib");
-			ImGui::BulletText("%s", "\\x6D\\x65\\x73\\x73\\x61\\x67\\x65\\x2E\\x74\\x78\\x74");
-		}
-
-		if (ImGui::CollapsingHeader("Hasher")) {
-			ImGui::TextWrapped("%s", "The hasher is pretty simple, it takes an input, hashes it, tells you the results and checks to see if it matches a cache file.");
-		}
-
-		if (ImGui::CollapsingHeader("Binary Search")) {
-			ImGui::TextWrapped("%s", "Binary search takes the input and scans the entire content of every cache file and provides byte offsets into which files which match the input.");
-			ImGui::BulletText("%s", "Ctrl+C to copy the output");
-			ImGui::BulletText("%s", "Ctrl+F to refocus the input box");
-		}
-	}
-	ImGui::End();
-}
-
 #include "sha1.hpp"
 
 void validate_executables() {
@@ -586,6 +556,7 @@ void validate_executables() {
 #include <lua.hpp>
 
 #include <tinyfiledialogs.h>
+
 
 int lua_thumper_hash(lua_State* L) {
 	size_t len;
@@ -706,7 +677,6 @@ lua_State* L = luaL_newstate();
 
 	bool toolsHasher = false;
 	bool toolsBinarySearch = false;
-	bool viewHelp = false;
 	bool open = true;
 
 	
@@ -741,9 +711,7 @@ lua_State* L = luaL_newstate();
 
 				std::string lenStr = std::string(value, len);
 
-				console.items.push_back(fmt::format("0x{:x} = {}", key, lenStr));
-
-				gHashtable[key] = value;
+				gHashtable[key] = lenStr;
 
 				lua_pop(L, 2);
 			}
@@ -762,7 +730,7 @@ lua_State* L = luaL_newstate();
 	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE);
 	glfwWindowHint(GLFW_MAXIMIZED, GLFW_TRUE);
 
-	GLFWwindow* window = glfwCreateWindow(1280, 720, "Aurora v0.0.4-a.2", nullptr, nullptr);
+	GLFWwindow* window = glfwCreateWindow(1280, 720, "Aurora v0.0.4-a.3-WIP", nullptr, nullptr);
 
 	glfwMakeContextCurrent(window);
 	gladLoadGL(&glfwGetProcAddress);
@@ -844,12 +812,6 @@ lua_State* L = luaL_newstate();
 				ImGui::EndMenu();
 			}
 
-			if (ImGui::BeginMenu("Help")) {
-				ImGui::MenuItem("Help", nullptr, &viewHelp);
-
-				ImGui::EndMenu();
-			}
-
 			ImGui::EndMainMenuBar();
 		}
 
@@ -857,7 +819,6 @@ lua_State* L = luaL_newstate();
 			lua_pcall(L, 0, 0, 0);
 		} else lua_pop(L, 1);
 
-		help(viewHelp);
 		tools_hasher(toolsHasher, pcFileStorage);
 		tools_binary_search(toolsBinarySearch);
 

@@ -1,6 +1,7 @@
 /bin
 /bin_int
 /.vs
+/.idea
 *.sln
 *.vcxproj
 *.vcxproj.user
