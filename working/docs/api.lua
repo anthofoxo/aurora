@@ -66,6 +66,10 @@ ImGui = {
     
 	Text = function() end,
 	BulletText = function() end,
-	TextWrapped = function() end,
+
+    ---@param fmt string
+    ---@param ... any
+	TextWrapped = function(fmt, ...) end,
+
 	MenuItem = function() end,
 }

@@ -35,6 +35,8 @@ See [api.lua](api.lua) for the plugin api reference.
 * Removed changelog plugin
 * Removed help menus
 * Added `Aurora.unescape` plugin API
+* Added `Aurora.game_directory` plugin API
+* Added `ImGui.Button` plugin API
 * Hasher plugin now has feature parity with the builtin
 * Removed builtin hasher
 

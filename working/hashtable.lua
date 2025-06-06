@@ -1,4 +1,26 @@
 local hashes = {
+	----------------------
+	-- Translation Keys --
+	----------------------
+	"accept",
+	"no",
+	"level1",
+	"level2",
+	"level3",
+	"level4",
+	"level5",
+	"level6",
+	"level7",
+	"level8",
+	"level9",
+	"cancel",
+	"continue",
+	"play",
+	"yes",
+	"leaderboard_view",
+	"rank",
+	"retry",
+	"tip",
 	-----------
 	-- Other --
 	-----------

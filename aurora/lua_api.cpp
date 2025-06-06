@@ -111,6 +111,11 @@ namespace {
 		return 0;
 	}
 
+	int imgui_button(lua_State* L) {
+		lua_pushboolean(L, ImGui::Button(luaL_checkstring(L, 1)));
+		return 1;
+	}
+
 	int imgui_text_unformatted(lua_State* L) {
 		ImGui::TextUnformatted(luaL_checkstring(L, 1));
 		return 0;
@@ -219,5 +224,7 @@ void aurora::register_plugin_api(lua_State* L) {
 	lua_setfield(L, -2, "TextWrapped");
 	lua_pushcfunction(L, &imgui_menu_item);
 	lua_setfield(L, -2, "MenuItem");
+	lua_pushcfunction(L, &imgui_button);
+	lua_setfield(L, -2, "Button");
 	lua_setglobal(L, "ImGui");
 }

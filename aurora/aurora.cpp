@@ -607,6 +607,14 @@ lua_State* L = luaL_newstate();
 		});
 		lua_setfield(L, -2, "cache_hit");
 
+		lua_pushcfunction(L, [](lua_State* L)-> int {
+			lua_pushstring(L, kThumperDirectory.c_str());
+			return 1;
+		});
+		lua_setfield(L, -2, "game_directory");
+
+		
+
 		lua_pop(L, 1);
 
 		if (luaL_dofile(L, "boot.lua") != LUA_OK) {
@@ -707,7 +715,7 @@ lua_State* L = luaL_newstate();
 	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE);
 	glfwWindowHint(GLFW_MAXIMIZED, GLFW_TRUE);
 
-	GLFWwindow* window = glfwCreateWindow(1280, 720, "Aurora v0.0.4-a.3-WIP", nullptr, nullptr);
+	GLFWwindow* window = glfwCreateWindow(1280, 720, "Aurora v0.0.4-a.3", nullptr, nullptr);
 
 	glfwMakeContextCurrent(window);
 	gladLoadGL(&glfwGetProcAddress);
