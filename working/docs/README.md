@@ -27,6 +27,12 @@ The plugin API is **NOT** stable and may break between updates.
 See [api.lua](api.lua) for the plugin api reference.
 
 ## Changelog
+### v0.0.4-a.4
+* Extended the hashtable with more values
+* Unified plugin api functions
+* Added `Aurora.escape` plugin API
+* Fixed hashtable inputs from terminating strings early from `NUL` bytes
+
 ### v0.0.4-a.3
 * Extended the hashtable with more values
 * Fixed allocation bug with non-ascii hashtable values

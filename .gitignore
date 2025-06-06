@@ -10,3 +10,4 @@ Makefile
 imgui.ini
 /.vscode
 /working/config.lua
+/cmake-build-*

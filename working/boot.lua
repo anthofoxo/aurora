@@ -25,7 +25,7 @@ for _, entry in ipairs(Aurora.directory_iterator("plugins") or {}) do
 			plugin.enabled = true
 
 			if plugin.gui then
-				plugin.gui.visible = Aurora.box(plugin.gui.visible or false)
+				plugin.gui.visible = plugin.gui.visible or false
 			end
 
 			plugins[plugin.id] = plugin
@@ -43,39 +43,6 @@ end
 print(string.format("Loaded %d plugins", pluginCount))
 
 return {
-	OnUpdate = function()
-		if ImGui.BeginMainMenuBar() then
-			if ImGui.BeginMenu("Plugins") then
-				for id, plugin in pairs(plugins) do
-					if plugin.enabled then
-						ImGui.MenuItem(id, nil, plugin.gui.visible, true)
-					end
-				end
-				ImGui.EndMenu()
-			end
-			ImGui.EndMainMenuBar()
-		end
-
-		for id, plugin in pairs(plugins) do
-			if plugin.enabled then
-				local status, result = pcall(function()
-					if plugin.gui then
-						if Aurora.unbox(plugin.gui.visible) then
-							local title = string.format("%s (%s)", plugin.gui.title, id)
-							if ImGui.Begin(title, plugin.gui.visible) then
-								plugin.gui.OnGui()
-							end
-							ImGui.End()
-						end
-					end
-				end)
-
-				if not status then
-					print(string.format("Plugin %s disabled: %s", id, result))
-					plugin.enabled = false
-					Aurora.throw(result)
-				end
-			end
-		end
-	end
+    plugins = plugins,
+	-- OnUpdate = function() end
 }

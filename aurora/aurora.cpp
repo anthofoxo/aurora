@@ -6,26 +6,36 @@
 
 #include <glad/gl.h>
 #include <GLFW/glfw3.h>
-#include <cstdlib>
 #include <imgui.h>
+#include <imgui_internal.h>
+#include <misc/cpp/imgui_stdlib.h>
 #include <backends/imgui_impl_glfw.h>
 #include <backends/imgui_impl_opengl3.h>
-#include <misc/cpp/imgui_stdlib.h>
 
 #include "imspinner.h"
+#include "imgui_memory_editor.h"
+#include "sha1.hpp"
+#include "lua_api.hpp"
 
-#include <string>
-#include <vector>
+#include <lua.hpp>
 #include <spdlog/fmt/fmt.h>
+#include <tinyfiledialogs.h>
 
-#include <algorithm> 
+#include <algorithm>
 #include <cctype>
-#include <locale>
-#include <unordered_set>
-#include <sstream>
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
+#include <future>
+#include <locale>
+#include <optional>
 #include <span>
+#include <sstream>
+#include <string>
+#include <unordered_set>
+#include <vector>
+
+#include "au_util.hpp"
 
 ImFont* gVariableSpace = nullptr;
 ImFont* gMonoSpace = nullptr;
@@ -97,7 +107,7 @@ struct ExampleAppConsole {
 		if (ImGui::Button("Options"))
 			ImGui::OpenPopup("Options");
 		ImGui::SameLine();
-		Filter.Draw("Filter (\"incl,-excl\") (\"error\")", 180);
+		Filter.Draw(R"(Filter ("incl,-excl") ("error"))", 180);
 		ImGui::Separator();
 
 		// Reserve enough left-over height for 1 separator + 1 input text
@@ -108,30 +118,6 @@ struct ExampleAppConsole {
 				ImGui::EndPopup();
 			}
 
-			// Display every line as a separate entry so we can change their color or add custom widgets.
-			// If you only want raw text you can use ImGui::TextUnformatted(log.begin(), log.end());
-			// NB- if you have thousands of entries this approach may be too inefficient and may require user-side clipping
-			// to only process visible items. The clipper will automatically measure the height of your first item and then
-			// "seek" to display only items in the visible area.
-			// To use the clipper we can replace your standard loop:
-			//      for (int i = 0; i < Items.Size; i++)
-			//   With:
-			//      ImGuiListClipper clipper;
-			//      clipper.Begin(Items.Size);
-			//      while (clipper.Step())
-			//         for (int i = clipper.DisplayStart; i < clipper.DisplayEnd; i++)
-			// - That your items are evenly spaced (same height)
-			// - That you have cheap random access to your elements (you can access them given their index,
-			//   without processing all the ones before)
-			// You cannot this code as-is if a filter is active because it breaks the 'cheap random-access' property.
-			// We would need random-access on the post-filtered list.
-			// A typical application wanting coarse clipping and filtering may want to pre-compute an array of indices
-			// or offsets of items that passed the filtering test, recomputing this array when user changes the filter,
-			// and appending newly elements as they are inserted. This is left as a task to the user until we can manage
-			// to improve this example code!
-			// If your items are of variable height:
-			// - Split them into same height items would be simpler and facilitate random-seeking into your list.
-			// - Consider using manual call to IsRectVisible() and skipping extraneous decoration from your items.
 			ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(4, 1)); // Tighten spacing
 			if (copy_to_clipboard)
 				ImGui::LogToClipboard();
@@ -170,7 +156,7 @@ struct ExampleAppConsole {
 		bool reclaim_focus = false;
 		ImGuiInputTextFlags input_text_flags = ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_EscapeClearsAll | ImGuiInputTextFlags_CallbackCompletion | ImGuiInputTextFlags_CallbackHistory;
 
-		auto callback = [](ImGuiInputTextCallbackData* data) { return reinterpret_cast<ExampleAppConsole*>(data->UserData)->TextEditCallback(data); };
+		auto callback = [](ImGuiInputTextCallbackData* data) { return static_cast<ExampleAppConsole*>(data->UserData)->TextEditCallback(data); };
 
 		if (ImGui::InputText("Input", &inputBuf, input_text_flags, callback, (void*)this)) {
 			trim(inputBuf);
@@ -285,7 +271,7 @@ struct ExampleAppConsole {
 				}
 
 				// List matches
-				items.push_back("Possible matches:\n");
+				items.emplace_back("Possible matches:\n");
 				for (int i = 0; i < candidates.Size; i++)
 					items.push_back(fmt::format("- {}\n", candidates[i]));
 			}
@@ -321,50 +307,6 @@ struct ExampleAppConsole {
 };
 
 ExampleAppConsole console;
-
-
-
-std::string unescape_hex_string(const std::string& input) {
-	std::stringstream output;
-	for (size_t i = 0; i < input.length(); ++i) {
-		if (input[i] == '\\' && i + 3 < input.length() && input[i + 1] == 'x') {
-			std::stringstream hex_value;
-			hex_value << input[i + 2] << input[i + 3]; // Exactly 2 hex digits
-
-			unsigned int value;
-			hex_value >> std::hex >> value;
-			output << static_cast<char>(value);
-
-			i += 3; // Skip \xHH (4 characters total)
-		}
-		else {
-			output << input[i];
-		}
-	}
-	return output.str();
-}
-
-std::uint32_t thumper_hash(std::span<std::byte const> bytes) {
-	std::uint32_t value = 0x811c9dc5;
-
-	for (auto const& byte : bytes) {
-		value = (value ^ static_cast<std::uint32_t>(byte)) * 0x1000193;
-	}
-
-	value *= 0x2001;
-	value = value ^ (value >> 0x7);
-	value *= 0x9;
-	value = value ^ (value >> 0x11);
-	value *= 0x21;
-
-	return value;
-}
-
-#include <unordered_set>
-#include <optional>
-#include <future>
-
-#include "imgui_memory_editor.h"
 
 std::string kThumperDirectory;
 
@@ -405,15 +347,13 @@ void tools_binary_search(bool& aOpen) {
 	ImGui::End();
 
 	if (ImGui::Begin("Binary Search", &aOpen)) {
-		
-
 		ImGui::SetNextItemShortcut(ImGuiMod_Ctrl | ImGuiKey_F);
 		if (ImGui::InputText("Input", &input, ImGuiInputTextFlags_EnterReturnsTrue)) {
 			if (input.size() > 0 && !future) {
 				future = std::async(std::launch::async, [](std::string input) {
 					Result result;
 					
-					std::string parsed = unescape_hex_string(input);
+					std::string parsed = aurora::unescape(input);
 					result.pattern = input;
 
 					for (auto const& entry : std::filesystem::directory_iterator(std::filesystem::path(kThumperDirectory) / "cache")) {
@@ -485,6 +425,7 @@ void tools_binary_search(bool& aOpen) {
 				try {
 					auto hashValue = std::stoull(match.file.substr(0, match.file.size() - 3), nullptr, 16);
 					displayValue = gHashtable.at(static_cast<uint32_t>(hashValue));
+					displayValue = aurora::escape(displayValue);
 				} catch(std::exception const&) {
 				}
 
@@ -516,45 +457,30 @@ void tools_binary_search(bool& aOpen) {
 	ImGui::End();
 }
 
-#include "sha1.hpp"
-
 void validate_executables() {
-	console.items.push_back("Validating executables...");
+	console.items.emplace_back("Validating executables...");
 
 	std::string baseExePath = fmt::format("{}/{}", kThumperDirectory, "THUMPER_win8.exe");
 	std::string unpackedExePath = fmt::format("{}/{}", kThumperDirectory, "THUMPER_win8.exe.unpacked.exe");
 	
-	bool isBaseValid = std::filesystem::exists(baseExePath) && SHA1().from_file(baseExePath) == "d1384dd75cdd3759d95ff02dda32062c148e391e";
-	bool isUnpackedValid = std::filesystem::exists(unpackedExePath) && SHA1().from_file(unpackedExePath) == "f125aae1b2dcb16c3fa6db6ebe26a43c1d4f89aa";
+	bool isBaseValid = std::filesystem::exists(baseExePath) && SHA1::from_file(baseExePath) == "d1384dd75cdd3759d95ff02dda32062c148e391e";
+	bool isUnpackedValid = std::filesystem::exists(unpackedExePath) && SHA1::from_file(unpackedExePath) == "f125aae1b2dcb16c3fa6db6ebe26a43c1d4f89aa";
 
-	if (!isBaseValid) console.items.push_back("[warn] Incorrect hash for base executable");
-	if (!isUnpackedValid) console.items.push_back("[warn] Incorrect hash for unpacked executable");
+	if (!isBaseValid) console.items.emplace_back("[warn] Incorrect hash for base executable");
+	if (!isUnpackedValid) console.items.emplace_back("[warn] Incorrect hash for unpacked executable");
 
-}
-
-#include <lua.hpp>
-
-#include <tinyfiledialogs.h>
-
-
-int lua_thumper_hash(lua_State* L) {
-	size_t len;
-	char const* data = lua_tolstring(L, 1, &len);
-	std::uint32_t result = thumper_hash(std::span(reinterpret_cast<std::byte const*>(data), len));
-	lua_pushinteger(L, result);
-	return 1;
 }
 
 int lua_print(lua_State* L) {
-	console.items.push_back(lua_tostring(L, 1));
+	console.items.emplace_back(lua_tostring(L, 1));
 	return 0;
 }
 
 void cache_scan(std::unordered_set<std::string>& pcFileStorage) {
-	console.items.push_back("Scanning cache...");
+	console.items.emplace_back("Scanning cache...");
 
 	if (kThumperDirectory.empty()) {
-		console.items.push_back("No thumper path specified, cannot scan cache");
+		console.items.emplace_back("No thumper path specified, cannot scan cache");
 		return;
 	}
 
@@ -570,8 +496,6 @@ void cache_scan(std::unordered_set<std::string>& pcFileStorage) {
 
 std::unordered_set<std::string> pcFileStorage;
 
-#include "lua_api.hpp"
-
 int aurora_rhash(lua_State* L) {
 	auto it = gHashtable.find(luaL_checkinteger(L, 1));
 	if (it != gHashtable.end()) {
@@ -583,69 +507,63 @@ int aurora_rhash(lua_State* L) {
 	return 1;
 }
 
+lua_State* aurora_newstate() {
+	lua_State* L = luaL_newstate();
+
+	luaL_openlibs(L);
+	lua_register(L, "print", &lua_print);
+	aurora::register_plugin_api(L);
+
+	lua_getglobal(L, "Aurora");
+
+	lua_pushcfunction(L, &aurora_rhash);
+	lua_setfield(L, -2, "rhash");
+
+	lua_pushcfunction(L, [](lua_State* L)-> int {
+		lua_pushboolean(L, pcFileStorage.contains(luaL_checkstring(L, 1)));
+		return 1;
+	});
+	lua_setfield(L, -2, "cache_hit");
+
+	lua_pushcfunction(L, [](lua_State* L)-> int {
+		lua_pushstring(L, kThumperDirectory.c_str());
+		return 1;
+	});
+	lua_setfield(L, -2, "game_directory");
+
+	lua_pop(L, 1);
+
+	return L;
+}
+
 namespace aurora {
 void main() {
+	lua_State* L = aurora_newstate();
 
-
-lua_State* L = luaL_newstate();
-
-	{
-		luaL_openlibs(L);
-		lua_register(L, "print", &lua_print);
-		aurora::register_plugin_api(L);
-
-		lua_getglobal(L, "Aurora");
-		lua_pushcfunction(L, &lua_thumper_hash);
-		lua_setfield(L, -2, "hash");
-
-		lua_pushcfunction(L, &aurora_rhash);
-		lua_setfield(L, -2, "rhash");
-
-		lua_pushcfunction(L, [](lua_State* L)-> int {
-			lua_pushboolean(L, pcFileStorage.contains(luaL_checkstring(L, 1)));
-			return 1;
-		});
-		lua_setfield(L, -2, "cache_hit");
-
-		lua_pushcfunction(L, [](lua_State* L)-> int {
-			lua_pushstring(L, kThumperDirectory.c_str());
-			return 1;
-		});
-		lua_setfield(L, -2, "game_directory");
-
-		
-
-		lua_pop(L, 1);
-
-		if (luaL_dofile(L, "boot.lua") != LUA_OK) {
-			console.items.push_back(lua_tostring(L, -1));
-			std::cout << lua_tostring(L, -1) << '\n';
-		}
-
-		
+	if (luaL_dofile(L, "boot.lua") != LUA_OK) {
+		console.items.emplace_back(lua_tostring(L, -1));
+		std::cout << lua_tostring(L, -1) << '\n';
 	}
-
 
 	// Load configs
 	{
-		console.items.push_back("Loading aurora config");
+		console.items.emplace_back("Loading aurora config");
 
-		lua_State* L = luaL_newstate();
-		luaL_openlibs(L);
+		lua_State* L = aurora_newstate();
 
 		if (luaL_dofile(L, "config.lua") != LUA_OK) {
 			console.items.push_back(fmt::format("Lua Error: {}", lua_tostring(L, -1)));
 		}
 		else {
 			if (!lua_istable(L, -1)) {
-				console.items.push_back("Invalid config. Use `Tools > Set Thumper Path` to repair");
+				console.items.emplace_back("Invalid config. Use `Tools > Set Thumper Path` to repair");
 			}
 			else {
 				if (lua_getfield(L, -1, "path") == LUA_TSTRING) {
 					kThumperDirectory = lua_tostring(L, -1);
 				}
 				else {
-					console.items.push_back("Invalid config. Use `Tools > Set Thumper Path` to repair");
+					console.items.emplace_back("Invalid config. Use `Tools > Set Thumper Path` to repair");
 				}
 				lua_pop(L, 1);
 			}
@@ -654,10 +572,10 @@ lua_State* L = luaL_newstate();
 
 		lua_close(L);
 
-		console.items.push_back("Validating aurora config");
+		console.items.emplace_back("Validating aurora config");
 
 		if (!std::filesystem::exists(kThumperDirectory)) {
-			console.items.push_back("Specified path doesn't exist. Use `Tools > Set Thumper Path` to repair");
+			console.items.emplace_back("Specified path doesn't exist. Use `Tools > Set Thumper Path` to repair");
 			kThumperDirectory = "";
 		}
 	}
@@ -669,20 +587,16 @@ lua_State* L = luaL_newstate();
 	cache_scan(pcFileStorage);
 
 	// gHashtable
-	console.items.push_back("Loading hashtable...");
+	console.items.emplace_back("Loading hashtable...");
 	{
-		lua_State* L = luaL_newstate();
-		luaL_openlibs(L);
-
-		lua_register(L, "print", &lua_print); // replace default print with our console print
-		lua_register(L, "aurora_hash", &lua_thumper_hash);
+		lua_State* L = aurora_newstate();
 
 		if (luaL_dofile(L, "hashtable.lua") != LUA_OK) {
 			console.items.push_back(fmt::format("Lua Error: {}", lua_tostring(L, -1)));
 		}
 		else {
 			if (!lua_istable(L, -1)) {
-				console.items.push_back("Invalid hashtable");
+				console.items.emplace_back("Invalid hashtable");
 			}
 			
 			lua_pushnil(L);
@@ -705,7 +619,7 @@ lua_State* L = luaL_newstate();
 
 		lua_close(L);
 	}
-	console.items.push_back("Done");
+	console.items.emplace_back("Done");
 
 	glfwInit();
 
@@ -715,7 +629,7 @@ lua_State* L = luaL_newstate();
 	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE);
 	glfwWindowHint(GLFW_MAXIMIZED, GLFW_TRUE);
 
-	GLFWwindow* window = glfwCreateWindow(1280, 720, "Aurora v0.0.4-a.3", nullptr, nullptr);
+	GLFWwindow* window = glfwCreateWindow(1280, 720, "Aurora v0.0.4-a.4", nullptr, nullptr);
 
 	glfwMakeContextCurrent(window);
 	gladLoadGL(&glfwGetProcAddress);
@@ -733,10 +647,7 @@ lua_State* L = luaL_newstate();
 	ImGui_ImplGlfw_InitForOpenGL(window, true);
 	ImGui_ImplOpenGL3_Init("#version 450 core");
 
-	console.items.push_back("Welcome to Aurora!");
-
-	//console.items.push_back("Debug text");
-	//console.items.push_back("[error] Error text");
+	console.items.emplace_back("Welcome to Aurora!");
 
 	while(!glfwWindowShouldClose(window)) {
 		glfwPollEvents();
@@ -748,7 +659,6 @@ lua_State* L = luaL_newstate();
 		ImGui::DockSpaceOverViewport();
 
 		if (ImGui::BeginMainMenuBar()) {
-
 			if (ImGui::BeginMenu("Tools")) {
 				if (ImGui::MenuItem("Set Thumper Path")) {
 					char const* pattern = "THUMPER_*.exe";
@@ -757,12 +667,12 @@ lua_State* L = luaL_newstate();
 						std::string path = std::filesystem::path(result).parent_path().generic_string();
 
 						if (std::filesystem::exists(path)) {
-							console.items.push_back("New thumper directory specified, validating");
+							console.items.emplace_back("New thumper directory specified, validating");
 							kThumperDirectory = path;
 							validate_executables();
 							cache_scan(pcFileStorage);
 
-							console.items.push_back("Validation complete, writting to config");
+							console.items.emplace_back("Validation complete, writing to config");
 
 							std::string luaString;
 
@@ -784,7 +694,7 @@ lua_State* L = luaL_newstate();
 							stream.close();
 						}
 						else {
-							console.items.push_back("Specified path doesn't exist. Operation stopped");
+							console.items.emplace_back("Specified path doesn't exist. Operation stopped");
 						}
 					}
 				}
@@ -794,13 +704,139 @@ lua_State* L = luaL_newstate();
 
 				ImGui::EndMenu();
 			}
-
-			ImGui::EndMainMenuBar();
 		}
 
-		if (lua_getfield(L, -1, "OnUpdate") == LUA_TFUNCTION) {
-			lua_pcall(L, 0, 0, 0);
-		} else lua_pop(L, 1);
+		ImGui::EndMainMenuBar();
+
+		bool wantReloadPlugins = false;
+
+
+		ImGuiKeyChord chord = ImGuiMod_Ctrl | ImGuiMod_Shift | ImGuiKey_P;
+		bool isRouted = ImGui::GetShortcutRoutingData(chord)->RoutingCurr != ImGuiKeyOwner_NoOwner;
+		if (!isRouted && ImGui::IsKeyChordPressed(chord)) {
+			wantReloadPlugins = true;
+		}
+
+
+		// update plugins
+		{
+			// invoke script update
+			if (lua_getfield(L, -1, "OnUpdate") == LUA_TFUNCTION) {
+				lua_pcall(L, 0, 0, 0);
+			} else lua_pop(L, 1);
+
+			// Build plugin menu
+			if (ImGui::BeginMainMenuBar()) {
+				if (ImGui::BeginMenu("Plugins")) {
+					if (ImGui::MenuItem("Reload Plugins", ImGui::GetKeyChordName(ImGuiMod_Ctrl | ImGuiMod_Shift | ImGuiKey_P))) {
+						wantReloadPlugins = true;
+					}
+
+					ImGui::Separator();
+
+					if (lua_getfield(L, -1, "plugins") == LUA_TTABLE) {
+						lua_pushnil(L);
+						while (lua_next(L, -2)) {
+							lua_pushvalue(L, -2);
+							char const *key = lua_tostring(L, -1);
+
+							lua_getfield(L, -2, "enabled");
+							bool const enabled = lua_toboolean(L, -1);
+							lua_pop(L, 1);
+
+							if (enabled) {
+								if (lua_getfield(L, -2, "gui") == LUA_TTABLE) {
+									lua_getfield(L, -1, "visible");
+									bool visible = lua_toboolean(L, -1);
+									lua_pop(L, 1);
+
+									if (ImGui::MenuItem(key, nullptr, visible)) {
+										lua_pushliteral(L, "visible");
+										lua_pushboolean(L, !visible); // Flip visible flag
+										lua_rawset(L, -3);
+									}
+								}
+								lua_pop(L, 1);
+							}
+
+							lua_pop(L, 2);
+						}
+
+					}
+					lua_pop(L, 1);
+
+					ImGui::EndMenu();
+				}
+
+				ImGui::EndMainMenuBar();
+			}
+
+			// iterate plugins
+			if (lua_getfield(L, -1, "plugins") == LUA_TTABLE) {
+				lua_pushnil(L);
+				while (lua_next(L, -2)) {
+					lua_pushvalue(L, -2);
+					char const *key = lua_tostring(L, -1);
+
+					lua_getfield(L, -2, "enabled");
+					bool const enabled = lua_toboolean(L, -1);
+					lua_pop(L, 1);
+
+					if (enabled) {
+						// If a gui is defined for this plugin
+						if (lua_getfield(L, -2, "gui") == LUA_TTABLE) {
+
+							lua_getfield(L, -1, "visible");
+							bool visible = lua_toboolean(L, -1);
+							lua_pop(L, 1);
+
+							lua_getfield(L, -1, "title");
+							char const* title = lua_tostring(L, -1);
+							lua_pop(L, 1);
+
+							std::string const debugTitle = fmt::format("{} ({})", title, key);
+
+							if (visible) {
+								if (ImGui::Begin(debugTitle.c_str(), &visible)) {
+									if (lua_getfield(L, -1, "OnGui") == LUA_TFUNCTION) {
+										if (lua_pcall(L, 0, 0, 0) != LUA_OK) {
+											ImGui::TextUnformatted(lua_tostring(L, -1));
+											lua_pop(L, 1);
+										}
+									}
+									else lua_pop(L, 1);
+								}
+								ImGui::End();
+
+								if (!visible) {
+									lua_pushliteral(L, "visible");
+									lua_pushboolean(L, visible);
+									lua_rawset(L, -3);
+								}
+							}
+
+
+						}
+						lua_pop(L, 1);
+					}
+
+					lua_pop(L, 2);
+				}
+
+			}
+			lua_pop(L, 1);
+		}
+
+		if (wantReloadPlugins) {
+			lua_pop(L, 1);
+			lua_close(L);
+			L = aurora_newstate();
+
+			if (luaL_dofile(L, "boot.lua") != LUA_OK) {
+				console.items.emplace_back(lua_tostring(L, -1));
+				std::cout << lua_tostring(L, -1) << '\n';
+			}
+		}
 
 		tools_binary_search(toolsBinarySearch);
 
@@ -811,7 +847,7 @@ lua_State* L = luaL_newstate();
 		glfwGetFramebufferSize(window, &display_w, &display_h);
 		glViewport(0, 0, display_w, display_h);
 		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-		glClear(GL_COLOR_BUFFER_BIT);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
 		glfwSwapBuffers(window);

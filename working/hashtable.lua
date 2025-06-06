@@ -45,7 +45,6 @@ local hashes = {
 	--------
 	"Aui/hmd_help.objlib",
 	"Aui/rank_icons.objlib",
-	"Aui/strings.en.loc",
 	"Aui/thumper.levels",
 	"Aui/thumper.scoring",
 	------------
@@ -69,6 +68,7 @@ local hashes = {
 	"Alevels/level5/level_5a.objlib",
 	"Alevels/level6/level_6.objlib",
 	"Alevels/level7/level_7a.objlib",
+	"Alevels/level7/level_7a.objlib",
 	"Alevels/level8/level_8a.objlib",
 	"Alevels/level9/level_9a.objlib",
 	--------------------
@@ -85,18 +85,14 @@ local hashes = {
 	"Alevels/level9/level_9a.sec",
 }
 
-for _, value in ipairs(dofile("hashtable/textures.lua")) do
-	table.insert(hashes, value)
-end
-
-for _, value in ipairs(dofile("hashtable/meshes.lua")) do
-	table.insert(hashes, value)
-end
+for _, value in ipairs(dofile("hashtable/localization.lua")) do table.insert(hashes, value) end
+for _, value in ipairs(dofile("hashtable/meshes.lua")) do table.insert(hashes, value) end
+for _, value in ipairs(dofile("hashtable/textures.lua")) do table.insert(hashes, value) end
 
 local hashtable = {}
 
 for _, value in ipairs(hashes) do
-	hashtable[aurora_hash(value)] = value
+	hashtable[Aurora.hash(value)] = value
 end
 
 return hashtable

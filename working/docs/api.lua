@@ -15,11 +15,6 @@ Aurora = {
     is_regular_file = function(value) end,
 
     ---@param value string
-    ---@noreturn
-    ---@native
-    throw = function(value) end,
-
-    ---@param value string
     ---@return number
     ---@native
     hash = function(value) end,
@@ -48,6 +43,11 @@ Aurora = {
     ---@return string
     ---@native
     unescape = function(value) end,
+
+    ---@param value string
+    ---@return string
+    ---@native
+    escape = function(value) end,
 }
 
 ImGui = {

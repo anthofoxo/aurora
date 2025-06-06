@@ -5,33 +5,30 @@
 #include <imgui.h>
 #include <misc/cpp/imgui_stdlib.h>
 
+#include "au_util.hpp"
+
 namespace {
+	int lua_hash(lua_State* L) {
+		size_t len;
+		char const* data = lua_tolstring(L, 1, &len);
+		std::uint32_t const result = aurora::hash(std::span(reinterpret_cast<std::byte const*>(data), len));
+		lua_pushinteger(L, result);
+		return 1;
+	}
+
 	int lua_string_unescape(lua_State* L) {
 		std::size_t size;
 		char const* bytes = luaL_checklstring(L, 1, &size);
-		std::string text = std::string(bytes, size);
+		std::string const unescaped = aurora::unescape(std::string_view(bytes, size));
+		lua_pushlstring(L, unescaped.data(), unescaped.size());
+		return 1;
+	}
 
-		std::stringstream output;
-
-		for (size_t i = 0; i < text.length(); ++i) {
-			if (text[i] == '\\' && i + 3 < text.length() && text[i + 1] == 'x') {
-				std::stringstream hex_value;
-				hex_value << text[i + 2] << text[i + 3]; // Exactly 2 hex digits
-
-				unsigned int value;
-				hex_value >> std::hex >> value;
-				output << static_cast<char>(value);
-
-				i += 3; // Skip \xHH (4 characters total)
-			}
-			else {
-				output << text[i];
-			}
-		}
-
-		text = output.str();
-
-		lua_pushlstring(L, text.data(), text.size());
+	int lua_escape(lua_State* L) {
+		std::size_t size;
+		char const* bytes = luaL_checklstring(L, 1, &size);
+		std::string const escaped = aurora::escape(std::string_view(bytes, size));
+		lua_pushlstring(L, escaped.data(), escaped.size());
 		return 1;
 	}
 
@@ -58,11 +55,6 @@ namespace {
 	int aurora_is_regular_file(lua_State* L) {
 		lua_pushboolean(L, std::filesystem::is_regular_file(luaL_checkstring(L, 1)));
 		return 1;
-	}
-
-	int aurora_throw(lua_State* L) {
-		throw std::runtime_error(lua_tostring(L, -1));
-		return 0;
 	}
 
 	int imgui_begin(lua_State* L) {
@@ -191,10 +183,12 @@ void aurora::register_plugin_api(lua_State* L) {
 	lua_setfield(L, -2, "directory_iterator");
 	lua_pushcfunction(L, &aurora_is_regular_file);
 	lua_setfield(L, -2, "is_regular_file");
-	lua_pushcfunction(L, &aurora_throw);
-	lua_setfield(L, -2, "throw");
+	lua_pushcfunction(L, &lua_hash);
+	lua_setfield(L, -2, "hash");
 	lua_pushcfunction(L, &lua_string_unescape);
 	lua_setfield(L, -2, "unescape");
+	lua_pushcfunction(L, &lua_escape);
+	lua_setfield(L, -2, "escape");
 	lua_setglobal(L, "Aurora");
 
 	lua_newtable(L);
