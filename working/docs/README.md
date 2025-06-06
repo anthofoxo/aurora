@@ -30,8 +30,23 @@ See [api.lua](api.lua) for the plugin api reference.
 ### v0.0.4-a.4
 * Extended the hashtable with more values
 * Unified plugin api functions
-* Added `Aurora.escape` plugin API
 * Fixed hashtable inputs from terminating strings early from `NUL` bytes
+* Hasher will now directly lookup the input in the hashtable. e.g. `673863f9 -> Alevels/demo.objlib`
+* Improved error and crash handling of scripts
+* All plugins can be reloaded without restarting Aurora from the `Plugins > Reload Plugins` option
+* Some plugin internals have been moved into native code
+* Better Plugin API Documentation
+
+#### New API Functions
+* `Aurora.escape`
+* `ImGui.LabelText`
+* `ImGui.Separator`
+
+#### Removed API Functions
+* `ImGui.Begin`
+* `ImGui.End`
+* `ImGui.BeginMainMenuBar`
+* `ImGui.EndMainMenuBar`
 
 ### v0.0.4-a.3
 * Extended the hashtable with more values

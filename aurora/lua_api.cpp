@@ -57,37 +57,6 @@ namespace {
 		return 1;
 	}
 
-	int imgui_begin(lua_State* L) {
-		char const* title = luaL_checkstring(L, 1);
-
-		lua_rawgeti(L, 2, 1);
-		bool open = lua_toboolean(L, -1);
-		lua_pop(L, 1);
-
-		bool returnValue = ImGui::Begin(title, &open);
-
-		lua_pushboolean(L, open);
-		lua_rawseti(L, 2, 1);
-
-		lua_pushboolean(L, returnValue);
-		return 1;
-	}
-
-	int imgui_end(lua_State* L) {
-		ImGui::End();
-		return 0;
-	}
-
-	int imgui_begin_main_menu_bar(lua_State* L) {
-		lua_pushboolean(L, ImGui::BeginMainMenuBar());
-		return 1;
-	}
-
-	int imgui_end_main_menu_bar(lua_State* L) {
-		ImGui::EndMainMenuBar();
-		return 0;
-	}
-
 	int imgui_begin_menu(lua_State* L) {
 		lua_pushboolean(L, ImGui::BeginMenu(luaL_checkstring(L, 1)));
 		return 1;
@@ -97,6 +66,11 @@ namespace {
 		ImGui::EndMenu();
 		return 0;
 	};
+
+	int imgui_separator(lua_State* L) {
+		ImGui::Separator();
+		return 0;
+	}
 	
 	int imgui_separator_text(lua_State* L) {
 		ImGui::SeparatorText(luaL_checkstring(L, 1));
@@ -133,6 +107,18 @@ namespace {
 		lua_insert(L, 1);
 		lua_pcall(L, numArgs, 1, 0);
 		ImGui::TextUnformatted(lua_tostring(L, -1));
+		return 0;
+	}
+
+	int imgui_label_text(lua_State* L) {
+		char const* label = luaL_checkstring(L, 1);
+		int numArgs = lua_gettop(L);
+		lua_getglobal(L, "string");
+		lua_getfield(L, -1, "format");
+		lua_remove(L, -2);
+		lua_insert(L, 2);
+		lua_pcall(L, numArgs - 1, 1, 0);
+		ImGui::LabelText(label, "%s", lua_tostring(L, -1));
 		return 0;
 	}
 
@@ -192,14 +178,6 @@ void aurora::register_plugin_api(lua_State* L) {
 	lua_setglobal(L, "Aurora");
 
 	lua_newtable(L);
-	lua_pushcfunction(L, &imgui_begin);
-	lua_setfield(L, -2, "Begin");
-	lua_pushcfunction(L, &imgui_end);
-	lua_setfield(L, -2, "End");
-	lua_pushcfunction(L, &imgui_begin_main_menu_bar);
-	lua_setfield(L, -2, "BeginMainMenuBar");
-	lua_pushcfunction(L, &imgui_end_main_menu_bar);
-	lua_setfield(L, -2, "EndMainMenuBar");
 	lua_pushcfunction(L, &imgui_begin_menu);
 	lua_setfield(L, -2, "BeginMenu");
 	lua_pushcfunction(L, &imgui_end_menu);
@@ -214,11 +192,15 @@ void aurora::register_plugin_api(lua_State* L) {
 	lua_setfield(L, -2, "Text");
 	lua_pushcfunction(L, &imgui_bullet_text);
 	lua_setfield(L, -2, "BulletText");
+	lua_pushcfunction(L, &imgui_label_text);
+	lua_setfield(L, -2, "LabelText");
 	lua_pushcfunction(L, &imgui_text_wrapped);
 	lua_setfield(L, -2, "TextWrapped");
 	lua_pushcfunction(L, &imgui_menu_item);
 	lua_setfield(L, -2, "MenuItem");
 	lua_pushcfunction(L, &imgui_button);
 	lua_setfield(L, -2, "Button");
+	lua_pushcfunction(L, &imgui_separator);
+	lua_setfield(L, -2, "Separator");
 	lua_setglobal(L, "ImGui");
 }
