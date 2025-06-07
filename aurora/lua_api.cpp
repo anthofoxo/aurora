@@ -88,6 +88,11 @@ namespace {
 		return 0;
 	}
 
+	int imgui_sameline(lua_State* L) {
+		ImGui::SameLine();
+		return 0;
+	}
+
 	int imgui_input_text(lua_State* L) {
 		lua_rawgeti(L, 2, 1);
 		std::string text = lua_tostring(L, -1);
@@ -120,6 +125,35 @@ namespace {
 		lua_insert(L, 2);
 		lua_pcall(L, numArgs - 1, 1, 0);
 		ImGui::LabelText(label, "%s", lua_tostring(L, -1));
+		return 0;
+	}
+
+	int imgui_TextColored(lua_State* L) {
+		lua_rawgeti(L, 1, 1);
+		float r = lua_tonumber(L, -1);
+		lua_pop(L, 1);
+
+		lua_rawgeti(L, 1, 2);
+		float g = lua_tonumber(L, -1);
+		lua_pop(L, 1);
+
+		lua_rawgeti(L, 1, 3);
+		float b = lua_tonumber(L, -1);
+		lua_pop(L, 1);
+
+		lua_rawgeti(L, 1, 4);
+		float a = lua_tonumber(L, -1);
+		lua_pop(L, 1);
+
+		int numArgs = lua_gettop(L);
+		lua_getglobal(L, "string");
+		lua_getfield(L, -1, "format");
+		lua_remove(L, -2);
+		lua_insert(L, 2);
+		lua_pcall(L, numArgs - 1, 1, 0);
+
+		ImGui::TextColored({ r, g, b, a }, "%s", lua_tostring(L, -1));
+
 		return 0;
 	}
 
@@ -162,6 +196,31 @@ namespace {
 			lua_pushboolean(L, value);
 			return 1;
 	}
+
+	int imgui_PushStyleVar(lua_State* L) {
+		if (lua_isnumber(L, 2)) {
+			ImGui::PushStyleVar(lua_tointeger(L, 1), lua_tonumber(L, 2));
+		}
+		else if (lua_istable(L, 2)) {
+			lua_rawgeti(L, 2, 1);
+			float x = lua_tonumber(L, -1);
+			lua_pop(L, 1);
+			lua_rawgeti(L, 2, 2);
+			float y = lua_tonumber(L, -1);
+			lua_pop(L, 1);
+
+			ImGui::PushStyleVar(lua_tointeger(L, 1), { x, y });
+		}
+		else
+			luaL_typeerror(L, 2, "table|number");
+
+		return 0;
+	}
+
+	int imgui_PopStyleVar(lua_State* L) {
+		ImGui::PopStyleVar();
+		return 0;
+	}
 }
 
 void aurora::register_plugin_api(lua_State* L) {
@@ -203,5 +262,14 @@ void aurora::register_plugin_api(lua_State* L) {
 	lua_setfield(L, -2, "Button");
 	lua_pushcfunction(L, &imgui_separator);
 	lua_setfield(L, -2, "Separator");
+	lua_pushcfunction(L, &imgui_sameline);
+	lua_setfield(L, -2, "SameLine");
+	lua_pushcfunction(L, &imgui_TextColored);
+	lua_setfield(L, -2, "TextColored");
+	lua_pushcfunction(L, &imgui_PushStyleVar);
+	lua_setfield(L, -2, "PushStyleVar");
+	lua_pushcfunction(L, &imgui_PopStyleVar);
+	lua_setfield(L, -2, "PopStyleVar");
+
 	lua_setglobal(L, "ImGui");
 }

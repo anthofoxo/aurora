@@ -12,11 +12,17 @@
 * Plugin windows now have a default size
 * Hashtable and plugin processes are now joined together
 * Improve native error handing
+* Fixed sign extension bug with `Aurora.escape`
+* New fuzzy hashtable search
 
 ### New API Functions
 * `Aurora.escape`
 * `ImGui.LabelText`
 * `ImGui.Separator`
+* `ImGui.SameLine`
+* `ImGui.TextColored`
+* `ImGui.PushStyleVar`
+* `ImGui.PopStyleVar`
 
 ### Removed API Functions
 * `ImGui.Begin`

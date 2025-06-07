@@ -47,7 +47,7 @@ namespace aurora {
                 output << input[i];
             }
             else {
-                output << "\\x" << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(input[i]);
+                output << "\\x" << std::hex << std::setw(2) << std::setfill('0') << static_cast<unsigned int>(static_cast<unsigned char>(input[i]));
             }
         }
 

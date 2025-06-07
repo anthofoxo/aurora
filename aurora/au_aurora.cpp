@@ -841,6 +841,16 @@ void main() {
 
 		ImGui::EndMainMenuBar();
 
+		static bool showDemo = false;
+
+		if (route_global_shortcut(ImGuiMod_Ctrl | ImGuiMod_Shift | ImGuiKey_D)) {
+			showDemo ^= true;
+		}
+
+		if (showDemo) {
+			ImGui::ShowDemoWindow();
+		}
+
 		if (route_global_shortcut(ImGuiMod_Ctrl | ImGuiMod_Shift | ImGuiKey_P)) {
 			pluginEngine.reload();
 		}

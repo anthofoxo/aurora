@@ -47,6 +47,16 @@ ImGui = {
 	BeginMenu = function() end,
 	EndMenu = function() end,
 	
+    ---@param style integer
+    ---@param value table|number
+    PushStyleVar = function(style, value) end,
+
+    PopStyleVar = function() end,
+
+    TextColored = function(color, fmt, ...) end,
+
+    SameLine = function() end,
+
     ---@param text string
 	TextUnformatted = function(text) end,
 
