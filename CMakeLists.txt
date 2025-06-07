@@ -9,8 +9,8 @@ add_subdirectory(vendor)
 project(aurora)
 
 add_executable(aurora
-        aurora/entrypoint.cpp
-        aurora/aurora.cpp
+        aurora/au_entrypoint.cpp
+        aurora/au_aurora.cpp
         aurora/imgui_memory_editor.h
         aurora/imspinner.h
         aurora/lua_api.cpp

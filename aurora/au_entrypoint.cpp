@@ -20,13 +20,6 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 int main(int, char**)
 #endif
 {
-	try {
-		aurora::main();
-		return EXIT_SUCCESS;
-	}
-	catch (std::exception const& e) {
-		std::cerr << e.what() << '\n';
-		tinyfd_messageBox("Critial Error", e.what(), "ok", "error", 1);
-		return EXIT_FAILURE;
-	}
+	aurora::main();
+	return EXIT_SUCCESS;
 }

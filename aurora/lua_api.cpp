@@ -32,6 +32,7 @@ namespace {
 		return 1;
 	}
 
+	// ReSharper disable once CppDFAConstantFunctionResult
 	int aurora_directory_iterator(lua_State* L) {
 		char const* directory = luaL_checkstring(L, 1);
 
@@ -41,7 +42,7 @@ namespace {
 		}
 
 		lua_newtable(L);
-		std::size_t index = 1;
+		lua_Integer index = 1;
 
 		for(auto const& entry : std::filesystem::directory_iterator(directory)) {
 			std::u8string const string = entry.path().generic_u8string();
@@ -153,12 +154,12 @@ namespace {
 			bool selected = lua_toboolean(L, -1);
 			lua_pop(L, 1);
 
-			bool returnvalue = ImGui::MenuItem(label, nullptr, &selected, true);
+			bool value = ImGui::MenuItem(label, nullptr, &selected, true);
 
 			lua_pushboolean(L, selected);
 			lua_rawseti(L, 3, 1);
 
-			lua_pushboolean(L, returnvalue);
+			lua_pushboolean(L, value);
 			return 1;
 	}
 }

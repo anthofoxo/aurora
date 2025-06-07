@@ -536,14 +536,177 @@ lua_State* aurora_newstate() {
 	return L;
 }
 
+struct PluginEngine {
+	void reload() {
+		shutdown();
+
+		L = aurora_newstate();
+
+		if (luaL_dofile(L, "boot.lua") != LUA_OK) {
+			console.items.emplace_back(lua_tostring(L, -1));
+			shutdown();
+			return;
+		}
+
+		// Iterate over provided hashtable and store it in the aurora database
+		gHashtable.clear();
+
+		if (lua_getfield(L, -1, "hashtable") == LUA_TTABLE) {
+			lua_pushnil(L);
+
+			while (lua_next(L, -2)) {
+				lua_pushvalue(L, -2);
+
+				std::size_t size;
+				char const* data = lua_tolstring(L, -2, &size);
+
+				gHashtable[lua_tointeger(L, -1)] = std::string(data, size);
+
+				lua_pop(L, 2);
+			}
+		}
+		lua_pop(L, 1);
+	}
+
+	void update() {
+		if (!L) return;
+
+		bool wantReloadPlugins = false;
+
+		// If OnUpdate is provided, invoke it
+		if (lua_getfield(L, -1, "OnUpdate") == LUA_TFUNCTION) {
+			lua_pcall(L, 0, 0, 0);
+		} else lua_pop(L, 1);
+
+		// Build plugin menu
+		if (ImGui::BeginMainMenuBar()) {
+			if (ImGui::BeginMenu("Plugins")) {
+				if (ImGui::MenuItem("Reload Plugins", ImGui::GetKeyChordName(ImGuiMod_Ctrl | ImGuiMod_Shift | ImGuiKey_P))) {
+					wantReloadPlugins = true;
+				}
+
+				ImGui::Separator();
+
+				if (lua_getfield(L, -1, "plugins") == LUA_TTABLE) {
+					lua_pushnil(L);
+					while (lua_next(L, -2)) {
+						lua_pushvalue(L, -2);
+						char const *key = lua_tostring(L, -1);
+
+						lua_getfield(L, -2, "enabled");
+						bool const enabled = lua_toboolean(L, -1);
+						lua_pop(L, 1);
+
+						if (enabled) {
+							if (lua_getfield(L, -2, "gui") == LUA_TTABLE) {
+								lua_getfield(L, -1, "visible");
+								bool visible = lua_toboolean(L, -1);
+								lua_pop(L, 1);
+
+								if (ImGui::MenuItem(key, nullptr, visible)) {
+									lua_pushliteral(L, "visible");
+									lua_pushboolean(L, !visible); // Flip visible flag
+									lua_rawset(L, -3);
+								}
+							}
+							lua_pop(L, 1);
+						}
+
+						lua_pop(L, 2);
+					}
+
+				}
+				lua_pop(L, 1);
+
+				ImGui::EndMenu();
+			}
+
+			ImGui::EndMainMenuBar();
+		}
+
+		// iterate plugins
+		if (lua_getfield(L, -1, "plugins") == LUA_TTABLE) {
+			lua_pushnil(L);
+			while (lua_next(L, -2)) {
+				lua_pushvalue(L, -2);
+				char const *key = lua_tostring(L, -1);
+
+				lua_getfield(L, -2, "enabled");
+				bool const enabled = lua_toboolean(L, -1);
+				lua_pop(L, 1);
+
+				if (enabled) {
+					// If a gui is defined for this plugin
+					if (lua_getfield(L, -2, "gui") == LUA_TTABLE) {
+
+						lua_getfield(L, -1, "visible");
+						bool visible = lua_toboolean(L, -1);
+						lua_pop(L, 1);
+
+						lua_getfield(L, -1, "title");
+						char const* title = lua_tostring(L, -1);
+						lua_pop(L, 1);
+
+						std::string const debugTitle = fmt::format("{} ({})", title, key);
+
+						if (visible) {
+							ImGui::SetNextWindowSize(ImVec2(640, 480), ImGuiCond_FirstUseEver);
+							if (ImGui::Begin(debugTitle.c_str(), &visible)) {
+								if (lua_getfield(L, -1, "OnGui") == LUA_TFUNCTION) {
+									if (lua_pcall(L, 0, 0, 0) != LUA_OK) {
+										ImGui::TextUnformatted(lua_tostring(L, -1));
+										lua_pop(L, 1);
+									}
+								}
+								else lua_pop(L, 1);
+							}
+							ImGui::End();
+
+							if (!visible) {
+								lua_pushliteral(L, "visible");
+								lua_pushboolean(L, visible);
+								lua_rawset(L, -3);
+							}
+						}
+
+
+					}
+					lua_pop(L, 1);
+				}
+
+				lua_pop(L, 2);
+			}
+
+		}
+		lua_pop(L, 1);
+
+		if (wantReloadPlugins) {
+			reload();
+		}
+	}
+
+	void shutdown() {
+		if (L) lua_close(L);
+		L = nullptr;
+	}
+
+	lua_State* L = nullptr;
+};
+
+bool route_global_shortcut(ImGuiKeyChord const chord) {
+	bool const isRouted = ImGui::GetShortcutRoutingData(chord)->RoutingCurr != ImGuiKeyOwner_NoOwner;
+	return !isRouted && ImGui::IsKeyChordPressed(chord);
+}
+
+void throw_error_box(std::string const& message) {
+	tinyfd_messageBox("Critical Error", message.c_str(), "ok", "error", 1);
+	throw std::runtime_error(message);
+}
+
 namespace aurora {
 void main() {
-	lua_State* L = aurora_newstate();
-
-	if (luaL_dofile(L, "boot.lua") != LUA_OK) {
-		console.items.emplace_back(lua_tostring(L, -1));
-		std::cout << lua_tostring(L, -1) << '\n';
-	}
+	PluginEngine pluginEngine;
+	pluginEngine.reload();
 
 	// Load configs
 	{
@@ -586,42 +749,11 @@ void main() {
 	validate_executables();
 	cache_scan(pcFileStorage);
 
-	// gHashtable
-	console.items.emplace_back("Loading hashtable...");
-	{
-		lua_State* L = aurora_newstate();
+	glfwSetErrorCallback([](int errorCode, const char *description) {
+		std::cerr << description << '\n';
+	});
 
-		if (luaL_dofile(L, "hashtable.lua") != LUA_OK) {
-			console.items.push_back(fmt::format("Lua Error: {}", lua_tostring(L, -1)));
-		}
-		else {
-			if (!lua_istable(L, -1)) {
-				console.items.emplace_back("Invalid hashtable");
-			}
-			
-			lua_pushnil(L);
-
-			while (lua_next(L, -2)) {
-				lua_pushvalue(L, -2);
-
-				auto key = lua_tointeger(L, -1);
-				size_t len;
-				char const* value = lua_tolstring(L, -2, &len);
-
-				std::string lenStr = std::string(value, len);
-
-				gHashtable[key] = lenStr;
-
-				lua_pop(L, 2);
-			}
-		}
-		lua_pop(L, 1);
-
-		lua_close(L);
-	}
-	console.items.emplace_back("Done");
-
-	glfwInit();
+	if (!glfwInit()) throw_error_box("Failed to initialize GLFW");
 
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 5);
@@ -630,9 +762,10 @@ void main() {
 	glfwWindowHint(GLFW_MAXIMIZED, GLFW_TRUE);
 
 	GLFWwindow* window = glfwCreateWindow(1280, 720, "Aurora v0.0.4-a.4", nullptr, nullptr);
+	if (!window) throw_error_box("Failed to create GLFW window");
 
 	glfwMakeContextCurrent(window);
-	gladLoadGL(&glfwGetProcAddress);
+	if (!gladLoadGL(&glfwGetProcAddress)) throw_error_box("Failed to initialize GLAD");
 
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
@@ -708,135 +841,11 @@ void main() {
 
 		ImGui::EndMainMenuBar();
 
-		bool wantReloadPlugins = false;
-
-
-		ImGuiKeyChord chord = ImGuiMod_Ctrl | ImGuiMod_Shift | ImGuiKey_P;
-		bool isRouted = ImGui::GetShortcutRoutingData(chord)->RoutingCurr != ImGuiKeyOwner_NoOwner;
-		if (!isRouted && ImGui::IsKeyChordPressed(chord)) {
-			wantReloadPlugins = true;
+		if (route_global_shortcut(ImGuiMod_Ctrl | ImGuiMod_Shift | ImGuiKey_P)) {
+			pluginEngine.reload();
 		}
 
-
-		// update plugins
-		{
-			// invoke script update
-			if (lua_getfield(L, -1, "OnUpdate") == LUA_TFUNCTION) {
-				lua_pcall(L, 0, 0, 0);
-			} else lua_pop(L, 1);
-
-			// Build plugin menu
-			if (ImGui::BeginMainMenuBar()) {
-				if (ImGui::BeginMenu("Plugins")) {
-					if (ImGui::MenuItem("Reload Plugins", ImGui::GetKeyChordName(ImGuiMod_Ctrl | ImGuiMod_Shift | ImGuiKey_P))) {
-						wantReloadPlugins = true;
-					}
-
-					ImGui::Separator();
-
-					if (lua_getfield(L, -1, "plugins") == LUA_TTABLE) {
-						lua_pushnil(L);
-						while (lua_next(L, -2)) {
-							lua_pushvalue(L, -2);
-							char const *key = lua_tostring(L, -1);
-
-							lua_getfield(L, -2, "enabled");
-							bool const enabled = lua_toboolean(L, -1);
-							lua_pop(L, 1);
-
-							if (enabled) {
-								if (lua_getfield(L, -2, "gui") == LUA_TTABLE) {
-									lua_getfield(L, -1, "visible");
-									bool visible = lua_toboolean(L, -1);
-									lua_pop(L, 1);
-
-									if (ImGui::MenuItem(key, nullptr, visible)) {
-										lua_pushliteral(L, "visible");
-										lua_pushboolean(L, !visible); // Flip visible flag
-										lua_rawset(L, -3);
-									}
-								}
-								lua_pop(L, 1);
-							}
-
-							lua_pop(L, 2);
-						}
-
-					}
-					lua_pop(L, 1);
-
-					ImGui::EndMenu();
-				}
-
-				ImGui::EndMainMenuBar();
-			}
-
-			// iterate plugins
-			if (lua_getfield(L, -1, "plugins") == LUA_TTABLE) {
-				lua_pushnil(L);
-				while (lua_next(L, -2)) {
-					lua_pushvalue(L, -2);
-					char const *key = lua_tostring(L, -1);
-
-					lua_getfield(L, -2, "enabled");
-					bool const enabled = lua_toboolean(L, -1);
-					lua_pop(L, 1);
-
-					if (enabled) {
-						// If a gui is defined for this plugin
-						if (lua_getfield(L, -2, "gui") == LUA_TTABLE) {
-
-							lua_getfield(L, -1, "visible");
-							bool visible = lua_toboolean(L, -1);
-							lua_pop(L, 1);
-
-							lua_getfield(L, -1, "title");
-							char const* title = lua_tostring(L, -1);
-							lua_pop(L, 1);
-
-							std::string const debugTitle = fmt::format("{} ({})", title, key);
-
-							if (visible) {
-								if (ImGui::Begin(debugTitle.c_str(), &visible)) {
-									if (lua_getfield(L, -1, "OnGui") == LUA_TFUNCTION) {
-										if (lua_pcall(L, 0, 0, 0) != LUA_OK) {
-											ImGui::TextUnformatted(lua_tostring(L, -1));
-											lua_pop(L, 1);
-										}
-									}
-									else lua_pop(L, 1);
-								}
-								ImGui::End();
-
-								if (!visible) {
-									lua_pushliteral(L, "visible");
-									lua_pushboolean(L, visible);
-									lua_rawset(L, -3);
-								}
-							}
-
-
-						}
-						lua_pop(L, 1);
-					}
-
-					lua_pop(L, 2);
-				}
-
-			}
-			lua_pop(L, 1);
-		}
-
-		if (wantReloadPlugins) {
-			lua_pop(L, 1);
-			lua_close(L);
-			L = aurora_newstate();
-
-			if (luaL_dofile(L, "boot.lua") != LUA_OK) {
-				console.items.emplace_back(lua_tostring(L, -1));
-				std::cout << lua_tostring(L, -1) << '\n';
-			}
-		}
+		pluginEngine.update();
 
 		tools_binary_search(toolsBinarySearch);
 
@@ -853,7 +862,8 @@ void main() {
 		glfwSwapBuffers(window);
 	}
 
-	lua_close(L);
+	pluginEngine.shutdown();
+
 	ImGui_ImplOpenGL3_Shutdown();
 	ImGui_ImplGlfw_Shutdown();
 	ImGui::DestroyContext();

@@ -10,8 +10,6 @@ return {
 		visible = true,
 		title = "Hasher",
 		OnGui = function()
-			ImGui.LabelText("Text", "%s awoo %d", "awwwwwwooo", 20)
-
 			if ImGui.InputText("Input", input) then
 				local unboxed = Aurora.unbox(input)
 
