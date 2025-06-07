@@ -62,20 +62,9 @@ inline void trim(std::string& s) {
 }
 
 struct ExampleAppConsole {
-	std::string inputBuf;
 	std::vector<std::string> items;
-	ImVector<const char*> Commands;
-	std::vector<std::string> history;
-	int                   HistoryPos = -1;    // -1: new line, 0..History.Size-1 browsing history.
-	ImGuiTextFilter       Filter;
 	bool                  AutoScroll = true;
 	bool                  ScrollToBottom = false;
-
-	ExampleAppConsole() {
-		Commands.push_back("help");
-		Commands.push_back("history");
-		Commands.push_back("clear");	
-	}
 
 	// Portable helpers
 	static int   Strnicmp(const char* s1, const char* s2, int n) { int d = 0; while (n > 0 && (d = toupper(*s2) - toupper(*s1)) == 0 && *s1) { s1++; s2++; n--; } return d; }
@@ -87,8 +76,6 @@ struct ExampleAppConsole {
 			ImGui::End();
 			return;
 		}
-
-		
 		
 		if (ImGui::SmallButton("Clear")) { items.clear(); }
 		ImGui::SameLine();
@@ -96,21 +83,6 @@ struct ExampleAppConsole {
 		
 		ImGui::Separator();
 
-		// Options menu
-		if (ImGui::BeginPopup("Options")) {
-			ImGui::Checkbox("Auto-scroll", &AutoScroll);
-			ImGui::EndPopup();
-		}
-
-		// Options, Filter
-		ImGui::SetNextItemShortcut(ImGuiMod_Ctrl | ImGuiKey_O, ImGuiInputFlags_Tooltip);
-		if (ImGui::Button("Options"))
-			ImGui::OpenPopup("Options");
-		ImGui::SameLine();
-		Filter.Draw(R"(Filter ("incl,-excl") ("error"))", 180);
-		ImGui::Separator();
-
-		// Reserve enough left-over height for 1 separator + 1 input text
 		const float footer_height_to_reserve = ImGui::GetStyle().ItemSpacing.y + ImGui::GetFrameHeightWithSpacing();
 		if (ImGui::BeginChild("ScrollingRegion", ImVec2(0, -footer_height_to_reserve), ImGuiChildFlags_NavFlattened, ImGuiWindowFlags_HorizontalScrollbar)) {
 			if (ImGui::BeginPopupContextWindow()) {
@@ -119,12 +91,9 @@ struct ExampleAppConsole {
 			}
 
 			ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(4, 1)); // Tighten spacing
-			if (copy_to_clipboard)
-				ImGui::LogToClipboard();
-			for (auto const& item : items)
-			{
-				if (!Filter.PassFilter(item.c_str()))
-					continue;
+			if (copy_to_clipboard) ImGui::LogToClipboard();
+
+			for (auto const& item : items) {
 
 				// Normally you would store more information in your item than just a string.
 				// (e.g. make Items[] an array of structure, store color/type etc.)
@@ -132,14 +101,13 @@ struct ExampleAppConsole {
 				bool has_color = false;
 				if (item.starts_with("[error]")) { color = ImVec4(1.0f, 0.4f, 0.4f, 1.0f); has_color = true; }
 				else if (item.starts_with("# ")) { color = ImVec4(1.0f, 0.8f, 0.6f, 1.0f); has_color = true; }
-				if (has_color)
-					ImGui::PushStyleColor(ImGuiCol_Text, color);
+
+				if (has_color) ImGui::PushStyleColor(ImGuiCol_Text, color);
 				ImGui::TextUnformatted(item.c_str());
-				if (has_color)
-					ImGui::PopStyleColor();
+				if (has_color) ImGui::PopStyleColor();
 			}
-			if (copy_to_clipboard)
-				ImGui::LogFinish();
+
+			if (copy_to_clipboard) ImGui::LogFinish();
 
 			// Keep up at the bottom of the scroll region if we were already at the bottom at the beginning of the frame.
 			// Using a scrollbar or mouse-wheel will take away from the bottom edge.
@@ -150,159 +118,8 @@ struct ExampleAppConsole {
 			ImGui::PopStyleVar();
 		}
 		ImGui::EndChild();
-		ImGui::Separator();
-
-		// Command-line
-		bool reclaim_focus = false;
-		ImGuiInputTextFlags input_text_flags = ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_EscapeClearsAll | ImGuiInputTextFlags_CallbackCompletion | ImGuiInputTextFlags_CallbackHistory;
-
-		auto callback = [](ImGuiInputTextCallbackData* data) { return static_cast<ExampleAppConsole*>(data->UserData)->TextEditCallback(data); };
-
-		if (ImGui::InputText("Input", &inputBuf, input_text_flags, callback, (void*)this)) {
-			trim(inputBuf);
-			if (!inputBuf.empty()) exec_command(inputBuf);
-			inputBuf.clear();
-			reclaim_focus = true;
-		}
-
-		ImGui::SetItemDefaultFocus();
-		if (reclaim_focus) ImGui::SetKeyboardFocusHere(-1);
 
 		ImGui::End();
-	}
-
-	void exec_command(std::string const& command_line) {
-		items.push_back(fmt::format("# {}", command_line));
-
-		HistoryPos = -1;
-
-		for (int i = history.size() - 1; i >= 0; i--) {
-			if (history[i] == command_line) {
-				history.erase(history.begin() + i);
-				break;
-			}
-		}
-
-		history.push_back(command_line);
-
-		if (command_line == "clear") {
-			items.clear();
-		}
-		else if (command_line == "help") {
-			items.push_back("Commands:");
-			for (int i = 0; i < Commands.Size; i++)
-				items.push_back(fmt::format("- {}", Commands[i]));
-		}
-		else if (command_line == "history") {
-			int first = history.size() - 10;
-
-			for (int i = first > 0 ? first : 0; i < history.size(); i++) {
-				items.push_back(fmt::format("{}: {}\n", i, history[i]));
-			}
-		}
-		else {
-			items.push_back(fmt::format("Unknown command: `{}`\n", command_line));
-		}
-
-		ScrollToBottom = true;
-	}
-
-	int TextEditCallback(ImGuiInputTextCallbackData* data)
-	{
-		//AddLog("cursor: %d, selection: %d-%d", data->CursorPos, data->SelectionStart, data->SelectionEnd);
-		switch (data->EventFlag)
-		{
-		case ImGuiInputTextFlags_CallbackCompletion:
-		{
-			// Example of TEXT COMPLETION
-
-			// Locate beginning of current word
-			const char* word_end = data->Buf + data->CursorPos;
-			const char* word_start = word_end;
-			while (word_start > data->Buf)
-			{
-				const char c = word_start[-1];
-				if (c == ' ' || c == '\t' || c == ',' || c == ';')
-					break;
-				word_start--;
-			}
-
-			// Build a list of candidates
-			ImVector<const char*> candidates;
-			for (int i = 0; i < Commands.Size; i++)
-				if (Strnicmp(Commands[i], word_start, (int)(word_end - word_start)) == 0)
-					candidates.push_back(Commands[i]);
-
-			if (candidates.Size == 0)
-			{
-				// No match
-				items.push_back(fmt::format("No match for \"{}\"!\n", std::string_view(word_start, (int)(word_end - word_start))));
-			}
-			else if (candidates.Size == 1)
-			{
-				// Single match. Delete the beginning of the word and replace it entirely so we've got nice casing.
-				data->DeleteChars((int)(word_start - data->Buf), (int)(word_end - word_start));
-				data->InsertChars(data->CursorPos, candidates[0]);
-				data->InsertChars(data->CursorPos, " ");
-			}
-			else
-			{
-				// Multiple matches. Complete as much as we can..
-				// So inputting "C"+Tab will complete to "CL" then display "CLEAR" and "CLASSIFY" as matches.
-				int match_len = (int)(word_end - word_start);
-				for (;;)
-				{
-					int c = 0;
-					bool all_candidates_matches = true;
-					for (int i = 0; i < candidates.Size && all_candidates_matches; i++)
-						if (i == 0)
-							c = toupper(candidates[i][match_len]);
-						else if (c == 0 || c != toupper(candidates[i][match_len]))
-							all_candidates_matches = false;
-					if (!all_candidates_matches)
-						break;
-					match_len++;
-				}
-
-				if (match_len > 0)
-				{
-					data->DeleteChars((int)(word_start - data->Buf), (int)(word_end - word_start));
-					data->InsertChars(data->CursorPos, candidates[0], candidates[0] + match_len);
-				}
-
-				// List matches
-				items.emplace_back("Possible matches:\n");
-				for (int i = 0; i < candidates.Size; i++)
-					items.push_back(fmt::format("- {}\n", candidates[i]));
-			}
-
-			break;
-		}
-		case ImGuiInputTextFlags_CallbackHistory:
-		{
-			// Example of HISTORY
-			const int prev_history_pos = HistoryPos;
-			if (data->EventKey == ImGuiKey_UpArrow) {
-				if (HistoryPos == -1)
-					HistoryPos = history.size() - 1;
-				else if (HistoryPos > 0)
-					HistoryPos--;
-			}
-			else if (data->EventKey == ImGuiKey_DownArrow) {
-				if (HistoryPos != -1)
-					if (++HistoryPos >= history.size())
-						HistoryPos = -1;
-			}
-
-			// A better implementation would preserve the data on the current input line along with cursor position.
-			if (prev_history_pos != HistoryPos) {
-				const char* history_str = (HistoryPos >= 0) ? history[HistoryPos].c_str() : "";
-				data->DeleteChars(0, data->BufTextLen);
-				data->InsertChars(0, history_str);
-			}
-		}
-		}
-		return 0;
 	}
 };
 
@@ -349,7 +166,7 @@ void tools_binary_search(bool& aOpen) {
 	if (ImGui::Begin("Binary Search", &aOpen)) {
 		ImGui::SetNextItemShortcut(ImGuiMod_Ctrl | ImGuiKey_F);
 		if (ImGui::InputText("Input", &input, ImGuiInputTextFlags_EnterReturnsTrue)) {
-			if (input.size() > 0 && !future) {
+			if (!input.empty() && !future) {
 				future = std::async(std::launch::async, [](std::string input) {
 					Result result;
 					
@@ -581,7 +398,7 @@ struct PluginEngine {
 		// Build plugin menu
 		if (ImGui::BeginMainMenuBar()) {
 			if (ImGui::BeginMenu("Plugins")) {
-				if (ImGui::MenuItem("Reload Plugins", ImGui::GetKeyChordName(ImGuiMod_Ctrl | ImGuiMod_Shift | ImGuiKey_P))) {
+				if (ImGui::MenuItem("Reload Plugins", ImGui::GetKeyChordName(ImGuiMod_Ctrl | ImGuiMod_Shift | ImGuiKey_R))) {
 					wantReloadPlugins = true;
 				}
 
@@ -851,7 +668,7 @@ void main() {
 			ImGui::ShowDemoWindow();
 		}
 
-		if (route_global_shortcut(ImGuiMod_Ctrl | ImGuiMod_Shift | ImGuiKey_P)) {
+		if (route_global_shortcut(ImGuiMod_Ctrl | ImGuiMod_Shift | ImGuiKey_R)) {
 			pluginEngine.reload();
 		}
 
