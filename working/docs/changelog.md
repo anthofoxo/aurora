@@ -14,15 +14,41 @@
 * Improve native error handing
 * Fixed sign extension bug with `Aurora.escape`
 * New fuzzy hashtable search
+* Removed `boot.lua:OnUpdate` function. Now handled in native code.
+* Fixed bug preventing the console from being closed
+* Started exposing OpenGL API functions
+* Added plugin unload hook
+* Added texture viewer and exporter
 
 ### New API Functions
 * `Aurora.escape`
+* `Aurora.read_file`
+* `Aurora.write_file`
+* `Aurora.create_directory`
+* `Aurora.create_directories`
+* `Aurora.ddsktx_parse`
 * `ImGui.LabelText`
 * `ImGui.Separator`
 * `ImGui.SameLine`
 * `ImGui.TextColored`
 * `ImGui.PushStyleVar`
 * `ImGui.PopStyleVar`
+* `ImGui.Selectable`
+* `ImGui.Image`
+* `ImGui.BeginTable`
+* `ImGui.EndTable`
+* `ImGui.TableNextRow`
+* `ImGui.TableSetColumnIndex`
+* `ImGui.Columns`
+* `ImGui.NextColumn`
+* `ImGui.BeginChild`
+* `ImGui.EndChild`
+* `gl.CreateVertexArrays`
+* `gl.NamedBufferStorage`
+* `gl.CreateBuffers`
+* `gl.DeleteBuffers`
+* `gl.CreateTextures`
+* `gl.DeleteTextures`
 
 ### Removed API Functions
 * `ImGui.Begin`

@@ -2,6 +2,7 @@
 
 #include <iomanip>
 #include <sstream>
+#include <fstream>
 
 namespace aurora {
     std::uint32_t hash(std::span<std::byte const> const bytes) {
@@ -52,5 +53,26 @@ namespace aurora {
         }
 
         return output.str();
+    }
+
+    std::optional<std::vector<std::byte>> read_file(std::filesystem::path const& aPath) {
+        std::ifstream stream(aPath, std::ios::binary | std::ios::in);
+        if (!stream) return std::nullopt;
+
+        stream.seekg(0, std::ios::end);
+        auto const length = stream.tellg();
+        stream.seekg(0, std::ios::beg);
+        std::vector<std::byte> bytes(length);
+        stream.read(reinterpret_cast<char*>(bytes.data()), length);
+
+        return bytes;
+    }
+
+    bool write_file(std::filesystem::path const& aPath, std::span<std::byte const> const aBytes) {
+        std::ofstream stream(aPath, std::ios::binary | std::ios::out);
+        if (!stream) return false;
+
+        stream.write(reinterpret_cast<char const*>(aBytes.data()), aBytes.size_bytes());
+        return true;
     }
 }

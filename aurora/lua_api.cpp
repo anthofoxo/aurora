@@ -7,6 +7,8 @@
 
 #include "au_util.hpp"
 
+#include <glad/gl.h>
+
 namespace {
 	int lua_hash(lua_State* L) {
 		size_t len;
@@ -223,6 +225,10 @@ namespace {
 	}
 }
 
+#define DDSKTX_IMPLEMENT
+#include "dds-ktx.h"
+#include <iostream>
+
 void aurora::register_plugin_api(lua_State* L) {
 	lua_newtable(L);
 	lua_pushcfunction(L, &aurora_directory_iterator);
@@ -235,6 +241,105 @@ void aurora::register_plugin_api(lua_State* L) {
 	lua_setfield(L, -2, "unescape");
 	lua_pushcfunction(L, &lua_escape);
 	lua_setfield(L, -2, "escape");
+
+	lua_pushcfunction(L, [](lua_State *L) -> int {
+		lua_pushboolean(L, std::filesystem::create_directory(luaL_checkstring(L, 1)));
+		return 1;
+	});
+	lua_setfield(L, -2, "create_directory");
+
+	lua_pushcfunction(L, [](lua_State *L) -> int {
+		lua_pushboolean(L, std::filesystem::create_directories(luaL_checkstring(L, 1)));
+		return 1;
+	});
+	lua_setfield(L, -2, "create_directories");
+
+	lua_pushcfunction(L, [](lua_State *L) -> int {
+		char const* path = luaL_checkstring(L, 1);
+
+		auto const bytes = read_file(path);
+
+		if (!bytes.has_value()) {
+			lua_pushnil(L);
+		}
+		else {
+			lua_pushlstring(L, reinterpret_cast<const char *>(bytes->data()), bytes->size());
+		}
+
+		return 1;
+	});
+	lua_setfield(L, -2, "read_file");
+
+	lua_pushcfunction(L, [](lua_State *L) -> int {
+		char const* path = luaL_checkstring(L, 1);
+
+		std::size_t size;
+		char const* data = luaL_checklstring(L, 2, &size);
+
+		bool const success = write_file(path, std::as_bytes(std::span(data, size)));
+		lua_pushboolean(L, success);
+
+		return 1;
+	});
+	lua_setfield(L, -2, "write_file");
+
+	lua_pushcfunction(L, [](lua_State* L)-> int {
+		std::size_t size;
+		char const* data = luaL_checklstring(L, 1, &size);
+
+		ddsktx_texture_info tc = { 0 };
+		ddsktx_error error;
+
+		if (ddsktx_parse(&tc, data, size, &error)) {
+			GLuint texture;
+			glCreateTextures(GL_TEXTURE_2D, 1, &texture);
+			GLenum format;
+
+			switch (tc.format) {
+				case DDSKTX_FORMAT_BC1:
+					format = GL_COMPRESSED_RGB_S3TC_DXT1_EXT;
+					break;
+				case DDSKTX_FORMAT_BC2:
+					format = GL_COMPRESSED_RGBA_S3TC_DXT3_EXT;
+					break;
+				case DDSKTX_FORMAT_BC3:
+					format = GL_COMPRESSED_RGBA_S3TC_DXT5_EXT;
+					break;
+				case DDSKTX_FORMAT_BGRA8:
+					format = GL_BGRA;
+					break;
+				default:
+					luaL_error(L, "Unsupported dds texture format: %d", tc.format);
+					return 1;
+			}
+
+			ddsktx_sub_data subdata;
+			ddsktx_get_sub(&tc, &subdata, data, size, 0, 0, 0);
+
+			glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+
+			glTextureStorage2D(texture, 1, format, subdata.width, subdata.height);
+			if (ddsktx_format_compressed(tc.format)) {
+				glCompressedTextureSubImage2D(texture, 0, 0, 0, subdata.width, subdata.height, format, subdata.size_bytes, subdata.buff);
+			}
+			else {
+				glTextureSubImage2D(texture, 0, 0, 0, subdata.width, subdata.height, format, GL_UNSIGNED_BYTE, subdata.buff);
+			}
+
+			glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+
+			lua_pushinteger(L, texture);
+			return 1;
+		}
+		else {
+			std::cout << error.msg << std::endl;
+			lua_pushnil(L);
+		}
+
+		return 1;
+	});
+	lua_setfield(L, -2, "ddsktx_parse");
+
 	lua_setglobal(L, "Aurora");
 
 	lua_newtable(L);
@@ -271,5 +376,147 @@ void aurora::register_plugin_api(lua_State* L) {
 	lua_pushcfunction(L, &imgui_PopStyleVar);
 	lua_setfield(L, -2, "PopStyleVar");
 
+	lua_pushcfunction(L, [](lua_State *L) -> int {
+		char const *id = luaL_checkstring(L, 1);
+		int const numCols = luaL_checkinteger(L, 2);
+		lua_pushboolean(L, ImGui::BeginTable(id, numCols));
+		return 1;
+	});
+	lua_setfield(L, -2, "BeginTable");
+	lua_pushcfunction(L, []([[maybe_unused]] lua_State *L) -> int {
+		ImGui::EndTable();
+		return 0;
+	});
+	lua_setfield(L, -2, "EndTable");
+
+	lua_pushcfunction(L, [](lua_State *L) -> int {
+		ImGui::TableNextRow();
+		return 0;
+	});
+	lua_setfield(L, -2, "TableNextRow");
+
+	lua_pushcfunction(L, [](lua_State *L) -> int {
+		ImGui::TableSetColumnIndex(luaL_checkinteger(L, 1));
+		return 0;
+	});
+	lua_setfield(L, -2, "TableSetColumnIndex");
+
+	lua_pushcfunction(L, [](lua_State *L) -> int {
+		ImGui::Columns(luaL_checkinteger(L, 1));
+		return 0;
+	});
+	lua_setfield(L, -2, "Columns");
+
+	lua_pushcfunction(L, []([[maybe_unused]] lua_State *L) -> int {
+		ImGui::NextColumn();
+		return 0;
+	});
+	lua_setfield(L, -2, "NextColumn");
+
+	lua_pushcfunction(L, [](lua_State *L) -> int {
+		lua_pushboolean(L, ImGui::BeginChild(luaL_checkstring(L, 1)));
+		return 1;
+	});
+	lua_setfield(L, -2, "BeginChild");
+
+	lua_pushcfunction(L, [](lua_State *L) -> int {
+		ImGui::EndChild();
+		return 0;
+	});
+	lua_setfield(L, -2, "EndChild");
+
+	lua_pushcfunction(L, [](lua_State *L)-> int {
+		auto const image = static_cast<ImTextureID>(static_cast<std::uintptr_t>(luaL_checkinteger(L, 1)));
+
+		lua_rawgeti(L, 2, 1);
+		float const width = lua_tonumber(L, -1);
+		lua_pop(L, 1);
+
+		lua_rawgeti(L, 2, 2);
+		float const height = lua_tonumber(L, -1);
+		lua_pop(L, 1);
+
+		ImGui::Image(image, {width, height });
+
+		return 0;
+	});
+	lua_setfield(L, -2, "Image");
+
+	lua_pushcfunction(L, [](lua_State *L) -> int {
+		char const *label = luaL_checkstring(L, 1);
+
+		bool selected = false;
+		if (lua_gettop(L) == 2) { selected = lua_toboolean(L, 2); }
+
+		lua_pushboolean(L, ImGui::Selectable(label, selected));
+		return 1;
+	});
+	lua_setfield(L, -2, "Selectable");
+
 	lua_setglobal(L, "ImGui");
+
+	lua_newtable(L);
+	lua_pushcfunction(L, [](lua_State *L) -> int {
+		GLuint handle;
+		glCreateBuffers(1, &handle);
+		lua_pushinteger(L, handle);
+		return 1;
+	});
+	lua_setfield(L, -2, "CreateBuffers");
+	lua_pushcfunction(L, [](lua_State *L) -> int {
+		GLuint const handle = luaL_checkinteger(L, 1);
+		glDeleteBuffers(1, &handle);
+		return 0;
+	});
+	lua_setfield(L, -2, "DeleteBuffers");
+	lua_pushcfunction(L, [](lua_State *L) -> int {
+		GLuint const buffer = luaL_checkinteger(L, 1);
+		GLsizeiptr const size = luaL_checkinteger(L, 2);
+		char const* data = luaL_checkstring(L, 3);
+		GLbitfield const flags = luaL_checkinteger(L, 4);
+		glNamedBufferStorage(buffer, size, data, flags);
+		return 0;
+	});
+	lua_setfield(L, -2, "NamedBufferStorage");
+	lua_pushcfunction(L, [](lua_State *L) -> int {
+		GLuint handle;
+		glCreateVertexArrays(1, &handle);
+		lua_pushinteger(L, handle);
+		return 1;
+	});
+	lua_setfield(L, -2, "CreateVertexArrays");
+
+	lua_pushcfunction(L, [](lua_State *L) -> int {
+		GLenum const target = luaL_checkinteger(L, 1);
+		GLuint handle;
+		glCreateTextures(target, 1, &handle);
+		lua_pushinteger(L, handle);
+		return 1;
+	});
+	lua_setfield(L, -2, "CreateTextures");
+
+	lua_pushcfunction(L, [](lua_State *L) -> int {
+		GLuint const handle = luaL_checkinteger(L, 1);
+		glDeleteTextures(1, &handle);
+		return 0;
+	});
+	lua_setfield(L, -2, "DeleteTextures");
+
+	lua_pushcfunction(L, [](lua_State *L) -> int {
+		GLuint const texture = luaL_checkinteger(L, 1);
+		GLsizei const levels = luaL_checkinteger(L, 2);
+		GLenum const internalformat = luaL_checkinteger(L, 3);
+		GLsizei const width = luaL_checkinteger(L, 4);
+		GLsizei const height = luaL_checkinteger(L, 5);
+		glTextureStorage2D(texture, levels, internalformat, width, height);
+		return 0;
+	});
+	lua_setfield(L, -2, "TextureStorage2D");
+
+	lua_setglobal(L, "gl");
+
+	lua_newtable(L);
+	lua_pushinteger(L, GL_TEXTURE_2D); lua_setfield(L, -2, "TEXTURE_2D");
+	lua_pushinteger(L, GL_RGBA8); lua_setfield(L, -2, "RGBA8");
+	lua_setglobal(L, "GL");
 }

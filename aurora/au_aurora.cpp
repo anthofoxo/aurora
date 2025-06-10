@@ -35,6 +35,11 @@
 #include <unordered_set>
 #include <vector>
 
+#include "icon.hpp"
+
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
+
 #include "au_util.hpp"
 
 ImFont* gVariableSpace = nullptr;
@@ -390,11 +395,6 @@ struct PluginEngine {
 
 		bool wantReloadPlugins = false;
 
-		// If OnUpdate is provided, invoke it
-		if (lua_getfield(L, -1, "OnUpdate") == LUA_TFUNCTION) {
-			lua_pcall(L, 0, 0, 0);
-		} else lua_pop(L, 1);
-
 		// Build plugin menu
 		if (ImGui::BeginMainMenuBar()) {
 			if (ImGui::BeginMenu("Plugins")) {
@@ -417,7 +417,7 @@ struct PluginEngine {
 						if (enabled) {
 							if (lua_getfield(L, -2, "gui") == LUA_TTABLE) {
 								lua_getfield(L, -1, "visible");
-								bool visible = lua_toboolean(L, -1);
+								bool const visible = lua_toboolean(L, -1);
 								lua_pop(L, 1);
 
 								if (ImGui::MenuItem(key, nullptr, visible)) {
@@ -503,7 +503,35 @@ struct PluginEngine {
 	}
 
 	void shutdown() {
-		if (L) lua_close(L);
+		if (!L) return;
+
+		// For all plugins with a OnUnload function defined, invoke it
+		if (lua_getfield(L, -1, "plugins") == LUA_TTABLE) {
+			lua_pushnil(L);
+			while (lua_next(L, -2)) {
+				lua_pushvalue(L, -2);
+				char const *key = lua_tostring(L, -1);
+
+				lua_getfield(L, -2, "enabled");
+				bool const enabled = lua_toboolean(L, -1);
+				lua_pop(L, 1);
+
+				if (enabled) {
+					if (lua_getfield(L, -2, "OnUnload") == LUA_TFUNCTION) {
+						lua_pcall(L, 0, 0, 0);
+					}
+					else {
+						lua_pop(L, 1);
+					}
+				}
+
+				lua_pop(L, 2);
+			}
+
+		}
+		lua_pop(L, 1);
+
+		lua_close(L);
 		L = nullptr;
 	}
 
@@ -522,9 +550,6 @@ void throw_error_box(std::string const& message) {
 
 namespace aurora {
 void main() {
-	PluginEngine pluginEngine;
-	pluginEngine.reload();
-
 	// Load configs
 	{
 		console.items.emplace_back("Loading aurora config");
@@ -581,8 +606,16 @@ void main() {
 	GLFWwindow* window = glfwCreateWindow(1280, 720, "Aurora v0.0.4-a.4", nullptr, nullptr);
 	if (!window) throw_error_box("Failed to create GLFW window");
 
+	GLFWimage image;
+	image.pixels = stbi_load_from_memory(aurora::icon_data, aurora::icon_size, &image.width, &image.height, nullptr, 4);
+	glfwSetWindowIcon(window, 1, &image);
+	stbi_image_free(image.pixels);
+
 	glfwMakeContextCurrent(window);
 	if (!gladLoadGL(&glfwGetProcAddress)) throw_error_box("Failed to initialize GLAD");
+
+	PluginEngine pluginEngine;
+	pluginEngine.reload();
 
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
@@ -599,6 +632,8 @@ void main() {
 
 	console.items.emplace_back("Welcome to Aurora!");
 
+	bool showDemo = false;
+
 	while(!glfwWindowShouldClose(window)) {
 		glfwPollEvents();
 
@@ -609,6 +644,13 @@ void main() {
 		ImGui::DockSpaceOverViewport();
 
 		if (ImGui::BeginMainMenuBar()) {
+			if (ImGui::BeginMenu("View")) {
+				ImGui::MenuItem("Console", nullptr, &open);
+				ImGui::Separator();
+				ImGui::MenuItem("Dear ImGui Demo", ImGui::GetKeyChordName(ImGuiMod_Ctrl | ImGuiMod_Shift | ImGuiKey_D), &showDemo);
+				ImGui::EndMenu();
+			}
+
 			if (ImGui::BeginMenu("Tools")) {
 				if (ImGui::MenuItem("Set Thumper Path")) {
 					char const* pattern = "THUMPER_*.exe";
@@ -658,14 +700,12 @@ void main() {
 
 		ImGui::EndMainMenuBar();
 
-		static bool showDemo = false;
+		if (showDemo) {
+			ImGui::ShowDemoWindow();
+		}
 
 		if (route_global_shortcut(ImGuiMod_Ctrl | ImGuiMod_Shift | ImGuiKey_D)) {
 			showDemo ^= true;
-		}
-
-		if (showDemo) {
-			ImGui::ShowDemoWindow();
 		}
 
 		if (route_global_shortcut(ImGuiMod_Ctrl | ImGuiMod_Shift | ImGuiKey_R)) {
@@ -676,7 +716,9 @@ void main() {
 
 		tools_binary_search(toolsBinarySearch);
 
-		console.draw("Console", &open);
+		if (open) {
+			console.draw("Console", &open);
+		}
 
 		ImGui::Render();
 		int display_w, display_h;

@@ -4,6 +4,15 @@
 ---@class Box<T>
 
 Aurora = {
+    ---@param path string
+    ---@return string?
+    read_file = function(path) end,
+
+    ---@param path string
+    ---@param data string
+    ---@return boolean
+    write_file = function(path, data) end,
+
     ---@param value string
     ---@return string[]?
     directory_iterator = function(value) end,
@@ -41,6 +50,9 @@ Aurora = {
     ---@param value string
     ---@return string
     escape = function(value) end,
+
+    ---@return string
+    game_directory = function() end,
 }
 
 ImGui = {
@@ -80,15 +92,59 @@ ImGui = {
     ---@param label string
     SeparatorText = function(label) end,
 
-    
-	
     ---@param label string
     ---@param text Box<string>
 	InputText = function(label, text) end,
 
-    
+    ---@param text string
+    ---@param selected boolean?
+    ---@return boolean
+    Selectable = function(text, selected) end,
 
 	MenuItem = function() end,
 
-	Separator = function() end,
+    Separator = function() end,
+
+    ---@param image integer
+	---@param size table
+	Image = function(image, size) end,
+}
+
+gl = {
+    ---@return integer
+	---@nodiscard
+	CreateBuffers = function() end,
+
+	---@param buffer integer
+    DeleteBuffers = function(buffer) end,
+
+	---@param buffer integer
+	---@param size integer
+	---@param data string
+	---@param flags integer
+	NamedBufferStorage = function(buffer, size, data, flags) end,
+
+    ---@return integer
+	---@nodiscard
+    CreateVertexArrays = function() end,
+
+    ---@param target integer
+    ---@return integer
+	---@nodiscard
+    CreateTextures = function(target) end,
+
+	---@param texture integer
+    DeleteTextures = function(texture) end,
+
+    ---@param texture integer
+    ---@param levels integer
+    ---@param internalFormat integer
+    ---@param width integer
+    ---@param height integer
+    TextureStorage2D = function(texture, levels, internalFormat, width, height) end,
+}
+
+GL = {
+    TEXTURE_2D = 0,
+    RGBA8 = 0,
 }

@@ -56,5 +56,4 @@ print(string.format("Loaded %d plugins", pluginCount))
 return {
     plugins = plugins,
     hashtable = hashtable,
-	-- OnUpdate = function() end
 }

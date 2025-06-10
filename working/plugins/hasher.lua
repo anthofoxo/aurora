@@ -18,6 +18,10 @@ return {
 				cacheHit = Aurora.cache_hit(string.format("%x.pc", output))
 				rhashHit = Aurora.rhash(output)
 
+				if rhashHit then
+					rhashHit = Aurora.escape(rhashHit)
+				end
+
 				directLookup = nil
 
 				-- inputs larger than 8 chars will never have a direct hit

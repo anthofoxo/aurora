@@ -1,7 +1,4 @@
 local hashes = {
-	----------------------
-	-- Translation Keys --
-	----------------------
 	"accept",
 	"no",
 	"level1",
@@ -21,73 +18,9 @@ local hashes = {
 	"rank",
 	"retry",
 	"tip",
-	-----------
-	-- Other --
-	-----------
-	"Aachievement/config.ach",
-	"Achannels.objlib",
-	"Edefaults.objlib",
-	"Edrool_splash.objlib",
-	------------
-	-- Global --
-	------------
-	"Aglobal/chrome_aurora_tex_256.objlib",
-	"Aglobal/chrome_tex_128.objlib",
-	"Aglobal/chrome_tex_256.objlib",
-	"Aglobal/gongs.objlib",
-	"Aui/error_dialog.objlib",
-	------------
-	-- Entity --
-	------------
-	"Aentity/ambient_fx.objlib",
-	--------
-	-- UI --
-	--------
-	"Aui/hmd_help.objlib",
-	"Aui/rank_icons.objlib",
-	"Aui/thumper.levels",
-	"Aui/thumper.scoring",
-	------------
-	-- Events --
-	------------
-	"Aevent/app.event",
-	"Eevent/core.event",
-	"Eevent/ui.event",
-	-------------
-	-- Samples --
-	-------------
-	"Asamples/levels/global_drones/french_horn_notes/pattern17.wav",
-	------------
-	-- Levels --
-	------------
-	"Alevels/title_screen.objlib",
-	"Alevels/demo.objlib",
-	"Alevels/level2/level_2a.objlib",
-	"Alevels/level3/level_3a.objlib",
-	"Alevels/level4/level_4a.objlib",
-	"Alevels/level5/level_5a.objlib",
-	"Alevels/level6/level_6.objlib",
-	"Alevels/level7/level_7a.objlib",
-	"Alevels/level7/level_7a.objlib",
-	"Alevels/level8/level_8a.objlib",
-	"Alevels/level9/level_9a.objlib",
-	--------------------
-	-- Level sections --
-	--------------------
-	"Alevels/demo.sec",
-	"Alevels/level2/level_2a.sec",
-	"Alevels/level3/level_3a.sec",
-	"Alevels/level4/level_4a.sec",
-	"Alevels/level5/level_5a.sec",
-	"Alevels/level6/level_6.sec",
-	"Alevels/level7/level_7a.sec",
-	"Alevels/level8/level_8a.sec",
-	"Alevels/level9/level_9a.sec",
 }
 
-for _, value in ipairs(dofile("hashtable/localization.lua")) do table.insert(hashes, value) end
-for _, value in ipairs(dofile("hashtable/meshes.lua")) do table.insert(hashes, value) end
-for _, value in ipairs(dofile("hashtable/textures.lua")) do table.insert(hashes, value) end
+for _, value in ipairs(dofile("hashtable/pc_list.lua")) do table.insert(hashes, value) end
 
 local hashtable = {}
 
