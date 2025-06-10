@@ -1,5 +1,7 @@
 
 # Changelogs
+## v0.0.4-a.5
+
 ## v0.0.4-a.4
 * Extended the hashtable with more values
 * Unified plugin api functions

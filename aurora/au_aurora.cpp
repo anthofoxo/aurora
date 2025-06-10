@@ -42,6 +42,8 @@
 
 #include "au_util.hpp"
 
+
+
 ImFont* gVariableSpace = nullptr;
 ImFont* gMonoSpace = nullptr;
 
@@ -68,11 +70,8 @@ inline void trim(std::string& s) {
 
 struct ExampleAppConsole {
 	std::vector<std::string> items;
-	bool                  AutoScroll = true;
-	bool                  ScrollToBottom = false;
-
-	// Portable helpers
-	static int   Strnicmp(const char* s1, const char* s2, int n) { int d = 0; while (n > 0 && (d = toupper(*s2) - toupper(*s1)) == 0 && *s1) { s1++; s2++; n--; } return d; }
+	bool AutoScroll = true;
+	bool ScrollToBottom = false;
 
 	void draw(const char* title, bool* p_open) {
 		ImGui::SetNextWindowSize(ImVec2(520, 600), ImGuiCond_FirstUseEver);
@@ -603,7 +602,7 @@ void main() {
 	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE);
 	glfwWindowHint(GLFW_MAXIMIZED, GLFW_TRUE);
 
-	GLFWwindow* window = glfwCreateWindow(1280, 720, "Aurora v0.0.4-a.4", nullptr, nullptr);
+	GLFWwindow* window = glfwCreateWindow(1280, 720, "Aurora v0.0.4-a.5", nullptr, nullptr);
 	if (!window) throw_error_box("Failed to create GLFW window");
 
 	GLFWimage image;

@@ -30,3 +30,4 @@ links {
 
 filter "system:windows"
 links "opengl32"
+defines "FMT_UNICODE=0"
