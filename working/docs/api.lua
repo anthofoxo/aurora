@@ -53,12 +53,27 @@ Aurora = {
 
     ---@return string
     game_directory = function() end,
+
+    ---@param path string
+    ---@return boolean
+    create_directory = function(path) end,
+
+    ---@param path string
+    ---@return boolean
+    create_directories = function(path) end,
+
+
+    ---Takes DDS/KTX binary data and loads them into a gpu texture
+    ---The returned texture MUST be freed by the user
+    ---@param bytes string
+    ---@return integer
+    ddsktx_parse = function(bytes) end,
 }
 
 ImGui = {
 	BeginMenu = function() end,
 	EndMenu = function() end,
-	
+
     ---@param style integer
     ---@param value table|number
     PushStyleVar = function(style, value) end,
@@ -107,7 +122,28 @@ ImGui = {
 
     ---@param image integer
 	---@param size table
-	Image = function(image, size) end,
+    Image = function(image, size) end,
+
+	---@param id string
+	---@param cols integer
+    BeginTable = function(id, cols) end,
+
+    EndTable = function() end,
+
+    TableNextRow = function() end,
+
+    ---@param idx integer
+    TableSetColumnIndex = function(idx) end,
+
+	---@param cols integer
+    Columns = function(cols) end,
+
+    NextColumn = function() end,
+
+	---@param id string
+    BeginChild = function(id) end,
+
+	EndChild = function() end,
 }
 
 gl = {

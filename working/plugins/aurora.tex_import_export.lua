@@ -26,7 +26,15 @@ local function perform_export(filename)
 
     filebytes = string.sub(filebytes, 5)
 
-    local substitutedString = "./tmp/" .. string.gsub(string.gsub(Aurora.escape(filename), "\\", "_") .. ".dds", "/", "_");
+    local substitutedString = "./tmp/" .. string.gsub(string.gsub(Aurora.escape(filename), "\\", "_"), "/", "_");
+
+    -- Cap path length at 64
+    if #substitutedString > 64 then
+        substitutedString = string.sub(substitutedString, 1, math.min(64, #substitutedString));
+    end
+
+    substitutedString = substitutedString .. ".dds"
+
     local success = Aurora.write_file(substitutedString, filebytes);
 
     if success then
