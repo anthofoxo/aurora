@@ -31,17 +31,19 @@ for _, entry in ipairs(Aurora.directory_iterator("plugins") or {}) do
 	if Aurora.is_regular_file(entry) and entry:endswith(".lua") then
 		local status, result = pcall(function()
 			local plugin = dofile(entry)
-			assert(plugin)
-			assert(plugin.id)
+            assert(plugin)
+
+			local pluginId = Aurora.stem(entry)
+
 			plugin.enabled = true
 
 			if plugin.gui then
 				plugin.gui.visible = plugin.gui.visible or false
 			end
 
-			plugins[plugin.id] = plugin
+			plugins[pluginId] = plugin
 
-			print(plugin.id)
+			print(pluginId)
 			pluginCount = pluginCount + 1
 		end)
 

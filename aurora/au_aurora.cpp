@@ -49,25 +49,6 @@ ImFont* gMonoSpace = nullptr;
 
 std::unordered_map<std::uint32_t, std::string> gHashtable;
 
-// trim from start (in place)
-inline void ltrim(std::string& s) {
-	s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](unsigned char ch) {
-		return !std::isspace(ch);
-	}));
-}
-
-// trim from end (in place)
-inline void rtrim(std::string& s) {
-	s.erase(std::find_if(s.rbegin(), s.rend(), [](unsigned char ch) {
-		return !std::isspace(ch);
-	 }).base(), s.end());
-}
-
-inline void trim(std::string& s) {
-	rtrim(s);
-	ltrim(s);
-}
-
 struct Console {
 	std::vector<std::string> mItems;
 	bool mAutoScroll = true;
@@ -138,9 +119,11 @@ std::string kThumperDirectory;
 struct HexEditor {
 	MemoryEditor mMemoryEditor;
 	std::vector<std::byte> mData;
+	std::string mPathPreview;
 
 	void action_loadfile(std::filesystem::path const& aPath) {
 		if (auto data = aurora::read_file(aPath); data.has_value()) {
+			mPathPreview = aPath.string();
 			mData = std::move(data.value());
 		}
 	}
@@ -150,7 +133,9 @@ struct HexEditor {
 	}
 
 	void draw() {
-		if (ImGui::Begin("Hex Editor")) {
+		std::string const label = fmt::format("Hex Editor {}###Hex Editor", mPathPreview);
+
+		if (ImGui::Begin(label.c_str())) {
 			ImGui::PushFont(gMonoSpace);
 			mMemoryEditor.DrawContents(mData.data(), mData.size());
 			ImGui::PopFont();
@@ -177,7 +162,7 @@ void tools_binary_search(bool& aOpen) {
 	static Result matches;
 
 	// If future ready
-	if (future && (future->wait_until(std::chrono::steady_clock::time_point::min()) == std::future_status::ready)) {
+	if (future && aurora::is_future_ready(*future)) {
 		matches = future->get();
 		future = std::nullopt;
 	}
@@ -199,9 +184,7 @@ void tools_binary_search(bool& aOpen) {
 					result.pattern = input;
 
 					for (auto const& entry : std::filesystem::directory_iterator(std::filesystem::path(kThumperDirectory) / "cache")) {
-						auto const data = aurora::read_file(entry.path());
-
-						if (data.has_value()) {
+						if (auto const data = aurora::read_file(entry.path())) {
 							auto it = data->begin();
 
 							while (true) {
@@ -270,7 +253,7 @@ void tools_binary_search(bool& aOpen) {
 				}
 
 				
-				ImGui::SetItemTooltip("Origin File: %s", match.file.c_str());				
+				ImGui::SetItemTooltip("Origin File: %s", match.file.c_str());
 			}
 
 			if (copy) ImGui::LogFinish();

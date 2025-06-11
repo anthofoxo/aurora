@@ -2,7 +2,6 @@ local input = Aurora.box("")
 local output = {}
 
 return {
-	id = "aurora.fuzzy_hash",
 	gui = {
 		visible = true,
 		title = "Hasher",
@@ -14,7 +13,7 @@ return {
 				local hashtable = Aurora.hashtable()
 
                 for key, value in pairs(hashtable) do
-                    
+
                     value = Aurora.escape(value)
 
                     local idx0, idx1 = string.find(value, unboxed)
@@ -26,10 +25,6 @@ return {
                         match.suffix = Aurora.escape(string.sub(value, idx1 + 1, -1))
                         table.insert(output, match)
                     end
-
-                    
-
-                    
                 end
 			end
 

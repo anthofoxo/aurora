@@ -5,7 +5,6 @@ local rhashHit = nil
 local directLookup = nil
 
 return {
-	id = "aurora.hasher",
 	gui = {
 		visible = true,
 		title = "Hasher",

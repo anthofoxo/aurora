@@ -6,6 +6,7 @@
 * `ImGui.LogFinish`
 * `ImGui.LogText`
 * `ImGui.SmallButton`
+* `Aurora.stem`
 
 ## v0.0.4-a.4
 * Extended the hashtable with more values

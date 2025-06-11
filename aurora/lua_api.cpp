@@ -260,6 +260,13 @@ void aurora::register_plugin_api(lua_State* L) {
 	lua_setfield(L, -2, "create_directories");
 
 	lua_pushcfunction(L, [](lua_State *L) -> int {
+		std::string const stem = std::filesystem::path(luaL_checkstring(L, 1)).stem().string();
+		lua_pushstring(L, stem.c_str());
+		return 1;
+	});
+	lua_setfield(L, -2, "stem");
+
+	lua_pushcfunction(L, [](lua_State *L) -> int {
 		char const* path = luaL_checkstring(L, 1);
 
 		auto const bytes = read_file(path);
@@ -395,12 +402,13 @@ void aurora::register_plugin_api(lua_State* L) {
 	lua_setfield(L, -2, "LogFinish");
 	lua_pushcfunction(L, [](lua_State *L) -> int {
 		int numArgs = lua_gettop(L);
-			lua_getglobal(L, "string");
-			lua_getfield(L, -1, "format");
-			lua_remove(L, -2);
-			lua_insert(L, 1);
-			lua_pcall(L, numArgs, 1, 0);
-			ImGui::LogText("%s", lua_tostring(L, -1));
+		lua_getglobal(L, "string");
+		lua_getfield(L, -1, "format");
+		lua_remove(L, -2);
+		lua_insert(L, 1);
+		lua_pcall(L, numArgs, 1, 0);
+		ImGui::LogText("%s", lua_tostring(L, -1));
+		return 0;
 	});
 	lua_setfield(L, -2, "LogText");
 

@@ -50,7 +50,6 @@ return {
             gl.DeleteTextures(texture)
         end
     end,
-	id = "aurora.texture_import_export",
 	gui = {
 		visible = true,
 		title = "Hasher",
