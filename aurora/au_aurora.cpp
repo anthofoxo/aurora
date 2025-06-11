@@ -68,10 +68,14 @@ inline void trim(std::string& s) {
 	ltrim(s);
 }
 
-struct ExampleAppConsole {
-	std::vector<std::string> items;
-	bool AutoScroll = true;
-	bool ScrollToBottom = false;
+struct Console {
+	std::vector<std::string> mItems;
+	bool mAutoScroll = true;
+	bool mScrollToBottom = false;
+
+	void log(std::string &&item) { mItems.push_back(std::move(item)); }
+	void log(std::string const &item) { mItems.push_back(item); }
+	void clear() { mItems.clear(); }
 
 	void draw(const char* title, bool* p_open) {
 		ImGui::SetNextWindowSize(ImVec2(520, 600), ImGuiCond_FirstUseEver);
@@ -81,7 +85,7 @@ struct ExampleAppConsole {
 			return;
 		}
 		
-		if (ImGui::SmallButton("Clear")) { items.clear(); }
+		if (ImGui::SmallButton("Clear")) clear();
 		ImGui::SameLine();
 		bool copy_to_clipboard = ImGui::SmallButton("Copy");
 		
@@ -90,14 +94,14 @@ struct ExampleAppConsole {
 		const float footer_height_to_reserve = ImGui::GetStyle().ItemSpacing.y + ImGui::GetFrameHeightWithSpacing();
 		if (ImGui::BeginChild("ScrollingRegion", ImVec2(0, -footer_height_to_reserve), ImGuiChildFlags_NavFlattened, ImGuiWindowFlags_HorizontalScrollbar)) {
 			if (ImGui::BeginPopupContextWindow()) {
-				if (ImGui::Selectable("Clear")) items.clear();
+				if (ImGui::Selectable("Clear")) clear();
 				ImGui::EndPopup();
 			}
 
 			ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(4, 1)); // Tighten spacing
 			if (copy_to_clipboard) ImGui::LogToClipboard();
 
-			for (auto const& item : items) {
+			for (auto const& item : mItems) {
 
 				// Normally you would store more information in your item than just a string.
 				// (e.g. make Items[] an array of structure, store color/type etc.)
@@ -115,9 +119,9 @@ struct ExampleAppConsole {
 
 			// Keep up at the bottom of the scroll region if we were already at the bottom at the beginning of the frame.
 			// Using a scrollbar or mouse-wheel will take away from the bottom edge.
-			if (ScrollToBottom || (AutoScroll && ImGui::GetScrollY() >= ImGui::GetScrollMaxY()))
+			if (mScrollToBottom || (mAutoScroll && ImGui::GetScrollY() >= ImGui::GetScrollMaxY()))
 				ImGui::SetScrollHereY(1.0f);
-			ScrollToBottom = false;
+			mScrollToBottom = false;
 
 			ImGui::PopStyleVar();
 		}
@@ -127,7 +131,7 @@ struct ExampleAppConsole {
 	}
 };
 
-ExampleAppConsole console;
+Console console;
 
 std::string kThumperDirectory;
 
@@ -158,7 +162,7 @@ void tools_binary_search(bool& aOpen) {
 
 	static MemoryEditor mem_edit_1;
 	mem_edit_1.ReadOnly = true;
-	static std::vector<char> file;
+	static std::vector<std::byte> file;
 
 	if(ImGui::Begin("Memory Viewer")) {
 		ImGui::PushFont(gMonoSpace);
@@ -175,51 +179,40 @@ void tools_binary_search(bool& aOpen) {
 					Result result;
 					
 					std::string parsed = aurora::unescape(input);
+					auto parsedSpan = std::as_bytes(std::span(parsed));
 					result.pattern = input;
 
 					for (auto const& entry : std::filesystem::directory_iterator(std::filesystem::path(kThumperDirectory) / "cache")) {
-						std::ifstream stream;
-						stream.open(entry.path(), std::ios::binary | std::ios::in);
-						stream.seekg(0, std::ios::end);
-						auto size = stream.tellg();
-						stream.seekg(0, std::ios::beg);
-						std::vector<char> bytes;
-						bytes.resize(size);
-						stream.read(bytes.data(), bytes.size());
-						stream.close();
+						auto const data = aurora::read_file(entry.path());
 
-						auto it = bytes.begin();
+						if (data.has_value()) {
+							auto it = data->begin();
 
-						while (true) {
-							it = std::search(it, bytes.end(), parsed.begin(), parsed.end());
-							if (it == bytes.end()) break;
+							while (true) {
+								it = std::search(it, data->end(), parsedSpan.begin(), parsedSpan.end());
+								if (it == data->end()) break;
 
-							result.matches.emplace_back(entry.path().filename().generic_string(), std::distance(bytes.begin(), it), std::distance(bytes.begin(), it) + parsed.size());
-							
-							++it;
+								result.matches.emplace_back(entry.path().filename().generic_string(), std::distance(data->begin(), it), std::distance(data->begin(), it) + parsedSpan.size());
+
+								++it;
+							}
 						}
 					}
 
 					if(std::filesystem::exists(std::filesystem::path(kThumperDirectory) / "THUMPER_win8.exe.unpacked.exe")){
-						std::ifstream stream;
-						stream.open(std::filesystem::path(kThumperDirectory) / "THUMPER_win8.exe.unpacked.exe", std::ios::binary | std::ios::in);
-						stream.seekg(0, std::ios::end);
-						auto size = stream.tellg();
-						stream.seekg(0, std::ios::beg);
-						std::vector<char> bytes;
-						bytes.resize(size);
-						stream.read(bytes.data(), bytes.size());
-						stream.close();
+						auto const data = aurora::read_file(std::filesystem::path(kThumperDirectory) / "THUMPER_win8.exe.unpacked.exe");
 
-						auto it = bytes.begin();
+						if (data.has_value()) {
+							auto it = data->begin();
 
-						while (true) {
-							it = std::search(it, bytes.end(), parsed.begin(), parsed.end());
-							if (it == bytes.end()) break;
+							while (true) {
+								it = std::search(it, data->end(), parsedSpan.begin(), parsedSpan.end());
+								if (it == data->end()) break;
 
-							result.matches.emplace_back("THUMPER_win8.exe.unpacked.exe", std::distance(bytes.begin(), it), std::distance(bytes.begin(), it) + parsed.size());
-							
-							++it;
+								result.matches.emplace_back("THUMPER_win8.exe.unpacked.exe", std::distance(data->begin(), it), std::distance(data->begin(), it) + parsed.size());
+
+								++it;
+							}
 						}
 					}
 
@@ -256,14 +249,11 @@ void tools_binary_search(bool& aOpen) {
 					
 					std::string path = fmt::format("{}/cache/{}", kThumperDirectory, match.file);
 
-					std::ifstream stream;
-					stream.open(path , std::ios::binary | std::ios::in);
-					stream.seekg(0, std::ios::end);
-					auto size = stream.tellg();
-					stream.seekg(0, std::ios::beg);
-					file.resize(size);
-					stream.read(file.data(), file.size());
-					stream.close();
+					file.clear();
+					auto data = aurora::read_file(path);
+					if (data.has_value()) {
+						file = std::move(data.value());
+					}
 
 					mem_edit_1.GotoAddrAndHighlight(match.start, match.end);
 				}
@@ -279,7 +269,7 @@ void tools_binary_search(bool& aOpen) {
 }
 
 void validate_executables() {
-	console.items.emplace_back("Validating executables...");
+	console.log("Validating executables...");
 
 	std::string baseExePath = fmt::format("{}/{}", kThumperDirectory, "THUMPER_win8.exe");
 	std::string unpackedExePath = fmt::format("{}/{}", kThumperDirectory, "THUMPER_win8.exe.unpacked.exe");
@@ -287,21 +277,21 @@ void validate_executables() {
 	bool isBaseValid = std::filesystem::exists(baseExePath) && SHA1::from_file(baseExePath) == "d1384dd75cdd3759d95ff02dda32062c148e391e";
 	bool isUnpackedValid = std::filesystem::exists(unpackedExePath) && SHA1::from_file(unpackedExePath) == "f125aae1b2dcb16c3fa6db6ebe26a43c1d4f89aa";
 
-	if (!isBaseValid) console.items.emplace_back("[warn] Incorrect hash for base executable");
-	if (!isUnpackedValid) console.items.emplace_back("[warn] Incorrect hash for unpacked executable");
+	if (!isBaseValid) console.log("[warn] Incorrect hash for base executable");
+	if (!isUnpackedValid) console.log("[warn] Incorrect hash for unpacked executable");
 
 }
 
 int lua_print(lua_State* L) {
-	console.items.emplace_back(lua_tostring(L, 1));
+	console.log(lua_tostring(L, 1));
 	return 0;
 }
 
 void cache_scan(std::unordered_set<std::string>& pcFileStorage) {
-	console.items.emplace_back("Scanning cache...");
+	console.log("Scanning cache...");
 
 	if (kThumperDirectory.empty()) {
-		console.items.emplace_back("No thumper path specified, cannot scan cache");
+		console.log("No thumper path specified, cannot scan cache");
 		return;
 	}
 
@@ -311,7 +301,7 @@ void cache_scan(std::unordered_set<std::string>& pcFileStorage) {
 		pcFileStorage.insert(entry.path().filename().generic_string());
 	}
 
-	console.items.push_back(fmt::format("{} file(s)", pcFileStorage.size()));
+	console.log(fmt::format("{} file(s)", pcFileStorage.size()));
 
 }
 
@@ -364,7 +354,7 @@ struct PluginEngine {
 		L = aurora_newstate();
 
 		if (luaL_dofile(L, "boot.lua") != LUA_OK) {
-			console.items.emplace_back(lua_tostring(L, -1));
+			console.log(lua_tostring(L, -1));
 			shutdown();
 			return;
 		}
@@ -509,7 +499,6 @@ struct PluginEngine {
 			lua_pushnil(L);
 			while (lua_next(L, -2)) {
 				lua_pushvalue(L, -2);
-				char const *key = lua_tostring(L, -1);
 
 				lua_getfield(L, -2, "enabled");
 				bool const enabled = lua_toboolean(L, -1);
@@ -551,23 +540,23 @@ namespace aurora {
 void main() {
 	// Load configs
 	{
-		console.items.emplace_back("Loading aurora config");
+		console.log("Loading aurora config");
 
 		lua_State* L = aurora_newstate();
 
 		if (luaL_dofile(L, "config.lua") != LUA_OK) {
-			console.items.push_back(fmt::format("Lua Error: {}", lua_tostring(L, -1)));
+			console.log(fmt::format("Lua Error: {}", lua_tostring(L, -1)));
 		}
 		else {
 			if (!lua_istable(L, -1)) {
-				console.items.emplace_back("Invalid config. Use `Tools > Set Thumper Path` to repair");
+				console.log("Invalid config. Use `Tools > Set Thumper Path` to repair");
 			}
 			else {
 				if (lua_getfield(L, -1, "path") == LUA_TSTRING) {
 					kThumperDirectory = lua_tostring(L, -1);
 				}
 				else {
-					console.items.emplace_back("Invalid config. Use `Tools > Set Thumper Path` to repair");
+					console.log("Invalid config. Use `Tools > Set Thumper Path` to repair");
 				}
 				lua_pop(L, 1);
 			}
@@ -576,10 +565,10 @@ void main() {
 
 		lua_close(L);
 
-		console.items.emplace_back("Validating aurora config");
+		console.log("Validating aurora config");
 
 		if (!std::filesystem::exists(kThumperDirectory)) {
-			console.items.emplace_back("Specified path doesn't exist. Use `Tools > Set Thumper Path` to repair");
+			console.log("Specified path doesn't exist. Use `Tools > Set Thumper Path` to repair");
 			kThumperDirectory = "";
 		}
 	}
@@ -629,7 +618,7 @@ void main() {
 	ImGui_ImplGlfw_InitForOpenGL(window, true);
 	ImGui_ImplOpenGL3_Init("#version 450 core");
 
-	console.items.emplace_back("Welcome to Aurora!");
+	console.log("Welcome to Aurora!");
 
 	bool showDemo = false;
 
@@ -658,12 +647,12 @@ void main() {
 						std::string path = std::filesystem::path(result).parent_path().generic_string();
 
 						if (std::filesystem::exists(path)) {
-							console.items.emplace_back("New thumper directory specified, validating");
+							console.log("New thumper directory specified, validating");
 							kThumperDirectory = path;
 							validate_executables();
 							cache_scan(pcFileStorage);
 
-							console.items.emplace_back("Validation complete, writing to config");
+							console.log("Validation complete, writing to config");
 
 							std::string luaString;
 
@@ -685,7 +674,7 @@ void main() {
 							stream.close();
 						}
 						else {
-							console.items.emplace_back("Specified path doesn't exist. Operation stopped");
+							console.log("Specified path doesn't exist. Operation stopped");
 						}
 					}
 				}
