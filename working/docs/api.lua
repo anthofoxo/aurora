@@ -143,7 +143,14 @@ ImGui = {
 	---@param id string
     BeginChild = function(id) end,
 
-	EndChild = function() end,
+    EndChild = function() end,
+
+    LogToClipboard = function() end,
+    LogFinish = function() end,
+
+    ---@param fmt string
+    ---@param ... any
+    LogText = function(fmt, ...) end,
 }
 
 gl = {

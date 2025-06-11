@@ -1,6 +1,11 @@
 
 # Changelogs
 ## v0.0.4-a.5
+### New API Functions
+* `ImGui.LogToClipboard`
+* `ImGui.LogFinish`
+* `ImGui.LogText`
+* `ImGui.SmallButton`
 
 ## v0.0.4-a.4
 * Extended the hashtable with more values

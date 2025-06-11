@@ -10,33 +10,41 @@ return {
 		visible = true,
 		title = "Hasher",
 		OnGui = function()
-			if ImGui.InputText("Input", input) then
-				local unboxed = Aurora.unbox(input)
+            if ImGui.InputText("Input", input) then
+                local unboxed = Aurora.unbox(input)
 
-				local unescaped = Aurora.unescape(unboxed)
-				output = Aurora.hash(unescaped)
-				cacheHit = Aurora.cache_hit(string.format("%x.pc", output))
-				rhashHit = Aurora.rhash(output)
+                local unescaped = Aurora.unescape(unboxed)
+                output = Aurora.hash(unescaped)
+                cacheHit = Aurora.cache_hit(string.format("%x.pc", output))
+                rhashHit = Aurora.rhash(output)
 
-				if rhashHit then
-					rhashHit = Aurora.escape(rhashHit)
-				end
+                if rhashHit then
+                    rhashHit = Aurora.escape(rhashHit)
+                end
 
-				directLookup = nil
+                directLookup = nil
 
-				-- inputs larger than 8 chars will never have a direct hit
-				if #unboxed <= 8 then
-					local result = tonumber(unboxed, 16)
-				
-					if result then
-						directLookup = Aurora.rhash(result)
-						if directLookup then
-							directLookup = Aurora.escape(directLookup)
-						end
-					end
-				end
+                -- inputs larger than 8 chars will never have a direct hit
+                if #unboxed <= 8 then
+                    local result = tonumber(unboxed, 16)
+
+                    if result then
+                        directLookup = Aurora.rhash(result)
+                        if directLookup then
+                            directLookup = Aurora.escape(directLookup)
+                        end
+                    end
+                end
+            end
+
+            ImGui.Text("0x%x", output)
+            ImGui.SameLine()
+
+            if ImGui.SmallButton("Copy") then
+                ImGui.LogToClipboard()
+                ImGui.LogText("%x", output)
+			    ImGui.LogFinish()
 			end
-			ImGui.Text("0x%x", output)
 
 			if cacheHit then
 				ImGui.Text("File found: %x.pc", output)

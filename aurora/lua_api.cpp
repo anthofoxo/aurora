@@ -85,6 +85,11 @@ namespace {
 		return 1;
 	}
 
+	int imgui_smallbutton(lua_State* L) {
+		lua_pushboolean(L, ImGui::SmallButton(luaL_checkstring(L, 1)));
+		return 1;
+	}
+
 	int imgui_text_unformatted(lua_State* L) {
 		ImGui::TextUnformatted(luaL_checkstring(L, 1));
 		return 0;
@@ -365,6 +370,8 @@ void aurora::register_plugin_api(lua_State* L) {
 	lua_setfield(L, -2, "MenuItem");
 	lua_pushcfunction(L, &imgui_button);
 	lua_setfield(L, -2, "Button");
+	lua_pushcfunction(L, &imgui_smallbutton);
+	lua_setfield(L, -2, "SmallButton");
 	lua_pushcfunction(L, &imgui_separator);
 	lua_setfield(L, -2, "Separator");
 	lua_pushcfunction(L, &imgui_sameline);
@@ -375,6 +382,27 @@ void aurora::register_plugin_api(lua_State* L) {
 	lua_setfield(L, -2, "PushStyleVar");
 	lua_pushcfunction(L, &imgui_PopStyleVar);
 	lua_setfield(L, -2, "PopStyleVar");
+
+	lua_pushcfunction(L, [](lua_State *L) -> int {
+		ImGui::LogToClipboard();
+		return 0;
+	});
+	lua_setfield(L, -2, "LogToClipboard");
+	lua_pushcfunction(L, [](lua_State *L) -> int {
+		ImGui::LogFinish();
+		return 0;
+	});
+	lua_setfield(L, -2, "LogFinish");
+	lua_pushcfunction(L, [](lua_State *L) -> int {
+		int numArgs = lua_gettop(L);
+			lua_getglobal(L, "string");
+			lua_getfield(L, -1, "format");
+			lua_remove(L, -2);
+			lua_insert(L, 1);
+			lua_pcall(L, numArgs, 1, 0);
+			ImGui::LogText("%s", lua_tostring(L, -1));
+	});
+	lua_setfield(L, -2, "LogText");
 
 	lua_pushcfunction(L, [](lua_State *L) -> int {
 		char const *id = luaL_checkstring(L, 1);

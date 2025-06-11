@@ -135,6 +135,30 @@ Console console;
 
 std::string kThumperDirectory;
 
+struct HexEditor {
+	MemoryEditor mMemoryEditor;
+	std::vector<std::byte> mData;
+
+	void action_loadfile(std::filesystem::path const& aPath) {
+		if (auto data = aurora::read_file(aPath); data.has_value()) {
+			mData = std::move(data.value());
+		}
+	}
+
+	void action_jump(std::size_t start, std::size_t end) {
+		mMemoryEditor.GotoAddrAndHighlight(start, end);
+	}
+
+	void draw() {
+		if (ImGui::Begin("Hex Editor")) {
+			ImGui::PushFont(gMonoSpace);
+			mMemoryEditor.DrawContents(mData.data(), mData.size());
+			ImGui::PopFont();
+		}
+		ImGui::End();
+	}
+};
+
 void tools_binary_search(bool& aOpen) {
 	struct Match {
 		std::string file;
@@ -160,16 +184,8 @@ void tools_binary_search(bool& aOpen) {
 
 	if (!aOpen) return;
 
-	static MemoryEditor mem_edit_1;
-	mem_edit_1.ReadOnly = true;
-	static std::vector<std::byte> file;
-
-	if(ImGui::Begin("Memory Viewer")) {
-		ImGui::PushFont(gMonoSpace);
-		mem_edit_1.DrawContents(file.data(), file.size());
-		ImGui::PopFont();
-	}
-	ImGui::End();
+	static HexEditor hexEditor;
+	hexEditor.draw();
 
 	if (ImGui::Begin("Binary Search", &aOpen)) {
 		ImGui::SetNextItemShortcut(ImGuiMod_Ctrl | ImGuiKey_F);
@@ -249,13 +265,8 @@ void tools_binary_search(bool& aOpen) {
 					
 					std::string path = fmt::format("{}/cache/{}", kThumperDirectory, match.file);
 
-					file.clear();
-					auto data = aurora::read_file(path);
-					if (data.has_value()) {
-						file = std::move(data.value());
-					}
-
-					mem_edit_1.GotoAddrAndHighlight(match.start, match.end);
+					hexEditor.action_loadfile(path);
+					hexEditor.action_jump(match.start, match.end);
 				}
 
 				
