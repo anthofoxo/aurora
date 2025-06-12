@@ -22,6 +22,10 @@ local hashes = {
 
 for _, value in ipairs(dofile("hashtable/pc_list.lua")) do table.insert(hashes, value) end
 
+if Aurora.filesystem.exists("hashtable/userdef.lua") then
+	for _, value in ipairs(dofile("hashtable/userdef.lua")) do table.insert(hashes, value) end
+end
+
 local hashtable = {}
 
 for _, value in ipairs(hashes) do

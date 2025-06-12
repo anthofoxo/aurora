@@ -44,7 +44,7 @@ namespace aurora {
     std::string escape(std::string_view const input) {
         std::stringstream output;
         for (size_t i = 0; i < input.length(); ++i) {
-            if (std::isprint(input[i])) {
+            if (std::isprint(static_cast<unsigned char>(input[i]))) {
                 output << input[i];
             }
             else {

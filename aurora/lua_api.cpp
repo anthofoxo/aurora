@@ -352,6 +352,15 @@ void aurora::register_plugin_api(lua_State* L) {
 	});
 	lua_setfield(L, -2, "ddsktx_parse");
 
+	lua_newtable(L);
+	lua_pushcfunction(L, [](lua_State *L) -> int {
+		lua_pushboolean(L, std::filesystem::exists(luaL_checkstring(L, 1)));
+		return 1;
+	});
+	lua_setfield(L, -2, "exists");
+
+	lua_setfield(L, -2, "filesystem");
+
 	lua_setglobal(L, "Aurora");
 
 	lua_newtable(L);
@@ -552,7 +561,9 @@ void aurora::register_plugin_api(lua_State* L) {
 	lua_setglobal(L, "gl");
 
 	lua_newtable(L);
-	lua_pushinteger(L, GL_TEXTURE_2D); lua_setfield(L, -2, "TEXTURE_2D");
-	lua_pushinteger(L, GL_RGBA8); lua_setfield(L, -2, "RGBA8");
+#define AU_IMPL_GL_EXPAND(L, name) lua_pushinteger(L, GL_ ## name); lua_setfield(L, -2, #name)
+	AU_IMPL_GL_EXPAND(L, TEXTURE_2D);
+	AU_IMPL_GL_EXPAND(L, RGBA8);
+#undef AU_IMPL_GL_EXPAND
 	lua_setglobal(L, "GL");
 }
