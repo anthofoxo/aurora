@@ -2,7 +2,8 @@
 # Changelogs
 ## v0.0.4-a.5
 ### API Changes
-* Plugin IDs are created using the filename stem 
+* Plugin IDs are created using the filename stem
+* Expanded hashtable entries
 #### New API Functions
 * `ImGui.LogToClipboard`
 * `ImGui.LogFinish`
