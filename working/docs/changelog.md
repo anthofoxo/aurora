@@ -1,7 +1,9 @@
 
 # Changelogs
 ## v0.0.4-a.5
-### New API Functions
+### API Changes
+* Plugin IDs are created using the filename stem 
+#### New API Functions
 * `ImGui.LogToClipboard`
 * `ImGui.LogFinish`
 * `ImGui.LogText`
