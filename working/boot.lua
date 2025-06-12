@@ -4,8 +4,6 @@
 -------------------------
 
 assert(Aurora)
-assert(Aurora.directory_iterator)
-assert(Aurora.is_regular_file)
 Aurora.box = function(value) return { value } end
 Aurora.unbox = function(value) return rawget(value, 1) end
 
@@ -27,13 +25,13 @@ local plugins = {}
 local pluginCount = 0
 print("Loading plugins...")
 
-for _, entry in ipairs(Aurora.directory_iterator("plugins") or {}) do
-	if Aurora.is_regular_file(entry) and entry:endswith(".lua") then
+for _, entry in ipairs(Aurora.filesystem.directory_iterator("plugins") or {}) do
+	if Aurora.filesystem.is_regular_file(entry) and entry:endswith(".lua") then
 		local status, result = pcall(function()
 			local plugin = dofile(entry)
             assert(plugin)
 
-			local pluginId = Aurora.stem(entry)
+			local pluginId = Aurora.filesystem.stem(entry)
 
 			plugin.enabled = true
 

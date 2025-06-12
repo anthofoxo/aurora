@@ -1,15 +1,25 @@
 
 # Changelogs
 ## v0.0.4-a.5
+### Breaking Changes
+* Filesystem APIs are now in the `Aurora.filesystem` table instead of the `Aurora` table
+
 ### API Changes
 * Plugin IDs are created using the filename stem
 * Expanded hashtable entries
+
+#### Moved API Functions
+* `Aurora.is_regular_file` -> `Aurora.filesystem.is_regular_file`
+* `Aurora.directory_iterator` -> `Aurora.filesystem.directory_iterator`
+* `Aurora.create_directory` -> `Aurora.filesystem.create_directory`
+* `Aurora.create_directories` -> `Aurora.filesystem.create_directories`
+
 #### New API Functions
 * `ImGui.LogToClipboard`
 * `ImGui.LogFinish`
 * `ImGui.LogText`
 * `ImGui.SmallButton`
-* `Aurora.stem`
+* `Aurora.filesystem.stem`
 
 ## v0.0.4-a.4
 * Extended the hashtable with more values

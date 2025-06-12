@@ -6,7 +6,7 @@ local exportPerformed = nil
 
 local knownTextures = {}
 
-Aurora.create_directory("./tmp")
+Aurora.filesystem.create_directory("./tmp")
 
 for _, value in pairs(Aurora.hashtable()) do
     if string.match(value, ".png") then

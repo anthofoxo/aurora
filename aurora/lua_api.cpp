@@ -34,32 +34,6 @@ namespace {
 		return 1;
 	}
 
-	// ReSharper disable once CppDFAConstantFunctionResult
-	int aurora_directory_iterator(lua_State* L) {
-		char const* directory = luaL_checkstring(L, 1);
-
-		if (!std::filesystem::exists(directory)) {
-			lua_pushnil(L);
-			return 1;
-		}
-
-		lua_newtable(L);
-		lua_Integer index = 1;
-
-		for(auto const& entry : std::filesystem::directory_iterator(directory)) {
-			std::u8string const string = entry.path().generic_u8string();
-			lua_pushlstring(L, reinterpret_cast<char const*>(string.data()), std::distance(string.begin(), string.end()));
-			lua_rawseti(L, -2, index++);
-		}
-
-		return 1;
-	}
-
-	int aurora_is_regular_file(lua_State* L) {
-		lua_pushboolean(L, std::filesystem::is_regular_file(luaL_checkstring(L, 1)));
-		return 1;
-	}
-
 	int imgui_begin_menu(lua_State* L) {
 		lua_pushboolean(L, ImGui::BeginMenu(luaL_checkstring(L, 1)));
 		return 1;
@@ -234,37 +208,88 @@ namespace {
 #include "dds-ktx.h"
 #include <iostream>
 
+namespace {
+	// The table in which to register the filesystem API is to be at idx -1
+	void register_filesystem_api(lua_State *L) {
+		lua_newtable(L);
+
+		// exists
+		lua_pushcfunction(L, [](lua_State *L) -> int {
+			lua_pushboolean(L, std::filesystem::exists(luaL_checkstring(L, 1)));
+			return 1;
+		});
+		lua_setfield(L, -2, "exists");
+
+		// is_regular_file
+		lua_pushcfunction(L, [](lua_State *L) -> int {
+			lua_pushboolean(L, std::filesystem::is_regular_file(luaL_checkstring(L, 1)));
+			return 1;
+		});
+		lua_setfield(L, -2, "is_regular_file");
+
+		// directory_iterator
+		lua_pushcfunction(L, [](lua_State *L) -> int {
+			char const* directory = luaL_checkstring(L, 1);
+
+			if (!std::filesystem::exists(directory)) {
+				lua_pushnil(L);
+				return 1;
+			}
+
+			lua_newtable(L);
+			lua_Integer index = 1;
+
+			for(auto const& entry : std::filesystem::directory_iterator(directory)) {
+				std::u8string const string = entry.path().generic_u8string();
+				lua_pushlstring(L, reinterpret_cast<char const*>(string.data()), std::distance(string.begin(), string.end()));
+				lua_rawseti(L, -2, index++);
+			}
+
+			return 1;
+		});
+		lua_setfield(L, -2, "directory_iterator");
+
+		// create_directory
+		lua_pushcfunction(L, [](lua_State *L) -> int {
+			lua_pushboolean(L, std::filesystem::create_directory(luaL_checkstring(L, 1)));
+			return 1;
+		});
+		lua_setfield(L, -2, "create_directory");
+
+		// create_directories
+		lua_pushcfunction(L, [](lua_State *L) -> int {
+			lua_pushboolean(L, std::filesystem::create_directories(luaL_checkstring(L, 1)));
+			return 1;
+		});
+		lua_setfield(L, -2, "create_directories");
+
+		// stem
+		lua_pushcfunction(L, [](lua_State *L) -> int {
+			std::string const stem = std::filesystem::path(luaL_checkstring(L, 1)).stem().string();
+			lua_pushstring(L, stem.c_str());
+			return 1;
+		});
+		lua_setfield(L, -2, "stem");
+
+		// exists
+		lua_pushcfunction(L, [](lua_State *L) -> int {
+			lua_pushboolean(L, std::filesystem::exists(luaL_checkstring(L, 1)));
+			return 1;
+		});
+		lua_setfield(L, -2, "exists");
+
+		lua_setfield(L, -2, "filesystem");
+	}
+}
+
 void aurora::register_plugin_api(lua_State* L) {
 	lua_newtable(L);
-	lua_pushcfunction(L, &aurora_directory_iterator);
-	lua_setfield(L, -2, "directory_iterator");
-	lua_pushcfunction(L, &aurora_is_regular_file);
-	lua_setfield(L, -2, "is_regular_file");
 	lua_pushcfunction(L, &lua_hash);
 	lua_setfield(L, -2, "hash");
 	lua_pushcfunction(L, &lua_string_unescape);
 	lua_setfield(L, -2, "unescape");
 	lua_pushcfunction(L, &lua_escape);
 	lua_setfield(L, -2, "escape");
-
-	lua_pushcfunction(L, [](lua_State *L) -> int {
-		lua_pushboolean(L, std::filesystem::create_directory(luaL_checkstring(L, 1)));
-		return 1;
-	});
-	lua_setfield(L, -2, "create_directory");
-
-	lua_pushcfunction(L, [](lua_State *L) -> int {
-		lua_pushboolean(L, std::filesystem::create_directories(luaL_checkstring(L, 1)));
-		return 1;
-	});
-	lua_setfield(L, -2, "create_directories");
-
-	lua_pushcfunction(L, [](lua_State *L) -> int {
-		std::string const stem = std::filesystem::path(luaL_checkstring(L, 1)).stem().string();
-		lua_pushstring(L, stem.c_str());
-		return 1;
-	});
-	lua_setfield(L, -2, "stem");
 
 	lua_pushcfunction(L, [](lua_State *L) -> int {
 		char const* path = luaL_checkstring(L, 1);
@@ -352,14 +377,7 @@ void aurora::register_plugin_api(lua_State* L) {
 	});
 	lua_setfield(L, -2, "ddsktx_parse");
 
-	lua_newtable(L);
-	lua_pushcfunction(L, [](lua_State *L) -> int {
-		lua_pushboolean(L, std::filesystem::exists(luaL_checkstring(L, 1)));
-		return 1;
-	});
-	lua_setfield(L, -2, "exists");
-
-	lua_setfield(L, -2, "filesystem");
+	register_filesystem_api(L);
 
 	lua_setglobal(L, "Aurora");
 

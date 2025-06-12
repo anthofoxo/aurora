@@ -4,6 +4,32 @@
 ---@class Box<T>
 
 Aurora = {
+    filesystem = {
+        ---@param value string
+        ---@return string[]?
+        directory_iterator = function(value) end,
+
+        ---@param value string
+        ---@return boolean
+        is_regular_file = function(value) end,
+
+        ---@param path string
+        ---@return boolean
+        create_directory = function(path) end,
+
+        ---@param path string
+        ---@return boolean
+        create_directories = function(path) end,
+
+        ---@param path string
+        ---@return boolean
+        exists = function(path) end,
+
+        ---@param path string
+        ---@return string
+        stem = function(path) end,
+    },
+
     ---@param path string
     ---@return string?
     read_file = function(path) end,
@@ -13,13 +39,9 @@ Aurora = {
     ---@return boolean
     write_file = function(path, data) end,
 
-    ---@param value string
-    ---@return string[]?
-    directory_iterator = function(value) end,
 
-    ---@param value string
-    ---@return boolean
-    is_regular_file = function(value) end,
+
+
 
     ---@param value string
     ---@return number
@@ -54,13 +76,7 @@ Aurora = {
     ---@return string
     game_directory = function() end,
 
-    ---@param path string
-    ---@return boolean
-    create_directory = function(path) end,
 
-    ---@param path string
-    ---@return boolean
-    create_directories = function(path) end,
 
 
     ---Takes DDS/KTX binary data and loads them into a gpu texture
