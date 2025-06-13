@@ -20,6 +20,9 @@ add_executable(aurora
         aurora/au_util.cpp
         aurora/dds-ktx.h
         aurora/icon.hpp
-        aurora/stb_image.h)
+        aurora/stb_image.h
+        aurora/api/au_api.hpp
+        aurora/api/au_api_imgui.cpp
+        aurora/api/au_api_filesystem.cpp)
 
 target_link_libraries(aurora glfw glad imgui tinyfd lua spdlog)

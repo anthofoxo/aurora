@@ -39,10 +39,6 @@ Aurora = {
     ---@return boolean
     write_file = function(path, data) end,
 
-
-
-
-
     ---@param value string
     ---@return number
     hash = function(value) end,
@@ -75,9 +71,6 @@ Aurora = {
 
     ---@return string
     game_directory = function() end,
-
-
-
 
     ---Takes DDS/KTX binary data and loads them into a gpu texture
     ---The returned texture MUST be freed by the user
