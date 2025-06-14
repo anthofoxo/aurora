@@ -61,10 +61,6 @@ for _, entry in ipairs(Aurora.filesystem.directory_iterator("plugins") or {}) do
 
 			plugin.enabled = true
 
-			if plugin.gui then
-				plugin.gui.visible = plugin.gui.visible or false
-			end
-
 			plugins[pluginId] = plugin
 
 			print(pluginId)

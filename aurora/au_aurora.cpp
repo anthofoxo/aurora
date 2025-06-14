@@ -341,6 +341,12 @@ lua_State* aurora_newstate() {
 }
 
 struct PluginEngine {
+	struct Plugin {
+		bool visible = false;
+	};
+
+	std::unordered_map<std::string, Plugin> plugins;
+
 	void reload() {
 		shutdown();
 
@@ -370,6 +376,28 @@ struct PluginEngine {
 			}
 		}
 		lua_pop(L, 1);
+
+		// Plugins are loaded, check the visible flag
+		if (lua_getfield(L, -1, "plugins") == LUA_TTABLE) {
+			lua_pushnil(L);
+			while (lua_next(L, -2)) {
+				lua_pushvalue(L, -2);
+				char const *key = lua_tostring(L, -1);
+
+				if (!plugins.contains(key)) {
+					Plugin& storage = plugins[key];
+
+					if (lua_getfield(L, -2, "visible") == LUA_TBOOLEAN) {
+						storage.visible = lua_toboolean(L, -1);
+					}
+					lua_pop(L, 1);
+				}
+
+				lua_pop(L, 2);
+			}
+
+		}
+		lua_pop(L, 1);
 	}
 
 	void update() {
@@ -392,21 +420,17 @@ struct PluginEngine {
 						lua_pushvalue(L, -2);
 						char const *key = lua_tostring(L, -1);
 
+						// Get the storage container for the plugin
+						// Allocate it if needed
+						Plugin& storage = plugins[key];
+
 						lua_getfield(L, -2, "enabled");
 						bool const enabled = lua_toboolean(L, -1);
 						lua_pop(L, 1);
 
 						if (enabled) {
 							if (lua_getfield(L, -2, "gui") == LUA_TTABLE) {
-								lua_getfield(L, -1, "visible");
-								bool const visible = lua_toboolean(L, -1);
-								lua_pop(L, 1);
-
-								if (ImGui::MenuItem(key, nullptr, visible)) {
-									lua_pushliteral(L, "visible");
-									lua_pushboolean(L, !visible); // Flip visible flag
-									lua_rawset(L, -3);
-								}
+								ImGui::MenuItem(key, nullptr, &storage.visible);
 							}
 							lua_pop(L, 1);
 						}
@@ -430,6 +454,10 @@ struct PluginEngine {
 				lua_pushvalue(L, -2);
 				char const *key = lua_tostring(L, -1);
 
+				// Get the storage container for the plugin
+				// Allocate it if needed
+				Plugin& storage = plugins[key];
+
 				lua_getfield(L, -2, "enabled");
 				bool const enabled = lua_toboolean(L, -1);
 				lua_pop(L, 1);
@@ -437,22 +465,18 @@ struct PluginEngine {
 				if (enabled) {
 					// If a gui is defined for this plugin
 					if (lua_getfield(L, -2, "gui") == LUA_TTABLE) {
-
-						lua_getfield(L, -1, "visible");
-						bool visible = lua_toboolean(L, -1);
-						lua_pop(L, 1);
-
 						lua_getfield(L, -1, "title");
 						char const* title = lua_tostring(L, -1);
 						lua_pop(L, 1);
 
 						std::string const debugTitle = fmt::format("{} ({})", title, key);
 
-						if (visible) {
+						if (storage.visible) {
 							ImGui::SetNextWindowSize(ImVec2(640, 480), ImGuiCond_FirstUseEver);
-							if (ImGui::Begin(debugTitle.c_str(), &visible)) {
+							if (ImGui::Begin(debugTitle.c_str(), &storage.visible)) {
 								if (lua_getfield(L, -1, "OnGui") == LUA_TFUNCTION) {
 									if (lua_pcall(L, 0, 0, 0) != LUA_OK) {
+										spdlog::error(lua_tostring(L, -1));
 										ImGui::TextUnformatted(lua_tostring(L, -1));
 										lua_pop(L, 1);
 									}
@@ -460,12 +484,6 @@ struct PluginEngine {
 								else lua_pop(L, 1);
 							}
 							ImGui::End();
-
-							if (!visible) {
-								lua_pushliteral(L, "visible");
-								lua_pushboolean(L, visible);
-								lua_rawset(L, -3);
-							}
 						}
 
 
@@ -624,6 +642,8 @@ void main() {
 		ImGui_ImplOpenGL3_NewFrame();
 		ImGui_ImplGlfw_NewFrame();
 		ImGui::NewFrame();
+
+		glEnable(GL_DEPTH_TEST);
 
 		ImGui::DockSpaceOverViewport();
 

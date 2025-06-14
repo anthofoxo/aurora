@@ -51,6 +51,11 @@ Aurora = {
         stem = function(path) end,
     },
 
+    ---@param value integer
+    ---@return number
+    ---@nodiscard
+    bitcast_float = function(value) end,
+
     ---@param path string
     ---@return string?
     read_file = function(path) end,
@@ -146,7 +151,10 @@ ImGui = {
     ---@return boolean
     Selectable = function(text, selected) end,
 
-	MenuItem = function() end,
+    ---@param label string
+    ---@return boolean
+    ---@nodiscard
+	MenuItem = function(label) end,
 
     Separator = function() end,
 
@@ -186,6 +194,17 @@ ImGui = {
 
     ---@return table
     GetContentRegionAvail = function() end,
+
+    ---@return boolean
+    ---@nodiscard
+    BeginPopupContextItem = function() end,
+
+    EndPopup = function() end,
+
+    CloseCurrentPopup = function() end,
+
+    ---@param text any
+    SetItemTooltip = function(text) end,
 }
 
 glm = {
@@ -194,7 +213,15 @@ glm = {
     ---@param near number
     ---@param far number
     ---@return mat4
+    ---@nodiscard
     perspective = function(fovy, aspect, near, far) end,
+
+    ---@param eye table
+    ---@param center table
+    ---@param up table
+    ---@return number[]
+    ---@nodiscard
+    lookAt = function(eye, center, up) end,
 }
 
 gl = {
@@ -360,30 +387,43 @@ gl = {
     ---@param transpose GLboolean
     ---@param value Ref<number>
     ProgramUniformMatrix4fv = function(program, location, count, transpose, value) end,
+
+    ---@param vaobj _VertexArray
+    ---@param ebo _Buffer
+    VertexArrayElementBuffer = function(vaobj, ebo) end,
+
+    ---@param mode GLenum
+    ---@param count GLsizei
+    ---@param type GLenum
+    ---@param indices integer
+    DrawElements = function(mode, count, type, indices) end,
 }
 
 GL = {
     TEXTURE_2D = 0,
-    RGBA8 = 0,
-    FRAMEBUFFER = 0,
-    COLOR_ATTACHMENT0 = 0,
-    COLOR_ATTACHMENT1 = 0,
-    COLOR_ATTACHMENT2 = 0,
-    COLOR_ATTACHMENT3 = 0,
-    COLOR_ATTACHMENT4 = 0,
-    COLOR_ATTACHMENT5 = 0,
-    COLOR_ATTACHMENT6 = 0,
-    COLOR_ATTACHMENT7 = 0,
-    DEPTH_ATTACHMENT = 0,
-    DEPTH_COMPONENT24 = 0,
-    DEPTH_COMPONENT32 = 0,
-    DEPTH_COMPONENT32F = 0,
-    COLOR = 0,
-    DEPTH = 0,
-    STENCIL = 0,
-    NONE = 0,
-    FLOAT = 0,
-    TRIANGLE_STRIP = 0,
-    VERTEX_SHADER = 0,
-    FRAGMENT_SHADER = 0,
+	RGBA8 = 0,
+	FRAMEBUFFER = 0,
+	COLOR_ATTACHMENT0 = 0,
+	COLOR_ATTACHMENT1 = 0,
+	COLOR_ATTACHMENT2 = 0,
+	COLOR_ATTACHMENT3 = 0,
+	COLOR_ATTACHMENT4 = 0,
+	COLOR_ATTACHMENT5 = 0,
+	COLOR_ATTACHMENT6 = 0,
+	COLOR_ATTACHMENT7 = 0,
+	DEPTH_ATTACHMENT = 0,
+	DEPTH_COMPONENT24 = 0,
+	DEPTH_COMPONENT32 = 0,
+	DEPTH_COMPONENT32F = 0,
+	COLOR = 0,
+	DEPTH = 0,
+	STENCIL = 0,
+	NONE = 0,
+	FLOAT = 0,
+	TRIANGLE_STRIP = 0,
+	TRIANGLES = 0,
+	VERTEX_SHADER = 0,
+	FRAGMENT_SHADER = 0,
+	UNSIGNED_SHORT = 0,
+	UNSIGNED_INT = 0,
 }

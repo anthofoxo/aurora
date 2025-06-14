@@ -1,16 +1,17 @@
 
 # Changelogs
 ## v0.0.4-a.5
-### General
-* Fixed uncaught errors during `Plugin.Unload` causing program crashes
-
-### Breaking Changes
-* Filesystem APIs are now in the `Aurora.filesystem` table instead of the `Aurora` table
-
-### API Changes
 * Plugin IDs are created using the filename stem
 * Expanded hashtable entries
 * Many OpenGL APIs exposed to allow custom rendering (Targeting 4.5 Core)
+* Fixed uncaught errors during `Plugin.Unload` causing program crashes
+* Plugins how have "persistent storage" meaning certain values are handled in native code and will persist between reloads
+* `Plugin.visible` is now moved to persistent storage
+* Reloading plugins will remember the visible windows
+
+### Breaking Changes
+* Filesystem APIs are now in the `Aurora.filesystem` table instead of the `Aurora` table
+* `Plugin.visible` changed type from `boolean` to `boolean?`
 
 #### Moved API Functions
 * `Aurora.is_regular_file` -> `Aurora.filesystem.is_regular_file`
@@ -21,12 +22,18 @@
 #### New API Functions
 * `Aurora.filesystem.stem`
 * `Aurora.util.create_shader_program`
+* `Aurora.bitcast_float`
 * `ImGui.LogToClipboard`
 * `ImGui.LogFinish`
 * `ImGui.LogText`
 * `ImGui.SmallButton`
 * `ImGui.GetContentRegionAvail`
+* `ImGui.BeginPopupContextItem`
+* `ImGui.EndPopup`
+* `ImGui.CloseCurrentPopup`
+* `ImGui.SetItemTooltip`
 * `glm.perspective`
+* `glm.lookAt`
 * `gl.BindFramebuffer`
 * `gl.CreateFramebuffers`
 * `gl.DeleteFramebuffers`
@@ -57,6 +64,8 @@
 * `gl.DeleteProgram`
 * `gl.GetUniformLocation`
 * `gl.ProgramUniformMatrix4fv`
+* `gl.VertexArrayElementBuffer`
+* `gl.DrawElements`
 
 ## v0.0.4-a.4
 * Extended the hashtable with more values

@@ -17,6 +17,11 @@ namespace {
         return 1;
     }
 
+    int BeginPopupContextItem(lua_State *L) {
+        lua_pushboolean(L, ImGui::BeginPopupContextItem());
+        return 1;
+    }
+
     int BeginTable(lua_State *L) {
         char const *id = luaL_checkstring(L, 1);
         int const numCols = static_cast<int>(luaL_checkinteger(L, 2));
@@ -40,6 +45,11 @@ namespace {
         return 1;
     }
 
+    int CloseCurrentPopup(lua_State *L) {
+        ImGui::CloseCurrentPopup();
+        return 0;
+    }
+
     int Columns(lua_State *L) {
         ImGui::Columns(static_cast<int>(luaL_checkinteger(L, 1)));
         return 0;
@@ -52,6 +62,11 @@ namespace {
 
     int EndMenu(lua_State *L) {
         ImGui::EndMenu();
+        return 0;
+    }
+
+    int EndPopup(lua_State *L) {
+        ImGui::EndPopup();
         return 0;
     }
 
@@ -158,17 +173,8 @@ namespace {
 
     int MenuItem(lua_State *L) {
         char const* label = luaL_checkstring(L, 1);
-        // idx 2 unused
-        // idx 4 unused
 
-        lua_rawgeti(L, 3, 1);
-        bool selected = lua_toboolean(L, -1);
-        lua_pop(L, 1);
-
-        bool value = ImGui::MenuItem(label, nullptr, &selected, true);
-
-        lua_pushboolean(L, selected);
-        lua_rawseti(L, 3, 1);
+        bool value = ImGui::MenuItem(label);
 
         lua_pushboolean(L, value);
         return 1;
@@ -226,6 +232,11 @@ namespace {
 
     int SeparatorText(lua_State *L) {
         ImGui::SeparatorText(luaL_checkstring(L, 1));
+        return 0;
+    }
+
+    int SetItemTooltip(lua_State *L) {
+        ImGui::SetItemTooltip(luaL_checkstring(L, 1));
         return 0;
     }
 
@@ -334,4 +345,8 @@ void aurora::api_register_imgui(lua_State *L) {
     AU_IMPL_API_REGISTER(TextColored);
     AU_IMPL_API_REGISTER(TextUnformatted);
     AU_IMPL_API_REGISTER(TextWrapped);
+    AU_IMPL_API_REGISTER(BeginPopupContextItem);
+    AU_IMPL_API_REGISTER(EndPopup);
+    AU_IMPL_API_REGISTER(CloseCurrentPopup);
+    AU_IMPL_API_REGISTER(SetItemTooltip);
 }

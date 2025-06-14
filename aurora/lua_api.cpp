@@ -1,5 +1,6 @@
 #include "lua_api.hpp"
 
+#include <bit>
 #include <filesystem>
 
 #include <imgui.h>
@@ -49,6 +50,12 @@ void aurora::register_plugin_api(lua_State* L) {
 	lua_setfield(L, -2, "unescape");
 	lua_pushcfunction(L, &lua_escape);
 	lua_setfield(L, -2, "escape");
+
+	lua_pushcfunction(L, [](lua_State *L) -> int {
+			lua_pushnumber(L, std::bit_cast<float>(static_cast<std::uint32_t>(lua_tointeger(L, 1))));
+			return 1;
+		});
+	lua_setfield(L, -2, "bitcast_float");
 
 	lua_pushcfunction(L, [](lua_State *L) -> int {
 		char const* path = luaL_checkstring(L, 1);
@@ -469,6 +476,29 @@ void aurora::register_plugin_api(lua_State* L) {
 	                  });
 	lua_setfield(L, -2, "ProgramUniformMatrix4fv");
 
+	lua_pushcfunction(L, [](lua_State *L) -> int {
+					  GLuint const vao = luaL_checkinteger(L, 1);
+					  GLuint const ebo = luaL_checkinteger(L, 2);
+					  glVertexArrayElementBuffer(vao, ebo);
+					  return 0;
+					  });
+
+	lua_setfield(L, -2, "VertexArrayElementBuffer");
+
+	lua_pushcfunction(L, [](lua_State *L) -> int {
+	                  GLenum const mode = luaL_checkinteger(L, 1);
+	                  GLsizei const count = luaL_checkinteger(L, 2);
+	                  GLenum const type = luaL_checkinteger(L, 3);
+	                  auto const *indices = reinterpret_cast<void*>(static_cast<std::uintptr_t>(luaL_checkinteger(L, 4))
+	                  );
+	                  glDrawElements(mode, count, type, indices);
+	                  return 0;
+	                  });
+
+	lua_setfield(L, -2, "DrawElements");
+
+
+
 	lua_setglobal(L, "gl");
 
 	lua_newtable(L);
@@ -494,8 +524,11 @@ void aurora::register_plugin_api(lua_State* L) {
 	AU_IMPL_GL_EXPAND(L, NONE);
 	AU_IMPL_GL_EXPAND(L, FLOAT);
 	AU_IMPL_GL_EXPAND(L, TRIANGLE_STRIP);
+	AU_IMPL_GL_EXPAND(L, TRIANGLES);
 	AU_IMPL_GL_EXPAND(L, VERTEX_SHADER);
 	AU_IMPL_GL_EXPAND(L, FRAGMENT_SHADER);
+	AU_IMPL_GL_EXPAND(L, UNSIGNED_SHORT);
+	AU_IMPL_GL_EXPAND(L, UNSIGNED_INT);
 #undef AU_IMPL_GL_EXPAND
 	lua_setglobal(L, "GL");
 }
