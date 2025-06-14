@@ -25,6 +25,32 @@ local plugins = {}
 local pluginCount = 0
 print("Loading plugins...")
 
+Aurora.util = {
+    ---@param vertSource string
+    ---@param fragSource string
+    ---@return _Program
+    create_shader_program = function(vertSource, fragSource)
+        local vertShader = gl.CreateShader(GL.VERTEX_SHADER)
+        gl.ShaderSource(vertShader, vertSource)
+        gl.CompileShader(vertShader)
+
+        local fragShader = gl.CreateShader(GL.FRAGMENT_SHADER)
+        gl.ShaderSource(fragShader, fragSource)
+        gl.CompileShader(fragShader)
+
+        local program = gl.CreateProgram()
+        gl.AttachShader(program, vertShader)
+        gl.AttachShader(program, fragShader)
+        gl.LinkProgram(program)
+        gl.DetachShader(program, vertShader)
+        gl.DetachShader(program, fragShader)
+        gl.DeleteShader(vertShader)
+        gl.DeleteShader(fragShader)
+
+        return program
+    end,
+}
+
 for _, entry in ipairs(Aurora.filesystem.directory_iterator("plugins") or {}) do
 	if Aurora.filesystem.is_regular_file(entry) and entry:endswith(".lua") then
 		local status, result = pcall(function()

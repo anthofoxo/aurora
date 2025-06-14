@@ -4,6 +4,7 @@
 
 #include <imgui.h>
 #include <misc/cpp/imgui_stdlib.h>
+#include <glm/glm.hpp>
 
 #include "au_util.hpp"
 #include "api/au_api.hpp"
@@ -142,6 +143,9 @@ void aurora::register_plugin_api(lua_State* L) {
 
 	aurora::api_register_imgui(L);
 	lua_setglobal(L, "ImGui");
+
+	aurora::api_register_glm(L);
+	lua_setglobal(L, "glm");
 
 	lua_newtable(L);
 	lua_pushcfunction(L, [](lua_State *L) -> int {
@@ -436,6 +440,34 @@ void aurora::register_plugin_api(lua_State* L) {
 						  return 0;
 						  });
 	lua_setfield(L, -2, "DeleteProgram");
+
+	lua_pushcfunction(L, [](lua_State *L) -> int {
+	                  GLuint const program = luaL_checkinteger(L, 1);
+	                  char const* name = luaL_checkstring(L, 2);
+	                  GLint const location = glGetUniformLocation(program, name);
+	                  lua_pushinteger(L, location);
+	                  return 1;
+	                  });
+	lua_setfield(L, -2, "GetUniformLocation");
+
+	lua_pushcfunction(L, [](lua_State *L) -> int {
+	                  GLuint const program = luaL_checkinteger(L, 1);
+	                  GLint const location = luaL_checkinteger(L, 2);
+	                  GLsizei const count = luaL_checkinteger(L, 3);
+	                  GLboolean const transpose = lua_toboolean(L, 4);
+
+	                  auto *data = static_cast<float*>(alloca(count * sizeof(glm::mat4)));
+
+	                  for (int i = 0; i < count * 16; ++i) {
+		                  lua_rawgeti(L, 5, i + 1);
+		                  data[i] = lua_tonumber(L, -1);
+		                  lua_pop(L, 1);
+	                  }
+
+	                  glProgramUniformMatrix4fv(program, location, count, transpose, data);
+	                  return 0;
+	                  });
+	lua_setfield(L, -2, "ProgramUniformMatrix4fv");
 
 	lua_setglobal(L, "gl");
 

@@ -17,21 +17,18 @@ gl.VertexArrayAttribFormat(vao, 0, 2, GL.FLOAT, false, 0)
 gl.VertexArrayAttribBinding(vao, 0, 0)
 gl.EnableVertexArrayAttrib(vao, 0)
 
-local vertShader = gl.CreateShader(GL.VERTEX_SHADER)
-gl.ShaderSource(vertShader,
+local program = Aurora.util.create_shader_program(
 [[#version 450 core
 layout (location = 0) in vec2 iPosition;
 out vec3 vColor;
 
+uniform mat4 uProjection;
+
 void main(void) {
-    gl_Position = vec4(iPosition, 0.0, 1.0);
+    gl_Position = uProjection * vec4(iPosition, -1.0, 1.0);
     vColor = vec3(iPosition + 0.5, 1.0);
 }
-]])
-gl.CompileShader(vertShader)
-
-local fragShader = gl.CreateShader(GL.FRAGMENT_SHADER)
-gl.ShaderSource(fragShader,
+]],
 [[#version 450 core
 in vec3 vColor;
 
@@ -40,16 +37,8 @@ layout (location = 0) out vec4 oColor;
 void main(void) {
     oColor = vec4(vColor, 1.0);
 }
-]])
-gl.CompileShader(fragShader)
-
-local program = gl.CreateProgram()
-gl.AttachShader(program, vertShader)
-gl.AttachShader(program, fragShader)
-gl.LinkProgram(program)
-gl.DetachShader(program, vertShader)
-gl.DetachShader(program, fragShader)
-gl.DeleteShader(vertShader)
+]]
+)
 
 for _, value in pairs(Aurora.hashtable()) do
     if string.match(value, ".x") then
@@ -125,12 +114,19 @@ return {
                 gl.NamedFramebufferRenderbuffer(framebuffer, GL.DEPTH_ATTACHMENT, renderbuffer)
             end
 
+
+
             gl.BindFramebuffer(GL.FRAMEBUFFER, framebuffer)
             gl.Viewport(0, 0, regionAvail[1], regionAvail[2])
             gl.ClearNamedFramebufferfv(framebuffer, GL.COLOR, 0, { 0.7, 0.8, 0.9, 1.0 })
             gl.ClearNamedFramebufferfv(framebuffer, GL.DEPTH, 0, { 1.0 })
             gl.UseProgram(program)
             gl.BindVertexArray(vao)
+
+            local projection = glm.perspective(math.rad(90.0), regionAvail[1] / regionAvail[2], 0.1, 64.0)
+            local projectionLocation = gl.GetUniformLocation(program, "uProjection")
+            gl.ProgramUniformMatrix4fv(program, projectionLocation, 1, false, projection)
+
             gl.DrawArrays(GL.TRIANGLE_STRIP, 0, 4)
 
             ImGui.Image(texture, regionAvail, { 0.0, 1.0 }, { 1.0, 0.0 })

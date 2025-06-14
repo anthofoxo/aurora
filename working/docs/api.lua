@@ -3,6 +3,10 @@
 ---@generic T
 ---@class Box<T>
 
+---@alias Ref<T> T[]
+
+---@alias mat4 number[]
+
 ---@alias GLenum integer
 ---@alias GLint integer
 ---@alias GLuint integer
@@ -184,6 +188,15 @@ ImGui = {
     GetContentRegionAvail = function() end,
 }
 
+glm = {
+    ---@param fovy number
+    ---@param aspect number
+    ---@param near number
+    ---@param far number
+    ---@return mat4
+    perspective = function(fovy, aspect, near, far) end,
+}
+
 gl = {
     ---@return _Buffer
 	---@nodiscard
@@ -334,6 +347,19 @@ gl = {
 
     ---@param program _Program
     DeleteProgram = function(program) end,
+
+    ---@param program _Program
+    ---@param name string
+    ---@return GLint
+    ---@nodiscard
+    GetUniformLocation = function(program, name) end,
+
+    ---@param program _Program
+    ---@param location GLint
+    ---@param count GLsizei
+    ---@param transpose GLboolean
+    ---@param value Ref<number>
+    ProgramUniformMatrix4fv = function(program, location, count, transpose, value) end,
 }
 
 GL = {

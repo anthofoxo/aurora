@@ -20,11 +20,13 @@
 
 #### New API Functions
 * `Aurora.filesystem.stem`
+* `Aurora.util.create_shader_program`
 * `ImGui.LogToClipboard`
 * `ImGui.LogFinish`
 * `ImGui.LogText`
 * `ImGui.SmallButton`
 * `ImGui.GetContentRegionAvail`
+* `glm.perspective`
 * `gl.BindFramebuffer`
 * `gl.CreateFramebuffers`
 * `gl.DeleteFramebuffers`
@@ -53,6 +55,8 @@
 * `gl.LinkProgram`
 * `gl.UseProgram`
 * `gl.DeleteProgram`
+* `gl.GetUniformLocation`
+* `gl.ProgramUniformMatrix4fv`
 
 ## v0.0.4-a.4
 * Extended the hashtable with more values
