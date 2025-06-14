@@ -18,6 +18,7 @@ includedirs {
 	"%{wks.location}/vendor/lua/src",
 	"%{wks.location}/vendor/tinyfd",
 	"%{wks.location}/vendor/spdlog/include",
+	"%{wks.location}/vendor/glm",
 }
 
 links {
