@@ -7,6 +7,7 @@
 ### API Changes
 * Plugin IDs are created using the filename stem
 * Expanded hashtable entries
+* Many OpenGL APIs exposed to allow custom rendering (Targeting 4.5 Core)
 
 #### Moved API Functions
 * `Aurora.is_regular_file` -> `Aurora.filesystem.is_regular_file`
@@ -15,11 +16,22 @@
 * `Aurora.create_directories` -> `Aurora.filesystem.create_directories`
 
 #### New API Functions
+* `Aurora.filesystem.stem`
 * `ImGui.LogToClipboard`
 * `ImGui.LogFinish`
 * `ImGui.LogText`
 * `ImGui.SmallButton`
-* `Aurora.filesystem.stem`
+* `ImGui.GetContentRegionAvail`
+* `gl.BindFramebuffer`
+* `gl.CreateFramebuffers`
+* `gl.DeleteFramebuffers`
+* `gl.NamedFramebufferTexture`
+* `gl.CreateRenderbuffers`
+* `gl.DeleteRenderbuffers`
+* `gl.NamedRenderbufferStorage`
+* `gl.NamedFramebufferRenderbuffer`
+* `gl.Viewport`
+* `gl.ClearNamedFramebufferfv`
 
 ## v0.0.4-a.4
 * Extended the hashtable with more values

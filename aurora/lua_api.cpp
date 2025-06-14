@@ -201,12 +201,122 @@ void aurora::register_plugin_api(lua_State* L) {
 	});
 	lua_setfield(L, -2, "TextureStorage2D");
 
+	lua_pushcfunction(L, [](lua_State *L) -> int {
+		glBindFramebuffer(luaL_checkinteger(L, 1), luaL_checkinteger(L, 2));
+		return 0;
+	});
+	lua_setfield(L, -2, "BindFramebuffer");
+
+	lua_pushcfunction(L, [](lua_State *L) -> int {
+		GLuint framebuffer;
+		glCreateFramebuffers(1, &framebuffer);
+		lua_pushinteger(L, framebuffer);
+		return 1;
+	});
+	lua_setfield(L, -2, "CreateFramebuffers");
+
+	lua_pushcfunction(L, [](lua_State *L) -> int {
+		GLuint const framebuffer = luaL_checkinteger(L, 1);
+		glDeleteFramebuffers(1, &framebuffer);
+		return 0;
+	});
+	lua_setfield(L, -2, "DeleteFramebuffers");
+
+	lua_pushcfunction(L, [](lua_State *L) -> int {
+		GLuint const framebuffer = luaL_checkinteger(L, 1);
+		GLenum const attachment = luaL_checkinteger(L, 2);
+		GLuint const texture = luaL_checkinteger(L, 3);
+		GLint const level = luaL_checkinteger(L, 4);
+		glNamedFramebufferTexture(framebuffer, attachment, texture, level);
+		return 0;
+	});
+	lua_setfield(L, -2, "NamedFramebufferTexture");
+
+	lua_pushcfunction(L, [](lua_State *L) -> int {
+		GLuint const framebuffer = luaL_checkinteger(L, 1);
+		GLenum const attachment = luaL_checkinteger(L, 2);
+		GLuint const renderbuffer = luaL_checkinteger(L, 3);
+		glNamedFramebufferRenderbuffer(framebuffer, attachment, GL_RENDERBUFFER, renderbuffer);
+		return 0;
+	});
+	lua_setfield(L, -2, "NamedFramebufferRenderbuffer");
+
+	lua_pushcfunction(L, [](lua_State *L) -> int {
+		GLuint renderbuffer;
+		glCreateRenderbuffers(1, &renderbuffer);
+		lua_pushinteger(L, renderbuffer);
+		return 1;
+	});
+	lua_setfield(L, -2, "CreateRenderbuffers");
+
+	lua_pushcfunction(L, [](lua_State *L) -> int {
+		GLuint const renderbuffer = luaL_checkinteger(L, 1);
+		glDeleteRenderbuffers(1, &renderbuffer);
+		return 0;
+	});
+	lua_setfield(L, -2, "DeleteRenderbuffers");
+
+	lua_pushcfunction(L, [](lua_State *L) -> int {
+		GLuint const renderbuffer = luaL_checkinteger(L, 1);
+		GLenum const internalformat = luaL_checkinteger(L, 2);
+		GLsizei const width = luaL_checkinteger(L, 3);
+		GLsizei const height = luaL_checkinteger(L, 4);
+		glNamedRenderbufferStorage(renderbuffer, internalformat, width, height);
+		return 0;
+	});
+	lua_setfield(L, -2, "NamedRenderbufferStorage");
+
+	lua_pushcfunction(L, [](lua_State *L) -> int {
+		GLint const x = luaL_checkinteger(L, 1);
+		GLint const y = luaL_checkinteger(L, 2);
+		GLsizei const width = luaL_checkinteger(L, 3);
+		GLsizei const height = luaL_checkinteger(L, 4);
+		glViewport(x, y, width, height);
+		return 0;
+	});
+	lua_setfield(L, -2, "Viewport");
+
+	lua_pushcfunction(L, [](lua_State *L) -> int {
+		GLuint const framebuffer = luaL_checkinteger(L, 1);
+		GLenum const buffer = luaL_checkinteger(L, 2);
+		GLint const drawbuffer = luaL_checkinteger(L, 3);
+
+		float value[4];
+		lua_pushinteger(L, 1); lua_rawget(L, 4); value[0] = lua_tonumber(L, -1); lua_pop(L, 1);
+
+		if (buffer == GL_COLOR) {
+			lua_pushinteger(L, 2); lua_rawget(L, 4); value[1] = lua_tonumber(L, -1); lua_pop(L, 1);
+			lua_pushinteger(L, 3); lua_rawget(L, 4); value[2] = lua_tonumber(L, -1); lua_pop(L, 1);
+			lua_pushinteger(L, 4); lua_rawget(L, 4); value[3] = lua_tonumber(L, -1); lua_pop(L, 1);
+		}
+
+		glClearNamedFramebufferfv(framebuffer, buffer, drawbuffer, value);
+		return 0;
+	});
+	lua_setfield(L, -2, "ClearNamedFramebufferfv");
+
 	lua_setglobal(L, "gl");
 
 	lua_newtable(L);
 #define AU_IMPL_GL_EXPAND(L, name) lua_pushinteger(L, GL_ ## name); lua_setfield(L, -2, #name)
 	AU_IMPL_GL_EXPAND(L, TEXTURE_2D);
 	AU_IMPL_GL_EXPAND(L, RGBA8);
+	AU_IMPL_GL_EXPAND(L, FRAMEBUFFER);
+	AU_IMPL_GL_EXPAND(L, COLOR_ATTACHMENT0);
+	AU_IMPL_GL_EXPAND(L, COLOR_ATTACHMENT1);
+	AU_IMPL_GL_EXPAND(L, COLOR_ATTACHMENT2);
+	AU_IMPL_GL_EXPAND(L, COLOR_ATTACHMENT3);
+	AU_IMPL_GL_EXPAND(L, COLOR_ATTACHMENT4);
+	AU_IMPL_GL_EXPAND(L, COLOR_ATTACHMENT5);
+	AU_IMPL_GL_EXPAND(L, COLOR_ATTACHMENT6);
+	AU_IMPL_GL_EXPAND(L, COLOR_ATTACHMENT7);
+	AU_IMPL_GL_EXPAND(L, DEPTH_ATTACHMENT);
+	AU_IMPL_GL_EXPAND(L, DEPTH_COMPONENT24);
+	AU_IMPL_GL_EXPAND(L, DEPTH_COMPONENT32);
+	AU_IMPL_GL_EXPAND(L, DEPTH_COMPONENT32F);
+	AU_IMPL_GL_EXPAND(L, COLOR);
+	AU_IMPL_GL_EXPAND(L, DEPTH);
+	AU_IMPL_GL_EXPAND(L, STENCIL);
 #undef AU_IMPL_GL_EXPAND
 	lua_setglobal(L, "GL");
 }

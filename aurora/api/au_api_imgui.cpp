@@ -60,6 +60,16 @@ namespace {
         return 0;
     }
 
+    int GetContentRegionAvail(lua_State *L) {
+        auto const [x, y] = ImGui::GetContentRegionAvail();
+        lua_newtable(L);
+        lua_pushnumber(L, x);
+        lua_rawseti(L, -2, 1);
+        lua_pushnumber(L, y);
+        lua_rawseti(L, -2, 2);
+        return 1;
+    }
+
     int Image(lua_State *L) {
         auto const image = static_cast<ImTextureID>(static_cast<std::uintptr_t>(luaL_checkinteger(L, 1)));
 
@@ -264,7 +274,6 @@ namespace {
         ImGui::TextWrapped("%s", lua_tostring(L, -1));
         return 0;
     }
-
 }
 
 void aurora::api_register_imgui(lua_State *L) {
@@ -278,6 +287,7 @@ void aurora::api_register_imgui(lua_State *L) {
     AU_IMPL_API_REGISTER(EndChild);
     AU_IMPL_API_REGISTER(EndMenu);
     AU_IMPL_API_REGISTER(EndTable);
+    AU_IMPL_API_REGISTER(GetContentRegionAvail);
     AU_IMPL_API_REGISTER(Image);
     AU_IMPL_API_REGISTER(InputText);
     AU_IMPL_API_REGISTER(LabelText);

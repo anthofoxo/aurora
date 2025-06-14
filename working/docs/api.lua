@@ -160,6 +160,9 @@ ImGui = {
     ---@param fmt string
     ---@param ... any
     LogText = function(fmt, ...) end,
+
+    ---@return table
+    GetContentRegionAvail = function() end,
 }
 
 gl = {
@@ -194,9 +197,64 @@ gl = {
     ---@param width integer
     ---@param height integer
     TextureStorage2D = function(texture, levels, internalFormat, width, height) end,
+
+    ---@param target integer
+    ---@param framebuffer integer
+    BindFramebuffer = function(target, framebuffer) end,
+
+    ---@return integer
+    CreateFramebuffers = function() end,
+
+    ---@param framebuffer integer
+    DeleteFramebuffers = function(framebuffer) end,
+
+     ---@return integer
+    CreateRenderbuffers = function() end,
+
+    ---@param renderbuffer integer
+    DeleteRenderbuffers = function(renderbuffer) end,
+
+    ---@param framebuffer integer
+    ---@param attachment integer
+    ---@param texture integer
+    ---@param level integer
+    NamedFramebufferTexture = function(framebuffer, attachment, texture, level) end,
+
+    ---@param renderbuffer integer
+    ---@param internalFormat integer
+    ---@param width integer
+    ---@param height integer
+    NamedRenderbufferStorage = function(renderbuffer, internalFormat, width, height) end,
+
+    ---@param framebuffer integer
+    ---@param attachment integer
+    ---@param renderbuffer integer
+    NamedFramebufferRenderbuffer = function(framebuffer, attachment, renderbuffer) end,
+
+    ---@param x integer
+    ---@param y integer
+    ---@param width integer
+    ---@param height integer
+    Viewport = function(x, y, width, height) end,
+
+    ---@param framebuffer integer
+    ---@param buffer integer
+    ---@param drawbuffer integer
+    ---@param value table
+    ClearNamedFramebufferfv = function(framebuffer, buffer, drawbuffer, value) end,
 }
 
 GL = {
     TEXTURE_2D = 0,
     RGBA8 = 0,
+    FRAMEBUFFER = 0,
+    COLOR_ATTACHMENT0 = 0,
+    COLOR_ATTACHMENT1 = 0,
+    COLOR_ATTACHMENT2 = 0,
+    COLOR_ATTACHMENT3 = 0,
+    COLOR_ATTACHMENT4 = 0,
+    COLOR_ATTACHMENT5 = 0,
+    COLOR_ATTACHMENT6 = 0,
+    COLOR_ATTACHMENT7 = 0,
+    DEPTH_ATTACHMENT = 0,
 }

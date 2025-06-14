@@ -683,7 +683,7 @@ void main() {
 		ImGui::EndMainMenuBar();
 
 		if (showDemo) {
-			ImGui::ShowDemoWindow();
+			ImGui::ShowDemoWindow(&showDemo);
 		}
 
 		if (route_global_shortcut(ImGuiMod_Ctrl | ImGuiMod_Shift | ImGuiKey_D)) {
@@ -702,6 +702,7 @@ void main() {
 			console.draw("Console", &open);
 		}
 
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		ImGui::Render();
 		int display_w, display_h;
 		glfwGetFramebufferSize(window, &display_w, &display_h);

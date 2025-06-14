@@ -51,7 +51,6 @@ return {
         end
     end,
 	gui = {
-		visible = true,
 		title = "Hasher",
         OnGui = function()
             ImGui.Text("%d known textures", #knownTextures)

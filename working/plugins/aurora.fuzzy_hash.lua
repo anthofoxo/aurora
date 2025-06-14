@@ -3,7 +3,6 @@ local output = {}
 
 return {
 	gui = {
-		visible = true,
 		title = "Hasher",
 		OnGui = function()
 			if ImGui.InputText("Input", input) then
