@@ -41,8 +41,7 @@
 #include "stb_image.h"
 
 #include "au_util.hpp"
-
-
+#include "spdlog/spdlog.h"
 
 ImFont* gVariableSpace = nullptr;
 ImFont* gMonoSpace = nullptr;
@@ -500,7 +499,10 @@ struct PluginEngine {
 
 				if (enabled) {
 					if (lua_getfield(L, -2, "OnUnload") == LUA_TFUNCTION) {
-						lua_pcall(L, 0, 0, 0);
+						if (lua_pcall(L, 0, 0, 0) != LUA_OK) {
+							spdlog::error(lua_tostring(L, -1));
+							lua_pop(L, 1); // Pop error value from stack
+						}
 					}
 					else {
 						lua_pop(L, 1);

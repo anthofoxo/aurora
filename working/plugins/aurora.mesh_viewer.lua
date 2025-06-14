@@ -1,9 +1,55 @@
 local knownMeshes = {}
 local selection = nil
 local contentRegionAvailLast = { 0, 0 }
-local texture = 0
-local framebuffer = 0
-local renderbuffer = 0
+local texture
+local framebuffer
+local renderbuffer
+local vao
+local vbo
+
+vbo = gl.CreateBuffers()
+local data = "\x00\x00\x00\xBF\x00\x00\x00\x3F\x00\x00\x00\xBF\x00\x00\x00\xBF\x00\x00\x00\x3F\x00\x00\x00\x3F\x00\x00\x00\x3F\x00\x00\x00\xBF"
+gl.NamedBufferStorage(vbo, #data, data, GL.NONE)
+
+vao = gl.CreateVertexArrays()
+gl.VertexArrayVertexBuffer(vao, 0, vbo, 0, 8)
+gl.VertexArrayAttribFormat(vao, 0, 2, GL.FLOAT, false, 0)
+gl.VertexArrayAttribBinding(vao, 0, 0)
+gl.EnableVertexArrayAttrib(vao, 0)
+
+local vertShader = gl.CreateShader(GL.VERTEX_SHADER)
+gl.ShaderSource(vertShader,
+[[#version 450 core
+layout (location = 0) in vec2 iPosition;
+out vec3 vColor;
+
+void main(void) {
+    gl_Position = vec4(iPosition, 0.0, 1.0);
+    vColor = vec3(iPosition + 0.5, 1.0);
+}
+]])
+gl.CompileShader(vertShader)
+
+local fragShader = gl.CreateShader(GL.FRAGMENT_SHADER)
+gl.ShaderSource(fragShader,
+[[#version 450 core
+in vec3 vColor;
+
+layout (location = 0) out vec4 oColor;
+
+void main(void) {
+    oColor = vec4(vColor, 1.0);
+}
+]])
+gl.CompileShader(fragShader)
+
+local program = gl.CreateProgram()
+gl.AttachShader(program, vertShader)
+gl.AttachShader(program, fragShader)
+gl.LinkProgram(program)
+gl.DetachShader(program, vertShader)
+gl.DetachShader(program, fragShader)
+gl.DeleteShader(vertShader)
 
 for _, value in pairs(Aurora.hashtable()) do
     if string.match(value, ".x") then
@@ -13,17 +59,21 @@ end
 
 return {
     OnUnload = function()
-        if texture ~= 0 then
+        if texture ~= nil then
             gl.DeleteTextures(texture)
         end
 
-        if framebuffer ~= 0 then
+        if framebuffer ~= nil then
             gl.DeleteFramebuffers(framebuffer)
         end
 
-        if renderbuffer ~= 0 then
+        if renderbuffer ~= nil then
             gl.DeleteRenderbuffers(renderbuffer)
         end
+
+        gl.DeleteProgram(program)
+        gl.DeleteVertexArrays(vao)
+        gl.DeleteBuffers(vbo)
     end,
 	gui = {
         title = "Mesh Viewer",
@@ -52,21 +102,21 @@ return {
                 contentRegionAvailLast = regionAvail
                 -- Content region size has changed, recreate the texture
 
-                if texture ~= 0 then
+                if texture ~= nil then
                     gl.DeleteTextures(texture)
                 end
 
                 texture = gl.CreateTextures(GL.TEXTURE_2D)
                 gl.TextureStorage2D(texture, 1, GL.RGBA8, regionAvail[1], regionAvail[2])
 
-                if renderbuffer ~= 0 then
+                if renderbuffer ~= nil then
                     gl.DeleteRenderbuffers(renderbuffer)
                 end
 
                 renderbuffer = gl.CreateRenderbuffers()
                 gl.NamedRenderbufferStorage(renderbuffer, GL.DEPTH_COMPONENT32, regionAvail[1], regionAvail[2])
 
-                if framebuffer ~= 0 then
+                if framebuffer ~= nil then
                     gl.DeleteFramebuffers(framebuffer)
                 end
 
@@ -79,9 +129,11 @@ return {
             gl.Viewport(0, 0, regionAvail[1], regionAvail[2])
             gl.ClearNamedFramebufferfv(framebuffer, GL.COLOR, 0, { 0.7, 0.8, 0.9, 1.0 })
             gl.ClearNamedFramebufferfv(framebuffer, GL.DEPTH, 0, { 1.0 })
-            gl.BindFramebuffer(GL.FRAMEBUFFER, 0)
+            gl.UseProgram(program)
+            gl.BindVertexArray(vao)
+            gl.DrawArrays(GL.TRIANGLE_STRIP, 0, 4)
 
-            ImGui.Image(texture, regionAvail)
+            ImGui.Image(texture, regionAvail, { 0.0, 1.0 }, { 1.0, 0.0 })
         end
 	},
 }

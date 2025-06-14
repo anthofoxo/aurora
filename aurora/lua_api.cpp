@@ -146,6 +146,19 @@ void aurora::register_plugin_api(lua_State* L) {
 	lua_newtable(L);
 	lua_pushcfunction(L, [](lua_State *L) -> int {
 		GLuint handle;
+		glCreateVertexArrays(1, &handle);
+		lua_pushinteger(L, handle);
+		return 1;
+	});
+	lua_setfield(L, -2, "CreateVertexArrays");
+	lua_pushcfunction(L, [](lua_State *L) -> int {
+		GLuint const handle = luaL_checkinteger(L, 1);
+		glDeleteVertexArrays(1, &handle);
+		return 0;
+	});
+	lua_setfield(L, -2, "DeleteVertexArrays");
+	lua_pushcfunction(L, [](lua_State *L) -> int {
+		GLuint handle;
 		glCreateBuffers(1, &handle);
 		lua_pushinteger(L, handle);
 		return 1;
@@ -166,13 +179,6 @@ void aurora::register_plugin_api(lua_State* L) {
 		return 0;
 	});
 	lua_setfield(L, -2, "NamedBufferStorage");
-	lua_pushcfunction(L, [](lua_State *L) -> int {
-		GLuint handle;
-		glCreateVertexArrays(1, &handle);
-		lua_pushinteger(L, handle);
-		return 1;
-	});
-	lua_setfield(L, -2, "CreateVertexArrays");
 
 	lua_pushcfunction(L, [](lua_State *L) -> int {
 		GLenum const target = luaL_checkinteger(L, 1);
@@ -277,6 +283,66 @@ void aurora::register_plugin_api(lua_State* L) {
 	lua_setfield(L, -2, "Viewport");
 
 	lua_pushcfunction(L, [](lua_State *L) -> int {
+		GLuint const vao = luaL_checkinteger(L, 1);
+		glBindVertexArray(vao);
+		return 0;
+	});
+	lua_setfield(L, -2, "BindVertexArray");
+	lua_pushcfunction(L, [](lua_State *L) -> int {
+	                  GLuint const vao = luaL_checkinteger(L, 1);
+	                  GLuint const bindingindex = luaL_checkinteger(L, 2);
+	                  GLuint const buffer = luaL_checkinteger(L, 3);
+	                  GLintptr const offset = luaL_checkinteger(L, 4);
+	                  GLsizei const stride = luaL_checkinteger(L, 5);
+	                  glVertexArrayVertexBuffer(vao, bindingindex, buffer, offset, stride);
+	                  return 0;
+	                  });
+
+	lua_setfield(L, -2, "VertexArrayVertexBuffer");
+
+	lua_pushcfunction(L, [](lua_State *L) -> int {
+	                  GLuint const vao = luaL_checkinteger(L, 1);
+	                  GLuint const index = luaL_checkinteger(L, 2);
+	                  glEnableVertexArrayAttrib(vao, index);
+	                  return 0;
+	                  });
+
+	lua_setfield(L, -2, "EnableVertexArrayAttrib");
+
+	lua_pushcfunction(L, [](lua_State *L) -> int {
+					  GLenum const mode = luaL_checkinteger(L, 1);
+					  GLint const first = luaL_checkinteger(L, 2);
+					  GLsizei const count = luaL_checkinteger(L, 3);
+					  glDrawArrays(mode, first, count);
+					  return 0;
+					  });
+
+	lua_setfield(L, -2, "DrawArrays");
+
+	lua_pushcfunction(L, [](lua_State *L) -> int {
+	                  GLuint const vao = luaL_checkinteger(L, 1);
+	                  GLuint const attribindex = luaL_checkinteger(L, 2);
+	                  GLint const size = luaL_checkinteger(L, 3);
+	                  GLenum const type = luaL_checkinteger(L, 4);
+	                  GLboolean const normalized = lua_toboolean(L, 5);
+	                  GLuint const relativeoffset = luaL_checkinteger(L, 6);
+	                  glVertexArrayAttribFormat(vao, attribindex, size, type, normalized, relativeoffset);
+	                  return 0;
+	                  });
+
+	lua_setfield(L, -2, "VertexArrayAttribFormat");
+
+	lua_pushcfunction(L, [](lua_State *L) -> int {
+					  GLuint const vao = luaL_checkinteger(L, 1);
+					  GLuint const attribindex = luaL_checkinteger(L, 2);
+					  GLuint const bindingindex = luaL_checkinteger(L, 3);
+					  glVertexArrayAttribBinding(vao, attribindex, bindingindex);
+					  return 0;
+					  });
+
+	lua_setfield(L, -2, "VertexArrayAttribBinding");
+
+	lua_pushcfunction(L, [](lua_State *L) -> int {
 		GLuint const framebuffer = luaL_checkinteger(L, 1);
 		GLenum const buffer = luaL_checkinteger(L, 2);
 		GLint const drawbuffer = luaL_checkinteger(L, 3);
@@ -294,6 +360,82 @@ void aurora::register_plugin_api(lua_State* L) {
 		return 0;
 	});
 	lua_setfield(L, -2, "ClearNamedFramebufferfv");
+
+	lua_pushcfunction(L, [](lua_State *L) -> int {
+		              GLenum const type = luaL_checkinteger(L, 1);
+					  GLuint const shader = glCreateShader(type);
+					  lua_pushinteger(L, shader);
+					  return 1;
+					  });
+	lua_setfield(L, -2, "CreateShader");
+
+	lua_pushcfunction(L, [](lua_State *L) -> int {
+					  GLuint const shader = luaL_checkinteger(L, 1);
+					  std::size_t size;
+					  char const* data = luaL_checklstring(L, 2, &size);
+			          auto const isize = static_cast<GLint>(size);
+					  glShaderSource(shader, 1, &data, &isize);
+					  return 0;
+					  });
+	lua_setfield(L, -2, "ShaderSource");
+
+	lua_pushcfunction(L, [](lua_State *L) -> int {
+					  GLuint const shader = luaL_checkinteger(L, 1);
+					  glCompileShader(shader);
+					  return 0;
+					  });
+	lua_setfield(L, -2, "CompileShader");
+
+	lua_pushcfunction(L, [](lua_State *L) -> int {
+					  GLuint const program = luaL_checkinteger(L, 1);
+					GLuint const shader = luaL_checkinteger(L, 2);
+					  glAttachShader(program, shader);
+					  return 0;
+					  });
+	lua_setfield(L, -2, "AttachShader");
+
+	lua_pushcfunction(L, [](lua_State *L) -> int {
+					  GLuint const program = luaL_checkinteger(L, 1);
+					GLuint const shader = luaL_checkinteger(L, 2);
+					  glDetachShader(program, shader);
+					  return 0;
+					  });
+	lua_setfield(L, -2, "DetachShader");
+
+	lua_pushcfunction(L, [](lua_State *L) -> int {
+					  GLuint const shader = luaL_checkinteger(L, 1);
+					  glDeleteShader(shader);
+					  return 0;
+					  });
+	lua_setfield(L, -2, "DeleteShader");
+
+	lua_pushcfunction(L, [](lua_State *L) -> int {
+						  GLuint const program = glCreateProgram();
+						  lua_pushinteger(L, program);
+						  return 1;
+						  });
+	lua_setfield(L, -2, "CreateProgram");
+
+	lua_pushcfunction(L, [](lua_State *L) -> int {
+						GLuint const program = luaL_checkinteger(L, 1);
+						  glLinkProgram(program);
+						  return 0;
+						  });
+	lua_setfield(L, -2, "LinkProgram");
+
+	lua_pushcfunction(L, [](lua_State *L) -> int {
+						GLuint const program = luaL_checkinteger(L, 1);
+						  glUseProgram(program);
+						  return 0;
+						  });
+	lua_setfield(L, -2, "UseProgram");
+
+	lua_pushcfunction(L, [](lua_State *L) -> int {
+						GLuint const program = luaL_checkinteger(L, 1);
+						  glDeleteProgram(program);
+						  return 0;
+						  });
+	lua_setfield(L, -2, "DeleteProgram");
 
 	lua_setglobal(L, "gl");
 
@@ -317,6 +459,11 @@ void aurora::register_plugin_api(lua_State* L) {
 	AU_IMPL_GL_EXPAND(L, COLOR);
 	AU_IMPL_GL_EXPAND(L, DEPTH);
 	AU_IMPL_GL_EXPAND(L, STENCIL);
+	AU_IMPL_GL_EXPAND(L, NONE);
+	AU_IMPL_GL_EXPAND(L, FLOAT);
+	AU_IMPL_GL_EXPAND(L, TRIANGLE_STRIP);
+	AU_IMPL_GL_EXPAND(L, VERTEX_SHADER);
+	AU_IMPL_GL_EXPAND(L, FRAGMENT_SHADER);
 #undef AU_IMPL_GL_EXPAND
 	lua_setglobal(L, "GL");
 }

@@ -1,6 +1,9 @@
 
 # Changelogs
 ## v0.0.4-a.5
+### General
+* Fixed uncaught errors during `Plugin.Unload` causing program crashes
+
 ### Breaking Changes
 * Filesystem APIs are now in the `Aurora.filesystem` table instead of the `Aurora` table
 
@@ -32,6 +35,24 @@
 * `gl.NamedFramebufferRenderbuffer`
 * `gl.Viewport`
 * `gl.ClearNamedFramebufferfv`
+* `gl.CreateVertexArrays`
+* `gl.DeleteVertexArrays`
+* `gl.BindVertexArray`
+* `gl.VertexArrayVertexBuffer`
+* `gl.EnableVertexArrayAttrib`
+* `gl.VertexArrayAttribFormat`
+* `gl.VertexArrayAttribBinding`
+* `gl.DrawArrays`
+* `gl.CreateShader`
+* `gl.ShaderSource`
+* `gl.CompileShader`
+* `gl.AttachShader`
+* `gl.DetachShader`
+* `gl.DeleteShader`
+* `gl.CreateProgram`
+* `gl.LinkProgram`
+* `gl.UseProgram`
+* `gl.DeleteProgram`
 
 ## v0.0.4-a.4
 * Extended the hashtable with more values

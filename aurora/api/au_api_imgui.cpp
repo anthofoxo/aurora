@@ -81,7 +81,32 @@ namespace {
         float const height = lua_tonumber(L, -1);
         lua_pop(L, 1);
 
-        ImGui::Image(image, {width, height });
+        ImVec2 uv0 = { 0.0f, 0.0f };
+        ImVec2 uv1 = { 1.0f, 1.0f };
+
+        if (lua_gettop(L) >= 3) {
+            lua_pushinteger(L, 1);
+            lua_rawget(L, 3);
+            uv0.x = lua_tonumber(L, -1);
+            lua_pop(L, 1);
+            lua_pushinteger(L, 2);
+            lua_rawget(L, 3);
+            uv0.y = lua_tonumber(L, -1);
+            lua_pop(L, 1);
+        }
+
+        if (lua_gettop(L) >= 4) {
+            lua_pushinteger(L, 1);
+            lua_rawget(L, 4);
+            uv1.x = lua_tonumber(L, -1);
+            lua_pop(L, 1);
+            lua_pushinteger(L, 2);
+            lua_rawget(L, 4);
+            uv1.y = lua_tonumber(L, -1);
+            lua_pop(L, 1);
+        }
+
+        ImGui::Image(image, {width, height }, uv0, uv1);
 
         return 0;
     }
