@@ -11,8 +11,19 @@ local count
 local geomCenter = { 0, 0, 0 }
 local largestVertexCoord = 0
 local errormsg
+local program
 
-local program = Aurora.util.create_shader_program(
+local loaded = false
+local function load()
+    loaded = true
+
+    for _, value in pairs(Aurora.hashtable()) do
+        if string.match(value, "%.x") then
+            table.insert(knownMeshes, value)
+        end
+    end
+
+    program = Aurora.util.create_shader_program(
 [[#version 450 core
 layout (location = 0) in vec3 iPosition;
 layout (location = 1) in vec3 iNormal;
@@ -22,8 +33,8 @@ uniform mat4 uProjection;
 uniform mat4 uView;
 
 void main(void) {
-    gl_Position = uProjection * uView * vec4(iPosition, 1.0);
-    vNormal = iNormal;
+ gl_Position = uProjection * uView * vec4(iPosition, 1.0);
+ vNormal = iNormal;
 }
 ]],
 [[#version 450 core
@@ -32,21 +43,73 @@ in vec3 vNormal;
 layout (location = 0) out vec4 oColor;
 
 void main(void) {
-    oColor = vec4(1.0, 1.0, 1.0, 1.0);
-    oColor.rgb *= max(dot(vec3(0.0, 0.0, 1.0), normalize(vNormal)), 0.2);
+ oColor = vec4(1.0, 1.0, 1.0, 1.0);
+ oColor.rgb *= max(dot(vec3(0.0, 0.0, 1.0), normalize(vNormal)), 0.2);
 }
-]]
-)
+]])
+end -- load
 
-for _, value in pairs(Aurora.hashtable()) do
-    if string.match(value, "%.x") then
-        table.insert(knownMeshes, value)
+local function read_u32(bytes, ptr)
+    return (bytes:byte(ptr + 0) << 0) | (bytes:byte(ptr + 1) << 8) | (bytes:byte(ptr + 2) << 16) | (bytes:byte(ptr + 3) << 24)
+end
+
+local function render()
+    local regionAvail = ImGui.GetContentRegionAvail()
+
+    if contentRegionAvailLast[1] ~= regionAvail[1] or contentRegionAvailLast[2] ~= regionAvail[2] then
+        contentRegionAvailLast = regionAvail
+
+        if texture then
+            gl.DeleteTextures(texture)
+        end
+
+        texture = gl.CreateTextures(GL.TEXTURE_2D)
+        gl.TextureStorage2D(texture, 1, GL.RGBA8, regionAvail[1], regionAvail[2])
+
+        if renderbuffer then
+            gl.DeleteRenderbuffers(renderbuffer)
+        end
+
+        renderbuffer = gl.CreateRenderbuffers()
+        gl.NamedRenderbufferStorage(renderbuffer, GL.DEPTH_COMPONENT32, regionAvail[1], regionAvail[2])
+
+        if framebuffer then
+            gl.DeleteFramebuffers(framebuffer)
+        end
+
+        framebuffer = gl.CreateFramebuffers()
+        gl.NamedFramebufferTexture(framebuffer, GL.COLOR_ATTACHMENT0, texture, 0)
+        gl.NamedFramebufferRenderbuffer(framebuffer, GL.DEPTH_ATTACHMENT, renderbuffer)
     end
+
+    gl.BindFramebuffer(GL.FRAMEBUFFER, framebuffer)
+    gl.Viewport(0, 0, regionAvail[1], regionAvail[2])
+    gl.ClearNamedFramebufferfv(framebuffer, GL.COLOR, 0, { 0.7, 0.8, 0.9, 1.0 })
+    gl.ClearNamedFramebufferfv(framebuffer, GL.DEPTH, 0, { 1.0 })
+
+    if vao then
+        gl.UseProgram(program)
+        gl.BindVertexArray(vao)
+
+        local projection = glm.perspective(math.rad(90.0), regionAvail[1] / regionAvail[2], 0.1, 2048.0)
+        local projectionLocation = gl.GetUniformLocation(program, "uProjection")
+        gl.ProgramUniformMatrix4fv(program, projectionLocation, 1, false, projection)
+
+        local view = glm.lookAt({ largestVertexCoord, largestVertexCoord, largestVertexCoord }, geomCenter, { 0, 1, 0 })
+        local viewLocation = gl.GetUniformLocation(program, "uView")
+        gl.ProgramUniformMatrix4fv(program, viewLocation, 1, false, view)
+
+        gl.DrawElements(GL.TRIANGLES, count, GL.UNSIGNED_SHORT, 0)
+    end
+
+    ImGui.Image(texture, regionAvail, { 0.0, 1.0 }, { 1.0, 0.0 })
 end
 
 return {
     OnUnload = function()
-        gl.DeleteProgram(program)
+        if program then
+            gl.DeleteProgram(program)
+        end
 
         if texture ~= nil then
             gl.DeleteTextures(texture)
@@ -75,14 +138,12 @@ return {
 	gui = {
         title = "Mesh Viewer",
         OnGui = function()
+            if not loaded then load() end
+
             ImGui.Text("%d known meshes", #knownMeshes)
             ImGui.Separator()
 
             ImGui.Columns(2);
-
-            local read_u32 = function(bytes, ptr)
-                 return (bytes:byte(ptr + 0) << 0) | (bytes:byte(ptr + 1) << 8) | (bytes:byte(ptr + 2) << 16) | (bytes:byte(ptr + 3) << 24)
-             end
 
             if ImGui.BeginChild("MeshViewerScrollRegion") then
                 for _, value in ipairs(knownMeshes) do
@@ -158,16 +219,8 @@ return {
                                         -- ptr is now at a location that references the triangle/element list
                                         local elementdata = string.sub(filebytes, ptr)
 
-
-
                                         ebo = gl.CreateBuffers()
                                         gl.NamedBufferStorage(ebo, trianglecount * 6, elementdata, GL.NONE)
-
-                                        -- there is more data available we *can* read but this is as much as we care about
-                                        -- see api/hexpat/mesh.hexpat
-
-                                        -- Buffers are allocated recreate the vao with the nessesary properties
-
 
                                         vao = gl.CreateVertexArrays()
                                         gl.VertexArrayVertexBuffer(vao, 0, vbo, 0, 36)
@@ -186,8 +239,6 @@ return {
                         end)
                         if status == false then
                             errormsg = result
-                        else
-                            errormsg = string.format("%f", largestVertexCoord)
                         end
                     end
 
@@ -218,54 +269,7 @@ return {
                 ImGui.TextUnformatted(errormsg)
             end
 
-            local regionAvail = ImGui.GetContentRegionAvail()
-
-            if contentRegionAvailLast[1] ~= regionAvail[1] or contentRegionAvailLast[2] ~= regionAvail[2] then
-                contentRegionAvailLast = regionAvail
-                if texture ~= nil then
-                    gl.DeleteTextures(texture)
-                end
-
-                texture = gl.CreateTextures(GL.TEXTURE_2D)
-                gl.TextureStorage2D(texture, 1, GL.RGBA8, regionAvail[1], regionAvail[2])
-
-                if renderbuffer ~= nil then
-                    gl.DeleteRenderbuffers(renderbuffer)
-                end
-
-                renderbuffer = gl.CreateRenderbuffers()
-                gl.NamedRenderbufferStorage(renderbuffer, GL.DEPTH_COMPONENT32, regionAvail[1], regionAvail[2])
-
-                if framebuffer ~= nil then
-                    gl.DeleteFramebuffers(framebuffer)
-                end
-
-                framebuffer = gl.CreateFramebuffers()
-                gl.NamedFramebufferTexture(framebuffer, GL.COLOR_ATTACHMENT0, texture, 0)
-                gl.NamedFramebufferRenderbuffer(framebuffer, GL.DEPTH_ATTACHMENT, renderbuffer)
-            end
-
-            gl.BindFramebuffer(GL.FRAMEBUFFER, framebuffer)
-            gl.Viewport(0, 0, regionAvail[1], regionAvail[2])
-            gl.ClearNamedFramebufferfv(framebuffer, GL.COLOR, 0, { 0.7, 0.8, 0.9, 1.0 })
-            gl.ClearNamedFramebufferfv(framebuffer, GL.DEPTH, 0, { 1.0 })
-
-            if vao then
-                gl.UseProgram(program)
-                gl.BindVertexArray(vao)
-
-                local projection = glm.perspective(math.rad(90.0), regionAvail[1] / regionAvail[2], 0.1, 2048.0)
-                local projectionLocation = gl.GetUniformLocation(program, "uProjection")
-                gl.ProgramUniformMatrix4fv(program, projectionLocation, 1, false, projection)
-
-                local view = glm.lookAt({ largestVertexCoord, largestVertexCoord, largestVertexCoord }, geomCenter, { 0, 1, 0 })
-                local viewLocation = gl.GetUniformLocation(program, "uView")
-                gl.ProgramUniformMatrix4fv(program, viewLocation, 1, false, view)
-
-                gl.DrawElements(GL.TRIANGLES, count, GL.UNSIGNED_SHORT, 0)
-            end
-
-            ImGui.Image(texture, regionAvail, { 0.0, 1.0 }, { 1.0, 0.0 })
+            render()
         end
 	},
 }

@@ -12,6 +12,7 @@
 ### Breaking Changes
 * Filesystem APIs are now in the `Aurora.filesystem` table instead of the `Aurora` table
 * `Plugin.visible` changed type from `boolean` to `boolean?`
+* `ImGui.MenuItem` parameter count reduced from 2 to 1
 
 #### Moved API Functions
 * `Aurora.is_regular_file` -> `Aurora.filesystem.is_regular_file`
@@ -34,38 +35,38 @@
 * `ImGui.SetItemTooltip`
 * `glm.perspective`
 * `glm.lookAt`
-* `gl.BindFramebuffer`
-* `gl.CreateFramebuffers`
-* `gl.DeleteFramebuffers`
-* `gl.NamedFramebufferTexture`
-* `gl.CreateRenderbuffers`
-* `gl.DeleteRenderbuffers`
-* `gl.NamedRenderbufferStorage`
-* `gl.NamedFramebufferRenderbuffer`
-* `gl.Viewport`
-* `gl.ClearNamedFramebufferfv`
-* `gl.CreateVertexArrays`
-* `gl.DeleteVertexArrays`
-* `gl.BindVertexArray`
-* `gl.VertexArrayVertexBuffer`
-* `gl.EnableVertexArrayAttrib`
-* `gl.VertexArrayAttribFormat`
-* `gl.VertexArrayAttribBinding`
-* `gl.DrawArrays`
-* `gl.CreateShader`
-* `gl.ShaderSource`
-* `gl.CompileShader`
 * `gl.AttachShader`
-* `gl.DetachShader`
-* `gl.DeleteShader`
+* `gl.BindFramebuffer`
+* `gl.BindVertexArray`
+* `gl.ClearNamedFramebufferfv`
+* `gl.CompileShader`
+* `gl.CreateFramebuffers`
 * `gl.CreateProgram`
-* `gl.LinkProgram`
-* `gl.UseProgram`
+* `gl.CreateRenderbuffers`
+* `gl.CreateShader`
+* `gl.CreateVertexArrays`
+* `gl.DeleteFramebuffers`
 * `gl.DeleteProgram`
-* `gl.GetUniformLocation`
-* `gl.ProgramUniformMatrix4fv`
-* `gl.VertexArrayElementBuffer`
+* `gl.DeleteRenderbuffers`
+* `gl.DeleteShader`
+* `gl.DeleteVertexArrays`
+* `gl.DetachShader`
+* `gl.DrawArrays`
 * `gl.DrawElements`
+* `gl.EnableVertexArrayAttrib`
+* `gl.GetUniformLocation`
+* `gl.LinkProgram`
+* `gl.NamedFramebufferRenderbuffer`
+* `gl.NamedFramebufferTexture`
+* `gl.NamedRenderbufferStorage`
+* `gl.ProgramUniformMatrix4fv`
+* `gl.ShaderSource`
+* `gl.UseProgram`
+* `gl.VertexArrayAttribBinding`
+* `gl.VertexArrayAttribFormat`
+* `gl.VertexArrayElementBuffer`
+* `gl.VertexArrayVertexBuffer`
+* `gl.Viewport`
 
 ## v0.0.4-a.4
 * Extended the hashtable with more values
