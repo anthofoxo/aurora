@@ -13,6 +13,8 @@ local largestVertexCoord = 0
 local errormsg
 local program
 
+local nativeblock = Memory.malloc(4)
+
 local loaded = false
 local function load()
     loaded = true
@@ -53,33 +55,44 @@ local function read_u32(bytes, ptr)
     return (bytes:byte(ptr + 0) << 0) | (bytes:byte(ptr + 1) << 8) | (bytes:byte(ptr + 2) << 16) | (bytes:byte(ptr + 3) << 24)
 end
 
+
+
 local function render()
+
+
     local regionAvail = ImGui.GetContentRegionAvail()
 
     if contentRegionAvailLast[1] ~= regionAvail[1] or contentRegionAvailLast[2] ~= regionAvail[2] then
         contentRegionAvailLast = regionAvail
 
         if texture then
-            gl.DeleteTextures(texture)
+            Memory.write_u32(nativeblock, texture)
+            gl.DeleteTextures(1, nativeblock)
         end
 
-        texture = gl.CreateTextures(GL.TEXTURE_2D)
+        gl.CreateTextures(GL.TEXTURE_2D, 1, nativeblock)
+        texture = Memory.read_u32(nativeblock)
+
         gl.TextureStorage2D(texture, 1, GL.RGBA8, regionAvail[1], regionAvail[2])
 
         if renderbuffer then
-            gl.DeleteRenderbuffers(renderbuffer)
+            Memory.write_u32(nativeblock, renderbuffer)
+            gl.DeleteRenderbuffers(1, nativeblock)
         end
 
-        renderbuffer = gl.CreateRenderbuffers()
+        gl.CreateRenderbuffers(1, nativeblock)
+        renderbuffer = Memory.read_u32(nativeblock)
         gl.NamedRenderbufferStorage(renderbuffer, GL.DEPTH_COMPONENT32, regionAvail[1], regionAvail[2])
 
         if framebuffer then
-            gl.DeleteFramebuffers(framebuffer)
+            Memory.write_u32(nativeblock, framebuffer)
+            gl.DeleteFramebuffers(1, nativeblock)
         end
 
-        framebuffer = gl.CreateFramebuffers()
+        gl.CreateFramebuffers(1, nativeblock)
+        framebuffer = Memory.read_u32(nativeblock)
         gl.NamedFramebufferTexture(framebuffer, GL.COLOR_ATTACHMENT0, texture, 0)
-        gl.NamedFramebufferRenderbuffer(framebuffer, GL.DEPTH_ATTACHMENT, renderbuffer)
+        gl.NamedFramebufferRenderbuffer(framebuffer, GL.DEPTH_ATTACHMENT, GL.RENDERBUFFER, renderbuffer)
     end
 
     gl.BindFramebuffer(GL.FRAMEBUFFER, framebuffer)
@@ -99,7 +112,8 @@ local function render()
         local viewLocation = gl.GetUniformLocation(program, "uView")
         gl.ProgramUniformMatrix4fv(program, viewLocation, 1, false, view)
 
-        gl.DrawElements(GL.TRIANGLES, count, GL.UNSIGNED_SHORT, 0)
+
+        gl.DrawElements(GL.TRIANGLES, count, GL.UNSIGNED_SHORT, Memory.null())
     end
 
     ImGui.Image(texture, regionAvail, { 0.0, 1.0 }, { 1.0, 0.0 })
@@ -107,32 +121,40 @@ end
 
 return {
     OnUnload = function()
+        Memory.free(nativeblock)
+
         if program then
             gl.DeleteProgram(program)
         end
 
         if texture ~= nil then
-            gl.DeleteTextures(texture)
+            Memory.write_u32(nativeblock, texture)
+            gl.DeleteTextures(1, nativeblock)
         end
 
         if framebuffer ~= nil then
-            gl.DeleteFramebuffers(framebuffer)
+            Memory.write_u32(nativeblock, framebuffer)
+            gl.DeleteFramebuffers(1, nativeblock)
         end
 
         if renderbuffer ~= nil then
-            gl.DeleteRenderbuffers(renderbuffer)
+            Memory.write_u32(nativeblock, renderbuffer)
+            gl.DeleteRenderbuffers(1, nativeblock)
         end
 
         if vao then
-            gl.DeleteVertexArrays(vao)
+            Memory.write_u32(nativeblock, vao)
+            gl.DeleteVertexArrays(1, nativeblock)
         end
 
         if vbo then
-            gl.DeleteBuffers(vbo)
+            Memory.write_u32(nativeblock, vbo)
+            gl.DeleteBuffers(1, nativeblock)
         end
 
         if ebo then
-            gl.DeleteBuffers(ebo)
+            Memory.write_u32(nativeblock, ebo)
+            gl.DeleteBuffers(1, nativeblock)
         end
     end,
 	gui = {
@@ -152,13 +174,16 @@ return {
                         selection = value
 
                         if vbo then
-                            gl.DeleteBuffers(vbo)
+                            Memory.write_u32(nativeblock, vbo)
+                            gl.DeleteBuffers(1, nativeblock)
                         end
                         if vao then
-                            gl.DeleteVertexArrays(vao)
+                            Memory.write_u32(nativeblock, vao)
+                            gl.DeleteVertexArrays(1, nativeblock)
                         end
                         if ebo then
-                            gl.DeleteBuffers(ebo)
+                            Memory.write_u32(nativeblock, ebo)
+                            gl.DeleteBuffers(1, nativeblock)
                         end
 
                         vao = nil
@@ -208,8 +233,14 @@ return {
 
                                         largestVertexCoord = largestVertexCoord * 1.5
 
-                                        vbo = gl.CreateBuffers()
-                                        gl.NamedBufferStorage(vbo, vertexcount * 36, vertexdata, GL.NONE)
+                                        local allocation = Memory.malloc(vertexcount * 36)
+                                        Memory.write_bytes(allocation, vertexdata, vertexcount * 36)
+
+                                        gl.CreateBuffers(1, nativeblock)
+                                        vbo = Memory.read_u32(nativeblock)
+                                        gl.NamedBufferStorage(vbo, vertexcount * 36, allocation, GL.NONE)
+
+                                        Memory.free(allocation)
 
                                         ptr = ptr + vertexcount * 36
 
@@ -219,10 +250,17 @@ return {
                                         -- ptr is now at a location that references the triangle/element list
                                         local elementdata = string.sub(filebytes, ptr)
 
-                                        ebo = gl.CreateBuffers()
-                                        gl.NamedBufferStorage(ebo, trianglecount * 6, elementdata, GL.NONE)
+                                        allocation = Memory.malloc(trianglecount * 6)
+                                        Memory.write_bytes(allocation, elementdata, trianglecount * 6)
 
-                                        vao = gl.CreateVertexArrays()
+                                        gl.CreateBuffers(1, nativeblock)
+                                        ebo = Memory.read_u32(nativeblock)
+                                        gl.NamedBufferStorage(ebo, trianglecount * 6, allocation, GL.NONE)
+                                        Memory.free(allocation)
+
+                                        gl.CreateVertexArrays(1, nativeblock)
+                                        vao = Memory.read_u32(nativeblock);
+
                                         gl.VertexArrayVertexBuffer(vao, 0, vbo, 0, 36)
                                         gl.VertexArrayElementBuffer(vao, ebo)
                                         gl.VertexArrayAttribFormat(vao, 0, 3, GL.FLOAT, false, 0)

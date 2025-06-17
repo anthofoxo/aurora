@@ -7,23 +7,6 @@
 
 ---@alias mat4 number[]
 
----@alias GLenum integer
----@alias GLint integer
----@alias GLuint integer
----@alias GLsizei integer
----@alias GLsizeiptr integer
----@alias GLintptr integer
----@alias GLbitfield integer
----@alias GLboolean boolean
-
----@class _Texture[:GLuint]
----@class _Renderbuffer[:GLuint]
----@class _Framebuffer[:GLuint]
----@class _Buffer[:GLuint]
----@class _VertexArray[:GLuint]
----@class _Shader[:GLuint]
----@class _Program[:GLuint]
-
 Aurora = {
     filesystem = {
         ---@param value string
@@ -103,6 +86,35 @@ Aurora = {
     ---@param bytes string
     ---@return integer
     ddsktx_parse = function(bytes) end,
+}
+
+---@class MemoryBuffer
+
+function MemoryBuffer:reserve(size) end
+
+MemoryBuffer = {
+    ---@return MemoryBuffer
+    new = function() end,
+
+
+    --@param self MemoryBuffer
+    --@param size integer
+    ---reserve = function(self, size) end,
+
+    ---@param self MemoryBuffer
+    ---@return integer
+    cursor = function(self) end,
+
+    ---@param self MemoryBuffer
+    ---@return integer
+    size = function(self) end,
+
+    ---@param self MemoryBuffer
+    ---@return integer
+    capacity = function(self) end,
+
+    ---@param self MemoryBuffer
+    close = function(self) end,
 }
 
 ImGui = {
@@ -224,206 +236,5 @@ glm = {
     lookAt = function(eye, center, up) end,
 }
 
-gl = {
-    ---@return _Buffer
-	---@nodiscard
-	CreateBuffers = function() end,
-
-	---@param buffer _Buffer
-    DeleteBuffers = function(buffer) end,
-
-    ---@return _VertexArray
-    ---@nodiscard
-    CreateVertexArrays = function() end,
-
-    ---@param array _VertexArray
-    DeleteVertexArrays = function(array) end,
-
-	---@param buffer _Buffer
-	---@param size GLsizeiptr
-	---@param data string
-	---@param flags GLbitfield
-	NamedBufferStorage = function(buffer, size, data, flags) end,
-
-    ---@param target GLenum
-    ---@return _Texture
-	---@nodiscard
-    CreateTextures = function(target) end,
-
-	---@param texture _Texture
-    DeleteTextures = function(texture) end,
-
-    ---@param texture _Texture
-    ---@param levels GLsizei
-    ---@param internalFormat GLenum
-    ---@param width GLsizei
-    ---@param height GLsizei
-    TextureStorage2D = function(texture, levels, internalFormat, width, height) end,
-
-    ---@param target GLenum
-    ---@param framebuffer _Framebuffer
-    BindFramebuffer = function(target, framebuffer) end,
-
-    ---@return _Framebuffer
-    ---@nodiscard
-    CreateFramebuffers = function() end,
-
-    ---@param framebuffer _Framebuffer
-    DeleteFramebuffers = function(framebuffer) end,
-
-    ---@return _Renderbuffer
-    ---@nodiscard
-    CreateRenderbuffers = function() end,
-
-    ---@param renderbuffer _Renderbuffer
-    DeleteRenderbuffers = function(renderbuffer) end,
-
-    ---@param framebuffer _Framebuffer
-    ---@param attachment GLenum
-    ---@param texture _Texture
-    ---@param level GLint
-    NamedFramebufferTexture = function(framebuffer, attachment, texture, level) end,
-
-    ---@param renderbuffer _Renderbuffer
-    ---@param internalFormat GLenum
-    ---@param width GLsizei
-    ---@param height GLsizei
-    NamedRenderbufferStorage = function(renderbuffer, internalFormat, width, height) end,
-
-    ---@param framebuffer _Framebuffer
-    ---@param attachment GLenum
-    ---@param renderbuffer _Renderbuffer
-    NamedFramebufferRenderbuffer = function(framebuffer, attachment, renderbuffer) end,
-
-    ---@param x GLint
-    ---@param y GLint
-    ---@param width GLsizei
-    ---@param height GLsizei
-    Viewport = function(x, y, width, height) end,
-
-    ---@param framebuffer _Framebuffer
-    ---@param buffer GLenum
-    ---@param drawbuffer GLint
-    ---@param value table
-    ClearNamedFramebufferfv = function(framebuffer, buffer, drawbuffer, value) end,
-
-    ---@param array _VertexArray
-    BindVertexArray = function(array) end,
-
-    ---@param vaobj _VertexArray
-    ---@param bindingindex GLuint
-    ---@param buffer _Buffer
-    ---@param offset GLintptr
-    ---@param stride GLsizei
-    VertexArrayVertexBuffer = function(vaobj, bindingindex, buffer, offset, stride) end,
-
-    ---@param vaobj _VertexArray
-    ---@param index GLuint
-    EnableVertexArrayAttrib = function(vaobj, index) end,
-
-    ---@param vaobj _VertexArray
-    ---@param attribindex GLuint
-    ---@param size GLint
-    ---@param type GLenum
-    ---@param normalized GLboolean
-    ---@param relativeoffset GLuint
-    VertexArrayAttribFormat = function(vaobj, attribindex, size, type, normalized, relativeoffset) end,
-
-    ---@param vaobj _VertexArray
-    ---@param attribindex GLuint
-    ---@param bindingindex GLuint
-    VertexArrayAttribBinding = function(vaobj, attribindex, bindingindex) end,
-
-    ---@param mode GLenum
-    ---@param first GLint
-    ---@param count GLsizei
-    DrawArrays = function(mode, first, count) end,
-
-    ---@param type GLenum
-    ---@return _Shader
-    ---@nodiscard
-    CreateShader = function(type) end,
-
-    ---@param shader _Shader
-    DeleteShader = function(shader) end,
-
-    ---@param program _Program
-    ---@param shader _Shader
-    AttachShader = function(program, shader) end,
-
-    ---@param program _Program
-    ---@param shader _Shader
-    DetachShader = function(program, shader) end,
-
-    ---@param shader _Shader
-    ---@param source string
-    ShaderSource = function(shader, source) end,
-
-    ---@param shader _Shader
-    CompileShader = function(shader) end,
-
-    ---@return _Program
-    ---@nodiscard
-    CreateProgram = function() end,
-
-    ---@param program _Program
-    LinkProgram = function(program) end,
-
-    ---@param program _Program
-    UseProgram = function(program) end,
-
-    ---@param program _Program
-    DeleteProgram = function(program) end,
-
-    ---@param program _Program
-    ---@param name string
-    ---@return GLint
-    ---@nodiscard
-    GetUniformLocation = function(program, name) end,
-
-    ---@param program _Program
-    ---@param location GLint
-    ---@param count GLsizei
-    ---@param transpose GLboolean
-    ---@param value Ref<number>
-    ProgramUniformMatrix4fv = function(program, location, count, transpose, value) end,
-
-    ---@param vaobj _VertexArray
-    ---@param ebo _Buffer
-    VertexArrayElementBuffer = function(vaobj, ebo) end,
-
-    ---@param mode GLenum
-    ---@param count GLsizei
-    ---@param type GLenum
-    ---@param indices integer
-    DrawElements = function(mode, count, type, indices) end,
-}
-
-GL = {
-    TEXTURE_2D = 0,
-	RGBA8 = 0,
-	FRAMEBUFFER = 0,
-	COLOR_ATTACHMENT0 = 0,
-	COLOR_ATTACHMENT1 = 0,
-	COLOR_ATTACHMENT2 = 0,
-	COLOR_ATTACHMENT3 = 0,
-	COLOR_ATTACHMENT4 = 0,
-	COLOR_ATTACHMENT5 = 0,
-	COLOR_ATTACHMENT6 = 0,
-	COLOR_ATTACHMENT7 = 0,
-	DEPTH_ATTACHMENT = 0,
-	DEPTH_COMPONENT24 = 0,
-	DEPTH_COMPONENT32 = 0,
-	DEPTH_COMPONENT32F = 0,
-	COLOR = 0,
-	DEPTH = 0,
-	STENCIL = 0,
-	NONE = 0,
-	FLOAT = 0,
-	TRIANGLE_STRIP = 0,
-	TRIANGLES = 0,
-	VERTEX_SHADER = 0,
-	FRAGMENT_SHADER = 0,
-	UNSIGNED_SHORT = 0,
-	UNSIGNED_INT = 0,
-}
+---@generic T
+---@class Pointer<T>

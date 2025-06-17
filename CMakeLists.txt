@@ -25,6 +25,8 @@ add_executable(aurora
         aurora/api/au_api.hpp
         aurora/api/au_api_imgui.cpp
         aurora/api/au_api_filesystem.cpp
-        aurora/api/au_api_glm.cpp)
+        aurora/api/au_api_glm.cpp
+        aurora/api/au_api_gl.cpp
+        aurora/api/au_api_native.cpp)
 
 target_link_libraries(aurora glfw glad imgui tinyfd lua spdlog glm)

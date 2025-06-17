@@ -28,15 +28,28 @@ print("Loading plugins...")
 Aurora.util = {
     ---@param vertSource string
     ---@param fragSource string
-    ---@return _Program
+    ---@return integer
     create_shader_program = function(vertSource, fragSource)
+
+        local allocation = Memory.malloc(8 + 4 + #vertSource)
+        Memory.write_bytes(Memory.offset(allocation, 12), vertSource, #vertSource)
+        Memory.write_ptr(allocation, Memory.offset(allocation, 12))
+        Memory.write_u32(Memory.offset(allocation, 8), #vertSource)
+
         local vertShader = gl.CreateShader(GL.VERTEX_SHADER)
-        gl.ShaderSource(vertShader, vertSource)
+        gl.ShaderSource(vertShader, 1, allocation, Memory.offset(allocation, 8))
         gl.CompileShader(vertShader)
+        Memory.free(allocation)
+
+        allocation = Memory.malloc(8 + 4 + #fragSource)
+        Memory.write_bytes(Memory.offset(allocation, 12), fragSource, #fragSource)
+        Memory.write_ptr(allocation, Memory.offset(allocation, 12))
+        Memory.write_u32(Memory.offset(allocation, 8), #fragSource)
 
         local fragShader = gl.CreateShader(GL.FRAGMENT_SHADER)
-        gl.ShaderSource(fragShader, fragSource)
+        gl.ShaderSource(fragShader, 1, allocation, Memory.offset(allocation, 8))
         gl.CompileShader(fragShader)
+        Memory.free(allocation)
 
         local program = gl.CreateProgram()
         gl.AttachShader(program, vertShader)

@@ -2,6 +2,7 @@
 
 #include <bit>
 #include <filesystem>
+#include <optional>
 
 #include <imgui.h>
 #include <misc/cpp/imgui_stdlib.h>
@@ -41,6 +42,44 @@ namespace {
 #define DDSKTX_IMPLEMENT
 #include "dds-ktx.h"
 #include <iostream>
+
+struct MemoryBuffer final {
+	std::vector<std::byte> mBuffer;
+	std::size_t mCursor = 0;
+
+	[[nodiscard]] std::size_t cursor() const { return mCursor; }
+	[[nodiscard]] std::size_t size() const { return mBuffer.size(); }
+	[[nodiscard]] std::size_t capacity() const { return mBuffer.capacity(); }
+
+	[[nodiscard]] bool check(std::size_t const count) const { return mCursor + count <= mBuffer.size(); }
+
+	template<typename T>
+	void put(T value) {
+		for (int i = 0; i < sizeof(value); ++i) { mBuffer.push_back(static_cast<std::byte>(0)); }
+		*reinterpret_cast<decltype(value)*>(mBuffer.data() + mBuffer.size() - sizeof(value)) = value;
+	}
+
+	void close() { mBuffer = decltype(mBuffer)(); mCursor = 0; }
+
+	void* pointer() { return mBuffer.data() + mCursor; }
+
+	void resize(std::size_t size) { mBuffer.resize(size); }
+	void reserve(std::size_t size) { mBuffer.reserve(size); }
+
+	bool skip(std::size_t size) {
+		if (!check(size)) return false;
+		mCursor += size;
+		return true;
+	}
+
+	template<typename T>
+	std::optional<T> get() {
+		if (!check(sizeof(T))) return std::nullopt;
+		T value = *reinterpret_cast<T*>(mBuffer.data() + mCursor);
+		mCursor += sizeof(T);
+		return value;
+	}
+};
 
 void aurora::register_plugin_api(lua_State* L) {
 	lua_newtable(L);
@@ -154,381 +193,229 @@ void aurora::register_plugin_api(lua_State* L) {
 	aurora::api_register_glm(L);
 	lua_setglobal(L, "glm");
 
-	lua_newtable(L);
-	lua_pushcfunction(L, [](lua_State *L) -> int {
-		GLuint handle;
-		glCreateVertexArrays(1, &handle);
-		lua_pushinteger(L, handle);
+	{
+
+
+		lua_newtable(L);
+
+		lua_pushcfunction(L, [](lua_State *L) -> int {
+			auto* memoryBuffer = static_cast<MemoryBuffer*>(lua_newuserdata(L, sizeof(MemoryBuffer)));
+			new (memoryBuffer) MemoryBuffer();
+			lua_newtable(L);
+			lua_getglobal(L, "MemoryBuffer");
+			lua_setfield(L, -2, "__index");
+			lua_pushcfunction(L, [](lua_State *L) -> int { static_cast<MemoryBuffer*>(lua_touserdata(L, 1))->~MemoryBuffer(); return 0; });
+			lua_setfield(L, -2, "__gc");
+			lua_setmetatable(L, -2);
+			return 1;
+		});
+		lua_setfield(L, -2, "new");
+
+		lua_pushcfunction(L, [](lua_State *L) -> int {
+			auto& memoryBuffer = *static_cast<MemoryBuffer*>(lua_touserdata(L, 1));
+			lua_pushinteger(L, memoryBuffer.size());
+			return 1;
+		});
+		lua_setfield(L, -2, "size");
+
+		lua_pushcfunction(L, [](lua_State *L) -> int {
+			auto& memoryBuffer = *static_cast<MemoryBuffer*>(lua_touserdata(L, 1));
+			lua_pushinteger(L, memoryBuffer.capacity());
+			return 1;
+		});
+		lua_setfield(L, -2, "capacity");
+
+		lua_pushcfunction(L, [](lua_State *L) -> int {
+			auto& memoryBuffer = *static_cast<MemoryBuffer*>(lua_touserdata(L, 1));
+			lua_pushinteger(L, memoryBuffer.cursor());
+			return 1;
+		});
+		lua_setfield(L, -2, "cursor");
+
+		lua_pushcfunction(L, [](lua_State *L) -> int {
+			auto& memoryBuffer = *static_cast<MemoryBuffer*>(lua_touserdata(L, 1));
+			lua_pushlightuserdata(L, memoryBuffer.pointer());
+			return 1;
+		});
+		lua_setfield(L, -2, "pointer");
+
+		lua_pushcfunction(L, [](lua_State *L) -> int {
+			auto& memoryBuffer = *static_cast<MemoryBuffer*>(lua_touserdata(L, 1));
+			memoryBuffer.resize(luaL_checkinteger(L, 2));
+			return 0;
+		});
+		lua_setfield(L, -2, "resize");
+
+		lua_pushcfunction(L, [](lua_State *L) -> int {
+			auto& memoryBuffer = *static_cast<MemoryBuffer*>(lua_touserdata(L, 1));
+			memoryBuffer.reserve(luaL_checkinteger(L, 2));
+			return 0;
+		});
+		lua_setfield(L, -2, "reserve");
+
+		lua_pushcfunction(L, [](lua_State *L) -> int {
+			auto& memoryBuffer = *static_cast<MemoryBuffer*>(lua_touserdata(L, 1));
+			memoryBuffer.close();
+			return 0;
+		});
+		lua_setfield(L, -2, "close");
+
+		lua_pushcfunction(L, [](lua_State *L) -> int {
+			auto& memoryBuffer = *static_cast<MemoryBuffer*>(lua_touserdata(L, 1));
+			lua_pushboolean(L, memoryBuffer.check(luaL_checkinteger(L, 2)));
+			return 0;
+		});
+		lua_setfield(L, -2, "check");
+
+
+
+		lua_pushcfunction(L, [](lua_State *L) -> int {
+			auto& memoryBuffer = *static_cast<MemoryBuffer*>(lua_touserdata(L, 1));
+			if (!memoryBuffer.skip(luaL_checkinteger(L, 2))) {
+				return luaL_error(L, "Assertion failed cursor <= size");
+			}
+			return 0;
+		});
+		lua_setfield(L, -2, "skip");
+
+		lua_pushcfunction(L, [](lua_State *L) -> int {
+			auto& memoryBuffer = *static_cast<MemoryBuffer*>(lua_touserdata(L, 1));
+			luaL_checktype(L, 2, LUA_TLIGHTUSERDATA);
+			memoryBuffer.put<void*>(lua_touserdata(L, 2));
+			return 0;
+		});
+		lua_setfield(L, -2, "put_ptr");
+
+		lua_pushcfunction(L, [](lua_State *L) -> int {
+			auto& memoryBuffer = *static_cast<MemoryBuffer*>(lua_touserdata(L, 1));
+			auto value = luaL_checkinteger(L, 2);
+			memoryBuffer.put<std::uint8_t>(value);
+			return 0;
+		});
+		lua_setfield(L, -2, "put_u8");
+
+		lua_pushcfunction(L, [](lua_State *L) -> int {
+			auto& memoryBuffer = *static_cast<MemoryBuffer*>(lua_touserdata(L, 1));
+			auto value = luaL_checkinteger(L, 2);
+			memoryBuffer.put<std::uint16_t>(value);
+			return 0;
+		});
+		lua_setfield(L, -2, "put_u16");
+
+		lua_pushcfunction(L, [](lua_State *L) -> int {
+			auto& memoryBuffer = *static_cast<MemoryBuffer*>(lua_touserdata(L, 1));
+			auto value = luaL_checkinteger(L, 2);
+			memoryBuffer.put<std::uint32_t>(value);
+			return 0;
+		});
+		lua_setfield(L, -2, "put_u32");
+
+		lua_pushcfunction(L, [](lua_State *L) -> int {
+			auto& memoryBuffer = *static_cast<MemoryBuffer*>(lua_touserdata(L, 1));
+			if (auto const value = memoryBuffer.get<std::uint8_t>()) { lua_pushinteger(L, *value); }
+			else { luaL_error(L, "assertion failed (cursor > size): Reading further would cause an access violation"); }
+			return 1;
+		});
+		lua_setfield(L, -2, "get_u8");
+
+		lua_pushcfunction(L, [](lua_State *L) -> int {
+			auto& memoryBuffer = *static_cast<MemoryBuffer*>(lua_touserdata(L, 1));
+			if (auto const value = memoryBuffer.get<std::uint16_t>()) { lua_pushinteger(L, *value); }
+			else { luaL_error(L, "assertion failed (cursor > size): Reading further would cause an access violation"); }
+			return 1;
+		});
+		lua_setfield(L, -2, "get_u16");
+
+		lua_pushcfunction(L, [](lua_State *L) -> int {
+			auto& memoryBuffer = *static_cast<MemoryBuffer*>(lua_touserdata(L, 1));
+			if (auto const value = memoryBuffer.get<std::uint32_t>()) { lua_pushinteger(L, *value); }
+			else { luaL_error(L, "assertion failed (cursor > size): Reading further would cause an access violation"); }
+			return 1;
+		});
+		lua_setfield(L, -2, "get_u32");
+
+		lua_pushcfunction(L, [](lua_State *L) -> int {
+			auto& memoryBuffer = *static_cast<MemoryBuffer*>(lua_touserdata(L, 1));
+			if (auto const value = memoryBuffer.get<void*>()) { lua_pushlightuserdata(L, *value); }
+			else { luaL_error(L, "assertion failed (cursor > size): Reading further would cause an access violation"); }
+			return 1;
+		});
+		lua_setfield(L, -2, "get_ptr");
+
+		lua_setglobal(L, "MemoryBuffer");
+
+		lua_newtable(L);
+		lua_pushcfunction(L, [](lua_State *L) -> int {
+			lua_pushlightuserdata(L, std::malloc(luaL_checkinteger(L, 1)));
 		return 1;
-	});
-	lua_setfield(L, -2, "CreateVertexArrays");
-	lua_pushcfunction(L, [](lua_State *L) -> int {
-		GLuint const handle = luaL_checkinteger(L, 1);
-		glDeleteVertexArrays(1, &handle);
-		return 0;
-	});
-	lua_setfield(L, -2, "DeleteVertexArrays");
-	lua_pushcfunction(L, [](lua_State *L) -> int {
-		GLuint handle;
-		glCreateBuffers(1, &handle);
-		lua_pushinteger(L, handle);
-		return 1;
-	});
-	lua_setfield(L, -2, "CreateBuffers");
-	lua_pushcfunction(L, [](lua_State *L) -> int {
-		GLuint const handle = luaL_checkinteger(L, 1);
-		glDeleteBuffers(1, &handle);
-		return 0;
-	});
-	lua_setfield(L, -2, "DeleteBuffers");
-	lua_pushcfunction(L, [](lua_State *L) -> int {
-		GLuint const buffer = luaL_checkinteger(L, 1);
-		GLsizeiptr const size = luaL_checkinteger(L, 2);
-		char const* data = luaL_checkstring(L, 3);
-		GLbitfield const flags = luaL_checkinteger(L, 4);
-		glNamedBufferStorage(buffer, size, data, flags);
-		return 0;
-	});
-	lua_setfield(L, -2, "NamedBufferStorage");
+		});
+		lua_setfield(L, -2, "malloc");
+		lua_pushcfunction(L, [](lua_State *L) -> int {
+			luaL_checktype(L, 1, LUA_TLIGHTUSERDATA);
+			std::free(lua_touserdata(L, 1));
+			return 1;
+		});
+		lua_setfield(L, -2, "free");
+		lua_pushcfunction(L, [](lua_State *L) -> int {
+			luaL_checktype(L, 1, LUA_TLIGHTUSERDATA);
+			lua_pushinteger(L, *static_cast<std::uint32_t*>(lua_touserdata(L, 1)));
+			return 1;
+		});
+		lua_setfield(L, -2, "read_u32");
 
-	lua_pushcfunction(L, [](lua_State *L) -> int {
-		GLenum const target = luaL_checkinteger(L, 1);
-		GLuint handle;
-		glCreateTextures(target, 1, &handle);
-		lua_pushinteger(L, handle);
-		return 1;
-	});
-	lua_setfield(L, -2, "CreateTextures");
+		lua_pushcfunction(L, [](lua_State *L) -> int {
+			luaL_checktype(L, 1, LUA_TLIGHTUSERDATA);
+			auto* data = static_cast<std::uint8_t*>(lua_touserdata(L, 1));
+			lua_pushlightuserdata(L, data + luaL_checkinteger(L, 2));
+			return 1;
+		});
+		lua_setfield(L, -2, "offset");
 
-	lua_pushcfunction(L, [](lua_State *L) -> int {
-		GLuint const handle = luaL_checkinteger(L, 1);
-		glDeleteTextures(1, &handle);
-		return 0;
-	});
-	lua_setfield(L, -2, "DeleteTextures");
+		lua_pushcfunction(L, [](lua_State *L) -> int {
+			luaL_checktype(L, 1, LUA_TLIGHTUSERDATA);
+			std::uint32_t& value = *static_cast<std::uint32_t*>(lua_touserdata(L, 1));
+			value = luaL_checkinteger(L, 2);
+			return 0;
+		});
+		lua_setfield(L, -2, "write_u32");
 
-	lua_pushcfunction(L, [](lua_State *L) -> int {
-		GLuint const texture = luaL_checkinteger(L, 1);
-		GLsizei const levels = luaL_checkinteger(L, 2);
-		GLenum const internalformat = luaL_checkinteger(L, 3);
-		GLsizei const width = luaL_checkinteger(L, 4);
-		GLsizei const height = luaL_checkinteger(L, 5);
-		glTextureStorage2D(texture, levels, internalformat, width, height);
-		return 0;
-	});
-	lua_setfield(L, -2, "TextureStorage2D");
+		lua_pushcfunction(L, [](lua_State *L) -> int {
+			luaL_checktype(L, 1, LUA_TLIGHTUSERDATA);
+			float& value = *static_cast<float*>(lua_touserdata(L, 1));
+			value = luaL_checknumber(L, 2);
+			return 0;
+		});
+		lua_setfield(L, -2, "write_f32");
 
-	lua_pushcfunction(L, [](lua_State *L) -> int {
-		glBindFramebuffer(luaL_checkinteger(L, 1), luaL_checkinteger(L, 2));
-		return 0;
-	});
-	lua_setfield(L, -2, "BindFramebuffer");
+		lua_pushcfunction(L, [](lua_State *L) -> int {
+			luaL_checktype(L, 1, LUA_TLIGHTUSERDATA);
+			luaL_checktype(L, 2, LUA_TLIGHTUSERDATA);
+			auto* value = static_cast<std::uintptr_t*>(lua_touserdata(L, 1));
+			*value = std::bit_cast<std::uintptr_t>(lua_touserdata(L, 2));
+			return 0;
+		});
+		lua_setfield(L, -2, "write_ptr");
 
-	lua_pushcfunction(L, [](lua_State *L) -> int {
-		GLuint framebuffer;
-		glCreateFramebuffers(1, &framebuffer);
-		lua_pushinteger(L, framebuffer);
-		return 1;
-	});
-	lua_setfield(L, -2, "CreateFramebuffers");
+		lua_pushcfunction(L, [](lua_State *L) -> int {
+			luaL_checktype(L, 1, LUA_TLIGHTUSERDATA);
+			void* target = lua_touserdata(L, 1);
+			char const* source = luaL_checkstring(L, 2);
+			int size = luaL_checkinteger(L, 3);
+			memcpy(target, source, size);
+			return 0;
+		});
+		lua_setfield(L, -2, "write_bytes");
 
-	lua_pushcfunction(L, [](lua_State *L) -> int {
-		GLuint const framebuffer = luaL_checkinteger(L, 1);
-		glDeleteFramebuffers(1, &framebuffer);
-		return 0;
-	});
-	lua_setfield(L, -2, "DeleteFramebuffers");
+		lua_pushcfunction(L, [](lua_State *L) -> int {
+			lua_pushlightuserdata(L, nullptr);
+			return 1;
+		});
+		lua_setfield(L, -2, "null");
+		lua_setglobal(L, "Memory");
+	}
 
-	lua_pushcfunction(L, [](lua_State *L) -> int {
-		GLuint const framebuffer = luaL_checkinteger(L, 1);
-		GLenum const attachment = luaL_checkinteger(L, 2);
-		GLuint const texture = luaL_checkinteger(L, 3);
-		GLint const level = luaL_checkinteger(L, 4);
-		glNamedFramebufferTexture(framebuffer, attachment, texture, level);
-		return 0;
-	});
-	lua_setfield(L, -2, "NamedFramebufferTexture");
-
-	lua_pushcfunction(L, [](lua_State *L) -> int {
-		GLuint const framebuffer = luaL_checkinteger(L, 1);
-		GLenum const attachment = luaL_checkinteger(L, 2);
-		GLuint const renderbuffer = luaL_checkinteger(L, 3);
-		glNamedFramebufferRenderbuffer(framebuffer, attachment, GL_RENDERBUFFER, renderbuffer);
-		return 0;
-	});
-	lua_setfield(L, -2, "NamedFramebufferRenderbuffer");
-
-	lua_pushcfunction(L, [](lua_State *L) -> int {
-		GLuint renderbuffer;
-		glCreateRenderbuffers(1, &renderbuffer);
-		lua_pushinteger(L, renderbuffer);
-		return 1;
-	});
-	lua_setfield(L, -2, "CreateRenderbuffers");
-
-	lua_pushcfunction(L, [](lua_State *L) -> int {
-		GLuint const renderbuffer = luaL_checkinteger(L, 1);
-		glDeleteRenderbuffers(1, &renderbuffer);
-		return 0;
-	});
-	lua_setfield(L, -2, "DeleteRenderbuffers");
-
-	lua_pushcfunction(L, [](lua_State *L) -> int {
-		GLuint const renderbuffer = luaL_checkinteger(L, 1);
-		GLenum const internalformat = luaL_checkinteger(L, 2);
-		GLsizei const width = luaL_checkinteger(L, 3);
-		GLsizei const height = luaL_checkinteger(L, 4);
-		glNamedRenderbufferStorage(renderbuffer, internalformat, width, height);
-		return 0;
-	});
-	lua_setfield(L, -2, "NamedRenderbufferStorage");
-
-	lua_pushcfunction(L, [](lua_State *L) -> int {
-		GLint const x = luaL_checkinteger(L, 1);
-		GLint const y = luaL_checkinteger(L, 2);
-		GLsizei const width = luaL_checkinteger(L, 3);
-		GLsizei const height = luaL_checkinteger(L, 4);
-		glViewport(x, y, width, height);
-		return 0;
-	});
-	lua_setfield(L, -2, "Viewport");
-
-	lua_pushcfunction(L, [](lua_State *L) -> int {
-		GLuint const vao = luaL_checkinteger(L, 1);
-		glBindVertexArray(vao);
-		return 0;
-	});
-	lua_setfield(L, -2, "BindVertexArray");
-	lua_pushcfunction(L, [](lua_State *L) -> int {
-	                  GLuint const vao = luaL_checkinteger(L, 1);
-	                  GLuint const bindingindex = luaL_checkinteger(L, 2);
-	                  GLuint const buffer = luaL_checkinteger(L, 3);
-	                  GLintptr const offset = luaL_checkinteger(L, 4);
-	                  GLsizei const stride = luaL_checkinteger(L, 5);
-	                  glVertexArrayVertexBuffer(vao, bindingindex, buffer, offset, stride);
-	                  return 0;
-	                  });
-
-	lua_setfield(L, -2, "VertexArrayVertexBuffer");
-
-	lua_pushcfunction(L, [](lua_State *L) -> int {
-	                  GLuint const vao = luaL_checkinteger(L, 1);
-	                  GLuint const index = luaL_checkinteger(L, 2);
-	                  glEnableVertexArrayAttrib(vao, index);
-	                  return 0;
-	                  });
-
-	lua_setfield(L, -2, "EnableVertexArrayAttrib");
-
-	lua_pushcfunction(L, [](lua_State *L) -> int {
-					  GLenum const mode = luaL_checkinteger(L, 1);
-					  GLint const first = luaL_checkinteger(L, 2);
-					  GLsizei const count = luaL_checkinteger(L, 3);
-					  glDrawArrays(mode, first, count);
-					  return 0;
-					  });
-
-	lua_setfield(L, -2, "DrawArrays");
-
-	lua_pushcfunction(L, [](lua_State *L) -> int {
-	                  GLuint const vao = luaL_checkinteger(L, 1);
-	                  GLuint const attribindex = luaL_checkinteger(L, 2);
-	                  GLint const size = luaL_checkinteger(L, 3);
-	                  GLenum const type = luaL_checkinteger(L, 4);
-	                  GLboolean const normalized = lua_toboolean(L, 5);
-	                  GLuint const relativeoffset = luaL_checkinteger(L, 6);
-	                  glVertexArrayAttribFormat(vao, attribindex, size, type, normalized, relativeoffset);
-	                  return 0;
-	                  });
-
-	lua_setfield(L, -2, "VertexArrayAttribFormat");
-
-	lua_pushcfunction(L, [](lua_State *L) -> int {
-					  GLuint const vao = luaL_checkinteger(L, 1);
-					  GLuint const attribindex = luaL_checkinteger(L, 2);
-					  GLuint const bindingindex = luaL_checkinteger(L, 3);
-					  glVertexArrayAttribBinding(vao, attribindex, bindingindex);
-					  return 0;
-					  });
-
-	lua_setfield(L, -2, "VertexArrayAttribBinding");
-
-	lua_pushcfunction(L, [](lua_State *L) -> int {
-		GLuint const framebuffer = luaL_checkinteger(L, 1);
-		GLenum const buffer = luaL_checkinteger(L, 2);
-		GLint const drawbuffer = luaL_checkinteger(L, 3);
-
-		float value[4];
-		lua_pushinteger(L, 1); lua_rawget(L, 4); value[0] = lua_tonumber(L, -1); lua_pop(L, 1);
-
-		if (buffer == GL_COLOR) {
-			lua_pushinteger(L, 2); lua_rawget(L, 4); value[1] = lua_tonumber(L, -1); lua_pop(L, 1);
-			lua_pushinteger(L, 3); lua_rawget(L, 4); value[2] = lua_tonumber(L, -1); lua_pop(L, 1);
-			lua_pushinteger(L, 4); lua_rawget(L, 4); value[3] = lua_tonumber(L, -1); lua_pop(L, 1);
-		}
-
-		glClearNamedFramebufferfv(framebuffer, buffer, drawbuffer, value);
-		return 0;
-	});
-	lua_setfield(L, -2, "ClearNamedFramebufferfv");
-
-	lua_pushcfunction(L, [](lua_State *L) -> int {
-		              GLenum const type = luaL_checkinteger(L, 1);
-					  GLuint const shader = glCreateShader(type);
-					  lua_pushinteger(L, shader);
-					  return 1;
-					  });
-	lua_setfield(L, -2, "CreateShader");
-
-	lua_pushcfunction(L, [](lua_State *L) -> int {
-					  GLuint const shader = luaL_checkinteger(L, 1);
-					  std::size_t size;
-					  char const* data = luaL_checklstring(L, 2, &size);
-			          auto const isize = static_cast<GLint>(size);
-					  glShaderSource(shader, 1, &data, &isize);
-					  return 0;
-					  });
-	lua_setfield(L, -2, "ShaderSource");
-
-	lua_pushcfunction(L, [](lua_State *L) -> int {
-					  GLuint const shader = luaL_checkinteger(L, 1);
-					  glCompileShader(shader);
-					  return 0;
-					  });
-	lua_setfield(L, -2, "CompileShader");
-
-	lua_pushcfunction(L, [](lua_State *L) -> int {
-					  GLuint const program = luaL_checkinteger(L, 1);
-					GLuint const shader = luaL_checkinteger(L, 2);
-					  glAttachShader(program, shader);
-					  return 0;
-					  });
-	lua_setfield(L, -2, "AttachShader");
-
-	lua_pushcfunction(L, [](lua_State *L) -> int {
-					  GLuint const program = luaL_checkinteger(L, 1);
-					GLuint const shader = luaL_checkinteger(L, 2);
-					  glDetachShader(program, shader);
-					  return 0;
-					  });
-	lua_setfield(L, -2, "DetachShader");
-
-	lua_pushcfunction(L, [](lua_State *L) -> int {
-					  GLuint const shader = luaL_checkinteger(L, 1);
-					  glDeleteShader(shader);
-					  return 0;
-					  });
-	lua_setfield(L, -2, "DeleteShader");
-
-	lua_pushcfunction(L, [](lua_State *L) -> int {
-						  GLuint const program = glCreateProgram();
-						  lua_pushinteger(L, program);
-						  return 1;
-						  });
-	lua_setfield(L, -2, "CreateProgram");
-
-	lua_pushcfunction(L, [](lua_State *L) -> int {
-						GLuint const program = luaL_checkinteger(L, 1);
-						  glLinkProgram(program);
-						  return 0;
-						  });
-	lua_setfield(L, -2, "LinkProgram");
-
-	lua_pushcfunction(L, [](lua_State *L) -> int {
-						GLuint const program = luaL_checkinteger(L, 1);
-						  glUseProgram(program);
-						  return 0;
-						  });
-	lua_setfield(L, -2, "UseProgram");
-
-	lua_pushcfunction(L, [](lua_State *L) -> int {
-						GLuint const program = luaL_checkinteger(L, 1);
-						  glDeleteProgram(program);
-						  return 0;
-						  });
-	lua_setfield(L, -2, "DeleteProgram");
-
-	lua_pushcfunction(L, [](lua_State *L) -> int {
-	                  GLuint const program = luaL_checkinteger(L, 1);
-	                  char const* name = luaL_checkstring(L, 2);
-	                  GLint const location = glGetUniformLocation(program, name);
-	                  lua_pushinteger(L, location);
-	                  return 1;
-	                  });
-	lua_setfield(L, -2, "GetUniformLocation");
-
-	lua_pushcfunction(L, [](lua_State *L) -> int {
-	                  GLuint const program = luaL_checkinteger(L, 1);
-	                  GLint const location = luaL_checkinteger(L, 2);
-	                  GLsizei const count = luaL_checkinteger(L, 3);
-	                  GLboolean const transpose = lua_toboolean(L, 4);
-
-	                  auto *data = static_cast<float*>(alloca(count * sizeof(glm::mat4)));
-
-	                  for (int i = 0; i < count * 16; ++i) {
-		                  lua_rawgeti(L, 5, i + 1);
-		                  data[i] = lua_tonumber(L, -1);
-		                  lua_pop(L, 1);
-	                  }
-
-	                  glProgramUniformMatrix4fv(program, location, count, transpose, data);
-	                  return 0;
-	                  });
-	lua_setfield(L, -2, "ProgramUniformMatrix4fv");
-
-	lua_pushcfunction(L, [](lua_State *L) -> int {
-					  GLuint const vao = luaL_checkinteger(L, 1);
-					  GLuint const ebo = luaL_checkinteger(L, 2);
-					  glVertexArrayElementBuffer(vao, ebo);
-					  return 0;
-					  });
-
-	lua_setfield(L, -2, "VertexArrayElementBuffer");
-
-	lua_pushcfunction(L, [](lua_State *L) -> int {
-	                  GLenum const mode = luaL_checkinteger(L, 1);
-	                  GLsizei const count = luaL_checkinteger(L, 2);
-	                  GLenum const type = luaL_checkinteger(L, 3);
-	                  auto const *indices = reinterpret_cast<void*>(static_cast<std::uintptr_t>(luaL_checkinteger(L, 4))
-	                  );
-	                  glDrawElements(mode, count, type, indices);
-	                  return 0;
-	                  });
-
-	lua_setfield(L, -2, "DrawElements");
-
-
-
+	aurora::api_register_gl(L);
 	lua_setglobal(L, "gl");
-
-	lua_newtable(L);
-#define AU_IMPL_GL_EXPAND(L, name) lua_pushinteger(L, GL_ ## name); lua_setfield(L, -2, #name)
-	AU_IMPL_GL_EXPAND(L, TEXTURE_2D);
-	AU_IMPL_GL_EXPAND(L, RGBA8);
-	AU_IMPL_GL_EXPAND(L, FRAMEBUFFER);
-	AU_IMPL_GL_EXPAND(L, COLOR_ATTACHMENT0);
-	AU_IMPL_GL_EXPAND(L, COLOR_ATTACHMENT1);
-	AU_IMPL_GL_EXPAND(L, COLOR_ATTACHMENT2);
-	AU_IMPL_GL_EXPAND(L, COLOR_ATTACHMENT3);
-	AU_IMPL_GL_EXPAND(L, COLOR_ATTACHMENT4);
-	AU_IMPL_GL_EXPAND(L, COLOR_ATTACHMENT5);
-	AU_IMPL_GL_EXPAND(L, COLOR_ATTACHMENT6);
-	AU_IMPL_GL_EXPAND(L, COLOR_ATTACHMENT7);
-	AU_IMPL_GL_EXPAND(L, DEPTH_ATTACHMENT);
-	AU_IMPL_GL_EXPAND(L, DEPTH_COMPONENT24);
-	AU_IMPL_GL_EXPAND(L, DEPTH_COMPONENT32);
-	AU_IMPL_GL_EXPAND(L, DEPTH_COMPONENT32F);
-	AU_IMPL_GL_EXPAND(L, COLOR);
-	AU_IMPL_GL_EXPAND(L, DEPTH);
-	AU_IMPL_GL_EXPAND(L, STENCIL);
-	AU_IMPL_GL_EXPAND(L, NONE);
-	AU_IMPL_GL_EXPAND(L, FLOAT);
-	AU_IMPL_GL_EXPAND(L, TRIANGLE_STRIP);
-	AU_IMPL_GL_EXPAND(L, TRIANGLES);
-	AU_IMPL_GL_EXPAND(L, VERTEX_SHADER);
-	AU_IMPL_GL_EXPAND(L, FRAGMENT_SHADER);
-	AU_IMPL_GL_EXPAND(L, UNSIGNED_SHORT);
-	AU_IMPL_GL_EXPAND(L, UNSIGNED_INT);
-#undef AU_IMPL_GL_EXPAND
+	aurora::api_register_gl_constants(L);
 	lua_setglobal(L, "GL");
 }

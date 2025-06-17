@@ -7,4 +7,7 @@ namespace aurora {
     void api_register_imgui(lua_State *L);
     void api_register_filesystem(lua_State *L);
     void api_register_glm(lua_State *L);
+    void api_register_gl(lua_State *L);
+    void api_register_gl_constants(lua_State *L);
+    void api_register_native(lua_State *L);
 }
