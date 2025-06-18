@@ -343,6 +343,7 @@ lua_State* aurora_newstate() {
 struct PluginEngine {
 	struct Plugin {
 		bool visible = false;
+		bool wantsFocus = false;
 	};
 
 	std::unordered_map<std::string, Plugin> plugins;
@@ -447,12 +448,47 @@ struct PluginEngine {
 			ImGui::EndMainMenuBar();
 		}
 
+		// Check messages
+
+		if (lua_getfield(L, 1, "plugins") == LUA_TTABLE) {
+			if (lua_getglobal(L, "_AuroraImplGlobalStorage") == LUA_TTABLE) {
+				lua_pushnil(L);
+				while (lua_next(L, -2)) {
+
+					lua_getfield(L, -1, "target");
+					char const* targetKey = lua_tostring(L, -1);
+					lua_gettable(L, -5);
+
+					if (lua_getfield(L, -1, "OnMessageRecieved") == LUA_TFUNCTION) {
+						lua_getfield(L, -3, "source");
+						lua_getfield(L, -4, "action");
+						lua_getfield(L, -5, "data");
+						lua_pcall(L, 3, 0, 0);
+
+						plugins[targetKey].wantsFocus = true;
+					}
+					else lua_pop(L, 1);
+
+					lua_pop(L, 2);
+				}
+
+				lua_pushnil(L);
+				lua_setglobal(L, "_AuroraImplGlobalStorage");
+			}
+			lua_pop(L, 1);
+		}
+		lua_pop(L, 1);
+
 		// iterate plugins
 		if (lua_getfield(L, -1, "plugins") == LUA_TTABLE) {
 			lua_pushnil(L);
 			while (lua_next(L, -2)) {
 				lua_pushvalue(L, -2);
 				char const *key = lua_tostring(L, -1);
+
+				// Update impl global, used for plugin messages
+				lua_pushstring(L, key);
+				lua_setglobal(L, "_AuroraImplCurrentPlugin");
 
 				// Get the storage container for the plugin
 				// Allocate it if needed
@@ -470,6 +506,12 @@ struct PluginEngine {
 						lua_pop(L, 1);
 
 						std::string const debugTitle = fmt::format("{} ({})", title, key);
+
+						if (storage.wantsFocus) {
+							storage.visible = true;
+							storage.wantsFocus = false;
+							ImGui::SetNextWindowFocus();
+						}
 
 						if (storage.visible) {
 							ImGui::SetNextWindowSize(ImVec2(640, 480), ImGuiCond_FirstUseEver);

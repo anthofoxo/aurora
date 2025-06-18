@@ -17,12 +17,17 @@ local hashes = {
 	"leaderboard_view",
 	"rank",
 	"retry",
-	"tip",
+    "tip",
 
 	-- Undocumented
 	"AnimComp",
 	"EditStateComp",
-	"XfmComp",
+    "XfmComp",
+    "intensity",
+    "local_rot",
+    "world.cam",
+    "camera_shake.anim",
+    "death_cam_shake.anim",
 
 	-- object parameters --
 

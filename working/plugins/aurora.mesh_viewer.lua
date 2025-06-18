@@ -11,19 +11,8 @@ local count
 local geomCenter = { 0, 0, 0 }
 local largestVertexCoord = 0
 local errormsg
-local program
 
-local loaded = false
-local function load()
-    loaded = true
-
-    for _, value in pairs(Aurora.hashtable()) do
-        if string.match(value, "%.x") then
-            table.insert(knownMeshes, value)
-        end
-    end
-
-    program = Aurora.util.create_shader_program(
+local program = Aurora.util.create_shader_program(
 [[#version 450 core
 layout (location = 0) in vec3 iPosition;
 layout (location = 1) in vec3 iNormal;
@@ -47,7 +36,6 @@ void main(void) {
  oColor.rgb *= max(dot(vec3(0.0, 0.0, 1.0), normalize(vNormal)), 0.2);
 }
 ]])
-end -- load
 
 local function read_u32(bytes, ptr)
     return (bytes:byte(ptr + 0) << 0) | (bytes:byte(ptr + 1) << 8) | (bytes:byte(ptr + 2) << 16) | (bytes:byte(ptr + 3) << 24)
@@ -105,7 +93,100 @@ local function render()
     ImGui.Image(texture, regionAvail, { 0.0, 1.0 }, { 1.0, 0.0 })
 end
 
+local function ActionOpen(filepath)
+    errormsg = nil
+    selection = filepath
+
+    if vbo then gl.DeleteBuffers(vbo) end
+    if vao then gl.DeleteVertexArrays(vao) end
+    if ebo then gl.DeleteBuffers(ebo) end
+
+    vao = nil
+    vbo = nil
+    ebo = nil
+
+    local status, result = pcall(function()
+        local filebytes = Aurora.read_file(filepath)
+        if filebytes then
+            local ptr = 1
+
+            local header = read_u32(filebytes, ptr); ptr = ptr + 4
+
+            if header == 6 then
+                local meshcount = read_u32(filebytes, ptr); ptr = ptr + 4
+
+                if meshcount > 0 then
+                    local vertexcount = read_u32(filebytes, ptr); ptr = ptr + 4
+
+                    local vertexdata = string.sub(filebytes, ptr)
+
+                    geomCenter = { 0, 0, 0 }
+                    largestVertexCoord = 0
+
+                    for i = 0, vertexcount - 1 do
+                        local x = Aurora.bitcast_float(read_u32(filebytes, ptr + (i * 36) + 0))
+                        local y = Aurora.bitcast_float(read_u32(filebytes, ptr + (i * 36) + 4))
+                        local z = Aurora.bitcast_float(read_u32(filebytes, ptr + (i * 36) + 8))
+
+                        geomCenter[1] = geomCenter[1] + x
+                        geomCenter[2] = geomCenter[2] + y
+                        geomCenter[3] = geomCenter[3] + z
+
+                        x = math.abs(x)
+                        y = math.abs(y)
+                        z = math.abs(z)
+
+                        if x > largestVertexCoord then largestVertexCoord = x end
+                        if y > largestVertexCoord then largestVertexCoord = y end
+                        if z > largestVertexCoord then largestVertexCoord = z end
+                    end
+
+                    geomCenter[1] = geomCenter[1] / vertexcount
+                    geomCenter[2] = geomCenter[2] / vertexcount
+                    geomCenter[3] = geomCenter[3] / vertexcount
+
+                    largestVertexCoord = largestVertexCoord * 1.5
+
+                    vbo = gl.CreateBuffers()
+                    gl.NamedBufferStorage(vbo, vertexcount * 36, vertexdata, GL.NONE)
+
+                    ptr = ptr + vertexcount * 36
+
+                    -- element list
+                    local trianglecount = read_u32(filebytes, ptr); ptr = ptr + 4
+                    count = trianglecount * 3
+                    -- ptr is now at a location that references the triangle/element list
+                    local elementdata = string.sub(filebytes, ptr)
+
+                    ebo = gl.CreateBuffers()
+                    gl.NamedBufferStorage(ebo, trianglecount * 6, elementdata, GL.NONE)
+
+                    vao = gl.CreateVertexArrays()
+                    gl.VertexArrayVertexBuffer(vao, 0, vbo, 0, 36)
+                    gl.VertexArrayElementBuffer(vao, ebo)
+                    gl.VertexArrayAttribFormat(vao, 0, 3, GL.FLOAT, false, 0)
+                    gl.VertexArrayAttribFormat(vao, 1, 3, GL.FLOAT, false, 12)
+                    gl.VertexArrayAttribBinding(vao, 0, 0)
+                    gl.VertexArrayAttribBinding(vao, 1, 0)
+                    gl.EnableVertexArrayAttrib(vao, 0)
+                    gl.EnableVertexArrayAttrib(vao, 1)
+                end
+            else
+                errormsg = "File is not a mesh"
+            end
+        end
+    end)
+    if status == false then
+        errormsg = result
+    end
+end
+
 return {
+    OnMessageRecieved = function(source, action, data)
+        if action == "open" then ActionOpen(data.file)
+        else print("unknown action: " .. action) end
+    end,
+
     OnUnload = function()
         if program then
             gl.DeleteProgram(program)
@@ -138,137 +219,11 @@ return {
 	gui = {
         title = "Mesh Viewer",
         OnGui = function()
-            if not loaded then load() end
-
-            ImGui.Text("%d known meshes", #knownMeshes)
-            ImGui.Separator()
-
-            ImGui.Columns(2);
-
-            if ImGui.BeginChild("MeshViewerScrollRegion") then
-                for _, value in ipairs(knownMeshes) do
-                    if ImGui.Selectable(Aurora.escape(value), selection == value) then
-                        errormsg = nil
-                        selection = value
-
-                        if vbo then
-                            gl.DeleteBuffers(vbo)
-                        end
-                        if vao then
-                            gl.DeleteVertexArrays(vao)
-                        end
-                        if ebo then
-                            gl.DeleteBuffers(ebo)
-                        end
-
-                        vao = nil
-                        vbo = nil
-                        ebo = nil
-
-                        local status, result = pcall(function()
-                            local filepath = string.format("%s/cache/%x.pc", Aurora.game_directory(), Aurora.hash(value))
-                            local filebytes = Aurora.read_file(filepath)
-                            if filebytes then
-                                local ptr = 1
-
-                                local header = read_u32(filebytes, ptr); ptr = ptr + 4
-
-                                if header == 6 then
-                                    local meshcount = read_u32(filebytes, ptr); ptr = ptr + 4
-
-                                    if meshcount > 0 then
-                                        local vertexcount = read_u32(filebytes, ptr); ptr = ptr + 4
-
-                                        local vertexdata = string.sub(filebytes, ptr)
-
-                                        geomCenter = { 0, 0, 0 }
-                                        largestVertexCoord = 0
-
-                                        for i = 0, vertexcount - 1 do
-                                            local x = Aurora.bitcast_float(read_u32(filebytes, ptr + (i * 36) + 0))
-                                            local y = Aurora.bitcast_float(read_u32(filebytes, ptr + (i * 36) + 4))
-                                            local z = Aurora.bitcast_float(read_u32(filebytes, ptr + (i * 36) + 8))
-
-                                            geomCenter[1] = geomCenter[1] + x
-                                            geomCenter[2] = geomCenter[2] + y
-                                            geomCenter[3] = geomCenter[3] + z
-
-                                            x = math.abs(x)
-                                            y = math.abs(y)
-                                            z = math.abs(z)
-
-                                            if x > largestVertexCoord then largestVertexCoord = x end
-                                            if y > largestVertexCoord then largestVertexCoord = y end
-                                            if z > largestVertexCoord then largestVertexCoord = z end
-                                        end
-
-                                        geomCenter[1] = geomCenter[1] / vertexcount
-                                        geomCenter[2] = geomCenter[2] / vertexcount
-                                        geomCenter[3] = geomCenter[3] / vertexcount
-
-                                        largestVertexCoord = largestVertexCoord * 1.5
-
-                                        vbo = gl.CreateBuffers()
-                                        gl.NamedBufferStorage(vbo, vertexcount * 36, vertexdata, GL.NONE)
-
-                                        ptr = ptr + vertexcount * 36
-
-                                        -- element list
-                                        local trianglecount = read_u32(filebytes, ptr); ptr = ptr + 4
-                                        count = trianglecount * 3
-                                        -- ptr is now at a location that references the triangle/element list
-                                        local elementdata = string.sub(filebytes, ptr)
-
-                                        ebo = gl.CreateBuffers()
-                                        gl.NamedBufferStorage(ebo, trianglecount * 6, elementdata, GL.NONE)
-
-                                        vao = gl.CreateVertexArrays()
-                                        gl.VertexArrayVertexBuffer(vao, 0, vbo, 0, 36)
-                                        gl.VertexArrayElementBuffer(vao, ebo)
-                                        gl.VertexArrayAttribFormat(vao, 0, 3, GL.FLOAT, false, 0)
-                                        gl.VertexArrayAttribFormat(vao, 1, 3, GL.FLOAT, false, 12)
-                                        gl.VertexArrayAttribBinding(vao, 0, 0)
-                                        gl.VertexArrayAttribBinding(vao, 1, 0)
-                                        gl.EnableVertexArrayAttrib(vao, 0)
-                                        gl.EnableVertexArrayAttrib(vao, 1)
-                                    end
-                                else
-                                    errormsg = "File is not a mesh"
-                                end
-                            end
-                        end)
-                        if status == false then
-                            errormsg = result
-                        end
-                    end
-
-                    if ImGui.BeginPopupContextItem() then
-                        if ImGui.MenuItem("Copy Key") then
-                            ImGui.LogToClipboard()
-                            ImGui.LogText("%s", Aurora.escape(value))
-                            ImGui.LogFinish()
-                            ImGui.CloseCurrentPopup()
-                        end
-                        if ImGui.MenuItem("Copy Hash") then
-                            ImGui.LogToClipboard()
-                            ImGui.LogText("%x", Aurora.hash(value))
-                            ImGui.LogFinish()
-                            ImGui.CloseCurrentPopup()
-                        end
-                        ImGui.EndPopup()
-                    end
-
-                    ImGui.SetItemTooltip("Right-click to open context menu");
-                end
+            if selection then
+                ImGui.TextUnformatted(selection)
+                ImGui.TextUnformatted(Aurora.escape(Aurora.rhash(tonumber(Aurora.filesystem.stem(selection), 16)) or "???"))
             end
-            ImGui.EndChild()
-
-            ImGui.NextColumn();
-
-            if errormsg then
-                ImGui.TextUnformatted(errormsg)
-            end
-
+            if errormsg then ImGui.TextUnformatted(errormsg) end
             render()
         end
 	},

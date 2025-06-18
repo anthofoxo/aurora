@@ -51,6 +51,17 @@ Aurora.util = {
     end,
 }
 
+Aurora.SendMessage = function(target, action, data)
+    -- Assert that the global storage table exists
+    if not _AuroraImplGlobalStorage then _AuroraImplGlobalStorage = {} end
+    table.insert(_AuroraImplGlobalStorage, {
+        source = _AuroraImplCurrentPlugin,
+        target = target,
+        action = action,
+        data = data,
+    })
+end
+
 for _, entry in ipairs(Aurora.filesystem.directory_iterator("plugins") or {}) do
 	if Aurora.filesystem.is_regular_file(entry) and entry:endswith(".lua") then
 		local status, result = pcall(function()

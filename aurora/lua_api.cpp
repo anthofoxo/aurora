@@ -13,6 +13,7 @@
 #include <glad/gl.h>
 
 namespace {
+
 	int lua_hash(lua_State* L) {
 		size_t len;
 		char const* data = lua_tolstring(L, 1, &len);

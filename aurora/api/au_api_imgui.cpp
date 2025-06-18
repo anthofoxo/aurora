@@ -310,6 +310,26 @@ namespace {
         ImGui::TextWrapped("%s", lua_tostring(L, -1));
         return 0;
     }
+
+    int TreeNode(lua_State *L) {
+        lua_pushboolean(L, ImGui::TreeNode(luaL_checkstring(L, 1)));
+        return 1;
+    }
+
+    int TreeNodeEx(lua_State *L) {
+        lua_pushboolean(L, ImGui::TreeNodeEx(luaL_checkstring(L, 1), luaL_checkinteger(L, 2)));
+        return 1;
+    }
+
+    int TreePop(lua_State *L) {
+        ImGui::TreePop();
+        return 0;
+    }
+
+    int IsItemActivated(lua_State *L) {
+        lua_pushboolean(L, ImGui::IsItemActivated());
+        return 1;
+    }
 }
 
 void aurora::api_register_imgui(lua_State *L) {
@@ -349,4 +369,8 @@ void aurora::api_register_imgui(lua_State *L) {
     AU_IMPL_API_REGISTER(EndPopup);
     AU_IMPL_API_REGISTER(CloseCurrentPopup);
     AU_IMPL_API_REGISTER(SetItemTooltip);
+    AU_IMPL_API_REGISTER(TreeNode);
+    AU_IMPL_API_REGISTER(TreeNodeEx);
+    AU_IMPL_API_REGISTER(TreePop);
+    AU_IMPL_API_REGISTER(IsItemActivated);
 }
