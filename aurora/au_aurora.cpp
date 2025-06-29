@@ -18,6 +18,7 @@
 #include <spdlog/fmt/fmt.h>
 #include <tinyfiledialogs.h>
 
+#include <unordered_map>
 #include <iostream>
 #include <algorithm>
 #include <cctype>
@@ -32,6 +33,7 @@
 #include <string>
 #include <unordered_set>
 #include <vector>
+#include <format>
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
@@ -40,6 +42,687 @@
 
 #include "au_util.hpp"
 #include "spdlog/spdlog.h"
+
+#include "au_hash.hpp"
+#include "au_lua_serialize.hpp"
+#include "gui/au_hasher.hpp"
+
+struct ByteStream final {
+	char const* const kError = "ByteStream out of range";
+
+	std::vector<std::byte> mBuffer;
+	std::size_t mOffset = 0;
+
+	template<typename T>
+	T read_gen() {
+		if (mOffset + sizeof(T) > mBuffer.size()) throw std::out_of_range(kError);
+		T value;
+		std::memcpy(&value, mBuffer.data() + mOffset, sizeof(T));
+		mOffset += sizeof(T);
+		return value;
+	}
+
+	bool read_bool() { return read_gen<std::uint8_t>(); }
+	std::uint32_t read_u8() { return read_gen<std::uint8_t>(); }
+	std::uint32_t read_u32() { return read_gen<std::uint32_t>(); }
+
+	std::string read_sstr() {
+		auto size = read_u32();
+		if (mOffset + size > mBuffer.size()) throw std::out_of_range(kError);
+		std::string string = std::string(reinterpret_cast<char const*>(mBuffer.data() + mOffset), size);
+		mOffset += size;
+		return string;
+	}
+
+	std::string read_cstr() {
+		// We cannot guarentee safety with a c string
+		std::size_t size = std::strlen(reinterpret_cast<char const*>(mBuffer.data() + mOffset));
+		std::string string = std::string(reinterpret_cast<char const*>(mBuffer.data() + mOffset), size);
+		mOffset += size;
+		mOffset += 1; // Null terminator
+		return string;
+	}
+
+	template<typename T>
+	void write_gen(T const& value) {
+		for (int i = 0; i < sizeof(T); ++i) mBuffer.emplace_back(static_cast<std::byte>(0));
+		std::memcpy(mBuffer.data() + mBuffer.size() - sizeof(T), &value, sizeof(T));
+	}
+
+	void write_bool(bool value) { return write_gen(value); }
+	void write_u8(std::uint8_t value) { return write_gen(value); }
+	void write_u32(std::uint32_t value) { return write_gen(value); }
+
+	void write_sstr(std::string const& value) {
+		write_u32(value.size());
+		for (auto c : value) mBuffer.emplace_back(static_cast<std::byte>(c));
+	}
+
+	void write_cstr(std::string const& value) {
+		for (auto c : value) mBuffer.emplace_back(static_cast<std::byte>(c));
+		mBuffer.emplace_back(static_cast<std::byte>('\0'));
+	}
+};
+
+void write_to_thumper_cache(std::uint32_t hash, std::span<std::byte const> bytes) {
+	std::string path = std::format("cache/{:x}.pc", hash);
+
+	if (std::filesystem::exists(path) && !std::filesystem::exists(path + ".bak")) {
+		std::filesystem::copy_file(path, path + ".bak");
+	}
+
+	std::ofstream stream(path, std::ios::binary);
+	if (!stream) {
+		__debugbreak();
+	}
+	stream.write(reinterpret_cast<char const*>(bytes.data()), bytes.size());
+}
+
+bool cache_file_exists(std::uint32_t value) {
+	return std::filesystem::exists(std::format("cache/{:x}.pc", value));
+}
+
+struct Credits {
+	struct MajorGroupElement {
+		std::string decoration;
+		std::string text;
+
+		void deserialize(ByteStream& stream) {
+			decoration = stream.read_sstr();
+			text = stream.read_sstr();
+		}
+
+		void serialize(ByteStream& stream) const {
+			stream.write_sstr(decoration);
+			stream.write_sstr(text);
+		}
+
+		void serialize(lua_State* L) {
+			lua_newtable(L);
+			lua_pushstring(L, decoration.c_str());
+			lua_setfield(L, -2, "decoration");
+			lua_pushstring(L, text.c_str());
+			lua_setfield(L, -2, "text");
+			// one new value added to stack
+		}
+
+		void deserialize(lua_State* L) {
+			lua_getfield(L, -1, "decoration");
+			decoration = lua_tostring(L, -1);
+			lua_pop(L, 1);
+
+			lua_getfield(L, -1, "text");
+			text = lua_tostring(L, -1);
+			lua_pop(L, 1);
+		}
+	};
+
+	struct MajorGroup {
+		std::vector<MajorGroupElement> elements;
+
+		void deserialize(ByteStream& stream) {
+			elements.resize(stream.read_u32());
+
+			for (auto& element : elements) {
+				element.deserialize(stream);
+			}
+		}
+
+		void serialize(ByteStream& stream) const {
+			stream.write_u32(elements.size());
+
+			for (auto const& element : elements) {
+				element.serialize(stream);
+			}
+		}
+
+		void serialize(lua_State* L) {
+			lua_newtable(L);
+
+			for (int i = 0; i < elements.size(); ++i) {
+				elements[i].serialize(L);
+				lua_rawseti(L, -2, i + 1);
+			}
+		}
+
+		void deserialize(lua_State* L) {
+			elements.clear();
+
+			lua_pushnil(L);
+			while (lua_next(L, -2)) {
+				MajorGroupElement element;
+				element.deserialize(L);
+
+				elements.emplace_back(std::move(element));
+
+				lua_pop(L, 1);
+			}
+		}
+	};
+
+	struct MinorGroup {
+		std::string banner;
+		std::vector<std::string> thanks;
+
+		void deserialize(ByteStream& stream) {
+			banner = stream.read_sstr();
+			thanks.resize(stream.read_u32());
+
+			for (auto& str : thanks) {
+				str = stream.read_sstr();
+			}
+		}
+
+		void serialize(ByteStream& stream) const {
+			stream.write_sstr(banner);
+			stream.write_u32(thanks.size());
+
+			for (auto& str : thanks) {
+				stream.write_sstr(str);
+			}
+		}
+
+		void serialize(lua_State* L) {
+			lua_newtable(L);
+			lua_pushstring(L, banner.c_str());
+			lua_setfield(L, -2, "banner");
+
+			lua_newtable(L);
+			for (int i = 0; i < thanks.size(); ++i) {
+				lua_pushstring(L, thanks[i].c_str());
+				lua_rawseti(L, -2, i + 1);
+			}
+
+			lua_setfield(L, -2, "elements");
+		}
+
+		void deserialize(lua_State* L) {
+			thanks.clear();
+
+			lua_getfield(L, -1, "banner");
+			banner = lua_tostring(L, -1);
+			lua_pop(L, 1);
+
+			lua_getfield(L, -1, "elements");
+
+			lua_pushnil(L);
+			while (lua_next(L, -2)) {
+				thanks.emplace_back(lua_tostring(L, -1));
+
+				lua_pop(L, 1);
+			}
+
+			lua_pop(L, 1);
+		}
+	};
+
+	std::vector<MajorGroup> major;
+	std::vector<MinorGroup> minor;
+
+	void deserialize(ByteStream& stream) {
+		major.resize(stream.read_u32());
+
+		for (auto& group : major) {
+			group.deserialize(stream);
+		}
+
+		minor.resize(stream.read_u32());
+
+		for (auto& group : minor) {
+			group.deserialize(stream);
+		}
+	}
+
+	void serialize(ByteStream& stream) const {
+		stream.write_u32(major.size());
+
+		for (auto& group : major) {
+			group.serialize(stream);
+		}
+
+		stream.write_u32(minor.size());
+
+		for (auto& group : minor) {
+			group.serialize(stream);
+		}
+	}
+
+	void serialize(lua_State* L) {
+		lua_newtable(L);
+
+		lua_newtable(L);
+		for (int i = 0; i < major.size(); ++i) {
+			major[i].serialize(L);
+			lua_rawseti(L, -2, i + 1);
+		}
+		lua_setfield(L, -2, "main");
+
+		lua_newtable(L);
+		for (int i = 0; i < minor.size(); ++i) {
+			minor[i].serialize(L);
+			lua_rawseti(L, -2, i + 1);
+		}
+		lua_setfield(L, -2, "tail");
+	}
+
+	void deserialize(lua_State* L) {
+		major.clear();
+		minor.clear();
+
+		lua_getfield(L, -1, "main");
+
+		lua_pushnil(L);
+		while (lua_next(L, -2)) {
+			MajorGroup group;
+			group.deserialize(L);
+			major.emplace_back(std::move(group));
+
+			lua_pop(L, 1);
+		}
+
+		lua_pop(L, 1);
+		lua_getfield(L, -1, "tail");
+		lua_pushnil(L);
+		while (lua_next(L, -2)) {
+			MinorGroup group;
+			group.deserialize(L);
+			minor.emplace_back(std::move(group));
+
+			lua_pop(L, 1);
+		}
+
+		lua_pop(L, 1);
+	}
+};
+
+void unpack_credits() {
+	lua_State* L = luaL_newstate();
+
+	if (luaL_dofile(L, "aurora/credits.lua") == LUA_OK) {
+
+		lua_pushnil(L);
+		while (lua_next(L, -2)) {
+			std::size_t size;
+			char const* data = lua_tolstring(L, -1, &size);
+			auto hash = aurora::fnv1a(data, size);
+
+			if (auto bytes = aurora::read_file(std::format("cache/{:x}.pc", hash))) {
+				ByteStream stream;
+				stream.mBuffer = std::move(*bytes);
+
+				lua_State* L = luaL_newstate();
+				luaL_openlibs(L);
+
+				stream.read_u32();
+				Credits credits;
+				credits.deserialize(stream);
+				credits.serialize(L);
+
+				std::string readyToWrite = std::string("return ") + aurora::lapi_serialize(L);
+
+				std::string writePath = std::format("mods/base/credits/{}.lua", std::string(data + 1, size - 9));
+				std::filesystem::create_directories(std::filesystem::path(writePath).parent_path());
+
+				std::ofstream s(writePath, std::ios::binary);
+				s.write(readyToWrite.data(), readyToWrite.size());
+				s.close();
+			}
+
+			lua_pop(L, 1);
+		}
+
+	}
+	lua_pop(L, 1);
+
+	lua_close(L);
+}
+
+// Texture unpacking is easy, iterate over the known texture hashes, compute its .pc filename, strip the first 4 bytes and export it as .dds (ideally this would be a .png)
+void unpack_textures() {
+	lua_State* L = luaL_newstate();
+
+	if (luaL_dofile(L, "aurora/textures.lua") == LUA_OK) {
+
+		lua_pushnil(L);
+		while (lua_next(L, -2)) {
+			std::size_t size;
+			char const* data = lua_tolstring(L, -1, &size);
+			auto hash = aurora::fnv1a(data, size);
+
+			bool isEngineData = *data == 'E';
+
+			std::uint32_t extra;
+			std::memcpy(&extra, data + size - 4, 4);
+
+			// read computed name
+			if (auto bytes = aurora::read_file(std::format("cache/{:x}.pc", hash))) {
+				ByteStream stream;
+				stream.mBuffer = std::move(*bytes);
+
+				stream.read_u32(); // skip first u32
+
+				std::string engineDir;
+
+				if (isEngineData) {
+					engineDir = "engine/";
+				}
+
+				std::string writePath = std::format("mods/base/textures/{}{}+{:x}.dds", engineDir, std::string(data + 1, size - 9), extra);
+				std::filesystem::create_directories(std::filesystem::path(writePath).parent_path());
+
+				std::ofstream s(writePath, std::ios::binary);
+				s.write(reinterpret_cast<char const*>(stream.mBuffer.data()) + 4, stream.mBuffer.size() - 4);
+				s.close();
+			}
+
+			lua_pop(L, 1);
+		}
+
+	}
+	lua_pop(L, 1);
+
+	lua_close(L);
+}
+
+void unpack_gui(bool& visible) {
+
+	if (!visible) return;
+	if (ImGui::Begin("Unpacker")) {
+		if (ImGui::Button("Unpack Credits")) {
+			unpack_credits();
+		}
+
+		if (ImGui::Button("Unpack Textures")) {
+			unpack_textures();
+		}
+	}
+	ImGui::End();
+}
+
+
+enum struct LocalizationKey : std::uint32_t {
+	kPlay = aurora::fnv1a(aurora::Context::kConsteval, "play"),
+	kCancel = aurora::fnv1a(aurora::Context::kConsteval, "cancel"),
+	kNo = aurora::fnv1a(aurora::Context::kConsteval, "no"),
+	kContinue = aurora::fnv1a(aurora::Context::kConsteval, "continue"),
+};
+
+std::vector<std::string> gBuildMessages;
+std::mutex gBuildMessagesMtx;
+
+void post_build_message(std::string const& string) {
+	std::lock_guard lck{ gBuildMessagesMtx };
+	gBuildMessages.emplace_back(string);
+}
+
+template <typename... Types>
+void post_build_message(std::format_string<Types...> const fmt, Types&&... args) {
+	post_build_message(std::format(fmt, std::forward<Types>(args)...));
+};
+
+struct ModDb {
+	std::unordered_map<std::string, std::unordered_map<LocalizationKey, std::string>> localization;
+	std::unordered_map<std::string, Credits> credits;
+
+	std::unordered_map<std::string, std::string> textures; // maps the texture name to the texture target
+};
+
+ModDb gModDb;
+
+
+void process_mod_hooks(std::string const& modid) {
+	post_build_message("Processing patches `{}`", modid);
+
+	if (std::filesystem::exists(std::format("mods/{}/patches/credits", modid))) {
+		for (auto const& entry : std::filesystem::recursive_directory_iterator(std::format("mods/{}/patches/credits", modid))) {
+			if (entry.is_directory()) continue;
+			if (entry.path().extension().generic_string() != ".lua") continue;
+
+			post_build_message(entry.path().generic_string());
+
+			lua_State* L = luaL_newstate();
+			luaL_openlibs(L);
+
+			std::filesystem::path fspath = std::filesystem::relative(entry.path(), std::format("mods/{}/patches/credits", modid)).generic_string();
+			std::string path = std::format("A{}/{}.credits", fspath.parent_path().generic_string(), fspath.stem().generic_string());
+
+			gModDb.credits[path].serialize(L);
+
+			if (luaL_dofile(L, entry.path().generic_string().c_str()) == LUA_OK) {
+				lua_pushvalue(L, -2);
+				lua_pcall(L, 1, 0, 0);
+				gModDb.credits[path].deserialize(L);
+			}
+			else {
+				post_build_message(lua_tostring(L, -1));
+			}
+			lua_pop(L, 1);
+			lua_close(L);
+		}
+	}
+}
+
+void load_mod(std::string const& modid) {
+	post_build_message("Loading `{}`", modid);
+
+	if (std::filesystem::exists(std::format("mods/{}/localization", modid))) {
+		for (auto const& entry : std::filesystem::recursive_directory_iterator(std::format("mods/{}/localization", modid))) {
+			if (entry.is_directory()) continue;
+			if (entry.path().extension().generic_string() != ".lua") continue;
+
+			post_build_message(entry.path().generic_string());
+
+			lua_State* L = luaL_newstate();
+			if (luaL_dofile(L, entry.path().generic_string().c_str()) == LUA_OK) {
+				std::filesystem::path fspath = std::filesystem::relative(entry.path(), std::format("mods/{}/localization", modid)).generic_string();
+				std::string path = std::format("A{}/{}.loc", fspath.parent_path().generic_string(), fspath.stem().generic_string());
+
+				lua_pushnil(L);
+				while (lua_next(L, -2)) {
+					lua_pushvalue(L, -2);
+
+					LocalizationKey localizationKey;
+
+					if (lua_type(L, -1) == LUA_TSTRING) {
+						std::size_t size;
+						char const* data = lua_tolstring(L, -1, &size);
+						localizationKey = LocalizationKey(aurora::fnv1a(data, size));
+					}
+					else {
+						localizationKey = LocalizationKey(lua_tointeger(L, -1));
+					}
+
+					gModDb.localization[path][localizationKey] = std::string(lua_tostring(L, -2));
+
+					lua_pop(L, 2);
+				}
+			}
+			else {
+				post_build_message(lua_tostring(L, -1));
+			}
+			lua_pop(L, 1);
+			lua_close(L);
+		}
+	}
+
+	if (std::filesystem::exists(std::format("mods/{}/credits", modid))) {
+		for (auto const& entry : std::filesystem::recursive_directory_iterator(std::format("mods/{}/credits", modid))) {
+			if (entry.is_directory()) continue;
+			if (entry.path().extension().generic_string() != ".lua") continue;
+
+			post_build_message(entry.path().generic_string());
+
+			lua_State* L = luaL_newstate();
+			if (luaL_dofile(L, entry.path().generic_string().c_str()) == LUA_OK) {
+				std::filesystem::path fspath = std::filesystem::relative(entry.path(), std::format("mods/{}/credits", modid)).generic_string();
+				std::string path = std::format("A{}/{}.credits", fspath.parent_path().generic_string(), fspath.stem().generic_string());
+
+				Credits credits;
+				credits.deserialize(L);
+
+				gModDb.credits[path] = credits;
+			}
+			else {
+				post_build_message(lua_tostring(L, -1));
+			}
+			lua_pop(L, 1);
+			lua_close(L);
+		}
+	}
+
+	if (std::filesystem::exists(std::format("mods/{}/textures", modid))) {
+		for (auto const& entry : std::filesystem::recursive_directory_iterator(std::format("mods/{}/textures", modid))) {
+			if (entry.is_directory()) continue;
+			if (entry.path().extension().generic_string() != ".dds") continue;
+
+			post_build_message(entry.path().generic_string());
+
+			auto engineRelative = std::filesystem::relative(entry.path(), std::format("mods/{}/textures/engine", modid));
+			bool isEngineRelativePath = !engineRelative.empty() && !engineRelative.string().rfind("..", 0) == 0;
+
+			auto relative = std::filesystem::relative(entry.path(), std::format("mods/{}/textures{}", modid, isEngineRelativePath ? "/engine" : ""));
+
+			std::string infostem = relative.stem().generic_string();
+			auto it = infostem.find_last_of('+');
+			std::string stem = infostem.substr(0, it);
+			std::uint32_t extra = std::stoul(infostem.substr(it + 1), nullptr, 16);
+
+			std::string hashinput = std::format("{}{}/{}.png", isEngineRelativePath ? "E" : "A", relative.parent_path().generic_string(), stem);
+			hashinput.resize(hashinput.size() + 4);
+			memcpy(hashinput.data() + hashinput.size() - 4, &extra, 4);
+
+			gModDb.textures[hashinput] = entry.path().generic_string();
+
+
+		}
+	}
+}
+
+void build() {
+	if (!std::filesystem::exists("mods/base")) {
+		post_build_message("Thumper content has not been unpacked");
+		post_build_message("Aurora cannot build mod content until this is done");
+		return;
+	}
+
+	post_build_message("Scanning mods directory");
+
+	std::unordered_set<std::string> mods;
+
+	for (auto const& entry : std::filesystem::directory_iterator("mods")) {
+		if (entry.is_directory()) {
+			std::string modid = entry.path().filename().generic_string();
+
+			bool disabled = modid.starts_with('_');
+
+			post_build_message("`{}` ({})", modid, disabled ? "Disabled" : "Enabled");
+
+			if (!disabled) mods.insert(std::move(modid));
+		}
+	}
+
+	if (!mods.contains("base")) {
+		post_build_message("`base` mod not found, canceled mod compilation");
+		return;
+	}
+
+	mods.erase("base");
+	load_mod("base");
+
+	for (auto const& modid : mods) {
+		load_mod(modid);
+	}
+
+	for (auto const& modid : mods) {
+		process_mod_hooks(modid);
+	}
+
+
+	post_build_message("Building assets");
+
+	for (auto const& [key, table] : gModDb.localization) {
+		post_build_message("`{}`", key);
+
+		struct LocalizationEntry {
+			LocalizationKey key;
+			std::uint32_t offset;
+			std::string value;
+		};
+
+		std::vector<LocalizationEntry> enteries;
+
+		std::uint32_t totalBytes = 0;
+
+		for (auto& [key, value] : table) {
+			LocalizationEntry entry;
+			entry.key = key;
+			entry.offset = totalBytes;
+			entry.value = value;
+
+			totalBytes += value.size() + 1;
+
+			enteries.emplace_back(entry);
+		}
+
+		ByteStream stream;
+		stream.write_u32(16);
+		stream.write_u32(enteries.size());
+		stream.write_u32(totalBytes);
+
+		for (auto const& entry : enteries) {
+			stream.write_cstr(entry.value);
+		}
+
+		for (auto const& entry : enteries) {
+			stream.write_u32(static_cast<std::uint32_t>(entry.key));
+			stream.write_u32(entry.offset);
+		}
+
+		write_to_thumper_cache(aurora::fnv1a(key), stream.mBuffer);
+	}
+
+	for (auto const& [key, table] : gModDb.credits) {
+		post_build_message("`{}`", key);
+
+		ByteStream stream;
+		stream.write_u32(16);
+		table.serialize(stream);
+
+		write_to_thumper_cache(aurora::fnv1a(key), stream.mBuffer);
+	}
+	int counter = 0;
+
+	try {
+
+		for (auto const& [target, source] : gModDb.textures) {
+			//post_build_message("`{}`", source);
+
+			++counter;
+
+			auto bytes = aurora::read_file(source);
+
+			if (bytes) {
+				std::uint32_t key = aurora::fnv1a(target);
+
+				ByteStream stream;
+				stream.write_u32(14);
+
+				stream.mBuffer.resize(stream.mBuffer.size() + bytes->size());
+				memcpy(stream.mBuffer.data() + 4, bytes->data(), bytes->size());
+
+				write_to_thumper_cache(key, stream.mBuffer);
+			}
+
+
+		}
+	}
+	catch (std::exception const& e) {
+		std::string s = e.what();
+	}
+
+	post_build_message("Done");
+}
+
 
 ImFont* gVariableSpace = nullptr;
 ImFont* gMonoSpace = nullptr;
@@ -322,6 +1005,15 @@ lua_State* aurora_newstate() {
 	return L;
 }
 
+void restore_cache_content() {
+	for (auto& entry : std::filesystem::directory_iterator("cache")) {
+		std::string backupFile = std::format("{}.bak", entry.path().generic_string());
+		if (std::filesystem::exists(backupFile)) {
+			std::filesystem::copy_file(backupFile, entry.path(), std::filesystem::copy_options::overwrite_existing);
+		}
+	}
+}
+
 struct PluginEngine {
 	struct Plugin {
 		bool visible = false;
@@ -597,9 +1289,6 @@ void create_window_icons(GLFWwindow* window) {
 	}
 }
 
-#include <format>
-
-#include "gui/au_hasher.hpp"
 
 namespace aurora {
 void main() {
@@ -686,6 +1375,9 @@ void main() {
 				
 				ImGui::MenuItem("Binary Search", nullptr, &toolsBinarySearch);
 				
+				if (ImGui::MenuItem("Restore Cache Backup")) {
+					restore_cache_content();
+				}
 
 				ImGui::EndMenu();
 			}
@@ -693,16 +1385,74 @@ void main() {
 
 		ImGui::EndMainMenuBar();
 
+		bool v = true;
+		unpack_gui(v);
+
+		static std::optional<std::future<void>> buildFuture = std::nullopt;
+
+		if (!buildFuture.has_value()) {
+			ImGui::SetNextWindowPos(ImVec2(io.DisplaySize.x * 0.5f, io.DisplaySize.y * 0.5f), ImGuiCond_Once, ImVec2(0.5f, 0.5f));
+			ImGui::SetNextWindowSize(ImVec2(800, 600), ImGuiCond_Once);
+			if (ImGui::Begin("Launcher")) {
+				static bool buildModContent = true;
 
 
-		if (ImGui::Begin("Launcher")) {
-			if (ImGui::Button("Launch Thumper")) {
-				gShouldLaunchThumper = true;
-				glfwSetWindowShouldClose(window, GLFW_TRUE);
+				ImGui::Checkbox("Build Mod Content", &buildModContent);
+
+
+
+				if (ImGui::Button("Launch Thumper")) {
+					gShouldLaunchThumper = true;
+
+					if (buildModContent) {
+						buildFuture = std::async(std::launch::async, build);
+					}
+					else {
+						glfwSetWindowShouldClose(window, true);
+					}
+				}
+
 			}
+			ImGui::End();
+		}
+		else {
+			if (ImGui::Begin("Building")) {
+				const float footer_height_to_reserve = ImGui::GetStyle().ItemSpacing.y + ImGui::GetFrameHeightWithSpacing();
+				if (ImGui::BeginChild("ScrollingRegion", ImVec2(0, -footer_height_to_reserve), ImGuiChildFlags_NavFlattened, ImGuiWindowFlags_HorizontalScrollbar)) {
+					ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(4, 1));
+
+					std::lock_guard lck{ gBuildMessagesMtx };
+
+					for (auto const& message : gBuildMessages) {
+						ImGui::TextUnformatted(message.c_str(), message.c_str() + message.size());
+					}
+
+					bool ScrollToBottom = false;
+					bool AutoScroll = true;
+
+					if (ScrollToBottom || (AutoScroll && ImGui::GetScrollY() >= ImGui::GetScrollMaxY()))
+						ImGui::SetScrollHereY(1.0f);
+
+					ImGui::PopStyleVar();
+				}
+				ImGui::EndChild();
+
+				if (aurora::is_future_ready(buildFuture.value())) {
+					
+
+					if (ImGui::Button("Launch")) {
+						glfwSetWindowShouldClose(window, true);
+						gShouldLaunchThumper = true;
+					}
+
+					
+				}
+			}
+			ImGui::End();
 
 		}
-		ImGui::End();
+
+		
 
 		hasher.on_gui(hasherVisible);
 

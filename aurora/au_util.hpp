@@ -8,12 +8,28 @@
 #include <string>
 #include <chrono>
 #include <vector>
+#include <fstream>
 
 namespace aurora {
     std::string unescape(std::string_view input);
     std::string escape(std::string_view input);
 
-    [[nodiscard]] std::optional<std::vector<std::byte>> read_file(std::filesystem::path const& aPath);
+    template<typename T = std::byte, std::enable_if_t<sizeof(T) == 1, int> = 0>
+    [[nodiscard]] std::optional<std::vector<T>> read_file(std::filesystem::path const& aPath) {
+        std::ifstream stream(aPath, std::ios::binary);
+        if (!stream) return std::nullopt;
+
+        stream.seekg(0, std::ios::end);
+        auto size = stream.tellg();
+        stream.seekg(0, std::ios::beg);
+
+        std::vector<T> buffer;
+        buffer.resize(size);
+        stream.read(reinterpret_cast<char*>(buffer.data()), size);
+
+        return buffer;
+    }
+
     bool write_file(std::filesystem::path const& aPath, std::span<std::byte const> aBytes);
 
     template<typename T>

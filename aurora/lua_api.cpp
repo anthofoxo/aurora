@@ -467,6 +467,8 @@ void aurora::register_plugin_api(lua_State* L) {
 	                  auto const count = static_cast<GLsizei>(luaL_checkinteger(L, 3));
 	                  auto const transpose = static_cast<GLboolean>(lua_toboolean(L, 4));
 
+					  assert(count * sizeof(glm::mat4) < 1024); // If allocating over 1KiB. Something has gone wrong
+
 	                  auto *data = static_cast<float*>(alloca(count * sizeof(glm::mat4)));
 
 	                  for (int i = 0; i < count * 16; ++i) {
