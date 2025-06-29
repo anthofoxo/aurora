@@ -10,8 +10,6 @@
 #include <vector>
 
 namespace aurora {
-    std::uint32_t hash(std::span<std::byte const> bytes);
-
     std::string unescape(std::string_view input);
     std::string escape(std::string_view input);
 
@@ -22,6 +20,8 @@ namespace aurora {
     [[nodiscard]] constexpr bool is_future_ready(std::future<T> const& future) noexcept {
         return future.wait_until(std::chrono::steady_clock::time_point::min()) == std::future_status::ready;
     }
+
+    std::string const& get_program_files_directory();
 
     template <auto fn>
     struct DeleterOf {

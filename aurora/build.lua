@@ -1,6 +1,10 @@
 project "aurora"
-kind "WindowedApp"
-debugdir "../working"
+kind "SharedLib"
+
+debugcommand "C:/Program Files (x86)/Steam/steamapps/common/Thumper/THUMPER_win8.exe.unpacked.exe"
+debugdir "C:/Program Files (x86)/Steam/steamapps/common/Thumper"
+
+postbuildcommands { "powershell -NoProfile -ExecutionPolicy Bypass -File \"post_build.ps1\"" }
 
 files {
 	"**.c",
@@ -19,6 +23,7 @@ includedirs {
 	"%{wks.location}/vendor/tinyfd",
 	"%{wks.location}/vendor/spdlog/include",
 	"%{wks.location}/vendor/glm",
+	"%{wks.location}/vendor/steamworks",
 }
 
 links {

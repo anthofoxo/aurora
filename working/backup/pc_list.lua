@@ -1,0 +1,31 @@
+return {
+	base = dofile("aurora/base.lua"),
+	textures = dofile("aurora/textures.lua"),
+	meshes = dofile("aurora/meshes.lua"),
+	fonts = dofile("aurora/fonts.lua"),
+	cubemaps = dofile("aurora/cubemaps.lua"),
+	levels = {
+		"Aui/thumper.levels",
+	},
+	localization = {
+		"Aui/strings.da.loc",
+		"Aui/strings.de.loc",
+		"Aui/strings.en.loc",
+		"Aui/strings.es-la.loc",
+		"Aui/strings.fi.loc",
+		"Aui/strings.fr-ca.loc",
+		"Aui/strings.fr.loc",
+		"Aui/strings.it.loc",
+		"Aui/strings.ja.loc",
+		"Aui/strings.ko.loc",
+		"Aui/strings.nl.loc",
+		"Aui/strings.no.loc",
+		"Aui/strings.pl.loc",
+		"Aui/strings.pt-br.loc",
+		"Aui/strings.ru.loc",
+		"Aui/strings.sv.loc",
+		"Aui/strings.tr.loc",
+		"Aui/strings.zh-s.loc",
+		"Aui/strings.zh-t.loc",
+	}
+}

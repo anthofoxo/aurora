@@ -12,7 +12,6 @@
 #include <backends/imgui_impl_glfw.h>
 #include <backends/imgui_impl_opengl3.h>
 
-#include "imspinner.h"
 #include "lua_api.hpp"
 
 #include <lua.hpp>
@@ -33,8 +32,6 @@
 #include <string>
 #include <unordered_set>
 #include <vector>
-
-#include "icon.hpp"
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
@@ -114,7 +111,24 @@ struct Console {
 
 Console console;
 
-std::string kThumperDirectory;
+void spawn_process_with_path_argument(std::string const& aApplication, std::string const& aArgumentPath) {
+	std::string arguments = std::format("\"{}\" \"{}\"", std::filesystem::path(aApplication).filename().generic_string(), aArgumentPath);
+
+	STARTUPINFOA si;
+	ZeroMemory(&si, sizeof(si));
+	si.cb = sizeof(si);
+
+	PROCESS_INFORMATION pi;
+	ZeroMemory(&pi, sizeof(pi));
+
+	CreateProcessA(aApplication.c_str(), arguments.data(), NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi);
+
+	CloseHandle(pi.hProcess);
+	CloseHandle(pi.hThread);
+}
+
+std::optional<std::string> mPathImHex;
+std::optional<std::string> mPathHxD;
 
 void tools_binary_search(bool& aOpen) {
 	struct Match {
@@ -152,7 +166,7 @@ void tools_binary_search(bool& aOpen) {
 					auto parsedSpan = std::as_bytes(std::span(parsed));
 					result.pattern = input;
 
-					for (auto const& entry : std::filesystem::directory_iterator(std::filesystem::path(kThumperDirectory) / "cache")) {
+					for (auto const& entry : std::filesystem::directory_iterator("cache")) {
 						if (auto const data = aurora::read_file(entry.path())) {
 							auto it = data->begin();
 
@@ -167,8 +181,8 @@ void tools_binary_search(bool& aOpen) {
 						}
 					}
 
-					if(std::filesystem::exists(std::filesystem::path(kThumperDirectory) / "THUMPER_win8.exe.unpacked.exe")){
-						auto const data = aurora::read_file(std::filesystem::path(kThumperDirectory) / "THUMPER_win8.exe.unpacked.exe");
+					if(std::filesystem::exists("THUMPER_win8.exe.unpacked.exe")){
+						auto const data = aurora::read_file("THUMPER_win8.exe.unpacked.exe");
 
 						if (data.has_value()) {
 							auto it = data->begin();
@@ -190,7 +204,7 @@ void tools_binary_search(bool& aOpen) {
 		}
 
 		if (future) {
-			ImSpinner::SpinnerArcWedges("Spinner", 16.0f);
+			ImGui::ProgressBar(-1.0f);
 		}
 		else {
 			ImGui::SetNextItemShortcut(ImGuiMod_Ctrl | ImGuiKey_C);
@@ -214,14 +228,23 @@ void tools_binary_search(bool& aOpen) {
 				std::string str = fmt::format("{} @ 0x{:x} -> 0x{:x}", displayValue, match.start, match.end);
 
 				if (ImGui::Selectable(str.c_str())) {
-					
-					std::string path = fmt::format("{}/cache/{}", kThumperDirectory, match.file);
-
-					hexEditor.action_loadfile(path);
-					hexEditor.action_jump(match.start, match.end);
 				}
 
+				if (ImGui::BeginPopupContextItem()) {
+					if (mPathHxD) {
+						if (ImGui::MenuItem("Open File in HxD")) {
+							spawn_process_with_path_argument(*mPathHxD, fmt::format("cache/{}", match.file));
+						}
+					}
 
+					if (mPathImHex) {
+						if (ImGui::MenuItem("Open File in ImHex")) {
+							spawn_process_with_path_argument(*mPathImHex, fmt::format("cache/{}", match.file));
+						}
+					}
+
+					ImGui::EndPopup();
+				}
 
 				
 				ImGui::SetItemTooltip("Origin File: %s", match.file.c_str());
@@ -233,20 +256,6 @@ void tools_binary_search(bool& aOpen) {
 	ImGui::End();
 }
 
-void validate_executables() {
-	console.log("Validating executables...");
-
-	std::string baseExePath = fmt::format("{}/{}", kThumperDirectory, "THUMPER_win8.exe");
-	std::string unpackedExePath = fmt::format("{}/{}", kThumperDirectory, "THUMPER_win8.exe.unpacked.exe");
-	
-	bool isBaseValid = std::filesystem::exists(baseExePath) && SHA1::from_file(baseExePath) == "d1384dd75cdd3759d95ff02dda32062c148e391e";
-	bool isUnpackedValid = std::filesystem::exists(unpackedExePath) && SHA1::from_file(unpackedExePath) == "f125aae1b2dcb16c3fa6db6ebe26a43c1d4f89aa";
-
-	if (!isBaseValid) console.log("[warn] Incorrect hash for base executable");
-	if (!isUnpackedValid) console.log("[warn] Incorrect hash for unpacked executable");
-
-}
-
 int lua_print(lua_State* L) {
 	console.log(lua_tostring(L, 1));
 	return 0;
@@ -255,14 +264,9 @@ int lua_print(lua_State* L) {
 void cache_scan(std::unordered_set<std::string>& pcFileStorage) {
 	console.log("Scanning cache...");
 
-	if (kThumperDirectory.empty()) {
-		console.log("No thumper path specified, cannot scan cache");
-		return;
-	}
-
 	pcFileStorage.clear();
 
-	for (auto const& entry : std::filesystem::directory_iterator(std::filesystem::path(kThumperDirectory) / "cache")) {
+	for (auto const& entry : std::filesystem::directory_iterator("cache")) {
 		pcFileStorage.insert(entry.path().filename().generic_string());
 	}
 
@@ -302,7 +306,7 @@ lua_State* aurora_newstate() {
 	lua_setfield(L, -2, "cache_hit");
 
 	lua_pushcfunction(L, [](lua_State* L)-> int {
-		lua_pushstring(L, kThumperDirectory.c_str());
+		lua_pushstring(L, "./"); // Backward compat, will be deprecated and removed
 		return 1;
 	});
 	lua_setfield(L, -2, "game_directory");
@@ -325,7 +329,7 @@ struct PluginEngine {
 
 		L = aurora_newstate();
 
-		if (luaL_dofile(L, "boot.lua") != LUA_OK) {
+		if (luaL_dofile(L, "aurora/boot.lua") != LUA_OK) {
 			console.log(lua_tostring(L, -1));
 			shutdown();
 			return;
@@ -587,47 +591,21 @@ void create_window_icons(GLFWwindow* window) {
 	}
 }
 
+#include <format>
+
+#include "gui/au_hasher.hpp"
+
 namespace aurora {
 void main() {
-	// Load configs
-	{
-		console.log("Loading aurora config");
+	mPathImHex = std::format("{}/ImHex/imhex-gui.exe", get_program_files_directory());
+	mPathHxD = std::format("{}/HxD/HxD.exe", get_program_files_directory());
 
-		lua_State* L = aurora_newstate();
-
-		if (luaL_dofile(L, "config.lua") != LUA_OK) {
-			console.log(fmt::format("Lua Error: {}", lua_tostring(L, -1)));
-		}
-		else {
-			if (!lua_istable(L, -1)) {
-				console.log("Invalid config. Use `Tools > Set Thumper Path` to repair");
-			}
-			else {
-				if (lua_getfield(L, -1, "path") == LUA_TSTRING) {
-					kThumperDirectory = lua_tostring(L, -1);
-				}
-				else {
-					console.log("Invalid config. Use `Tools > Set Thumper Path` to repair");
-				}
-				lua_pop(L, 1);
-			}
-		}
-		lua_pop(L, 1);
-
-		lua_close(L);
-
-		console.log("Validating aurora config");
-
-		if (!std::filesystem::exists(kThumperDirectory)) {
-			console.log("Specified path doesn't exist. Use `Tools > Set Thumper Path` to repair");
-			kThumperDirectory = "";
-		}
-	}
+	if (!std::filesystem::exists(*mPathImHex)) mPathImHex = std::nullopt;
+	if (!std::filesystem::exists(*mPathHxD)) mPathHxD = std::nullopt;
 
 	bool toolsBinarySearch = false;
 	bool open = true;
 	
-	validate_executables();
 	cache_scan(pcFileStorage);
 
 	glfwSetErrorCallback([](int errorCode, const char *description) {
@@ -664,8 +642,8 @@ void main() {
 	io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
 	io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 
-	gVariableSpace = io.Fonts->AddFontFromFileTTF("NotoSans-Regular.ttf", 18.0f);
-	gMonoSpace = io.Fonts->AddFontFromFileTTF("NotoSansMono-Regular.ttf", 18.0f);
+	gVariableSpace = io.Fonts->AddFontFromFileTTF("aurora/NotoSans-Regular.ttf", 18.0f);
+	gMonoSpace = io.Fonts->AddFontFromFileTTF("aurora/NotoSansMono-Regular.ttf", 18.0f);
 
 	ImGui::StyleColorsDark();
 	ImGui_ImplGlfw_InitForOpenGL(window, true);
@@ -674,6 +652,9 @@ void main() {
 	console.log("Welcome to Aurora!");
 
 	bool showDemo = false;
+
+	aurora::GuiHasher hasher;
+	bool hasherVisible = false;
 
 	while(!glfwWindowShouldClose(window)) {
 		glfwPollEvents();
@@ -689,52 +670,15 @@ void main() {
 		if (ImGui::BeginMainMenuBar()) {
 			if (ImGui::BeginMenu("View")) {
 				ImGui::MenuItem("Console", nullptr, &open);
+				ImGui::MenuItem("Hasher", nullptr, &hasherVisible);
 				ImGui::Separator();
 				ImGui::MenuItem("Dear ImGui Demo", ImGui::GetKeyChordName(ImGuiMod_Ctrl | ImGuiMod_Shift | ImGuiKey_D), &showDemo);
 				ImGui::EndMenu();
 			}
 
 			if (ImGui::BeginMenu("Tools")) {
-				if (ImGui::MenuItem("Set Thumper Path")) {
-					char const* pattern = "THUMPER_*.exe";
-					char* result = tinyfd_openFileDialog("Select thumper executable", nullptr, 1, &pattern, nullptr, false);
-					if (result) {
-						std::string path = std::filesystem::path(result).parent_path().generic_string();
-
-						if (std::filesystem::exists(path)) {
-							console.log("New thumper directory specified, validating");
-							kThumperDirectory = path;
-							validate_executables();
-							cache_scan(pcFileStorage);
-
-							console.log("Validation complete, writing to config");
-
-							std::string luaString;
-
-							lua_State* L = luaL_newstate();
-							luaL_openlibs(L);
-							lua_getglobal(L, "string");
-							lua_getfield(L, -1, "format");
-							lua_pushliteral(L, "%q");
-							lua_pushstring(L, path.c_str());
-							lua_pcall(L, 2, 1, 0);
-							luaString = lua_tostring(L, -1);
-							lua_close(L);
-
-							std::ofstream stream;
-							stream.open("config.lua", std::ios::out);
-							stream << "return {\n\tpath = ";
-							stream << luaString;
-							stream << "\n}";
-							stream.close();
-						}
-						else {
-							console.log("Specified path doesn't exist. Operation stopped");
-						}
-					}
-				}
 				
-				ImGui::MenuItem("Binary Search", nullptr, &toolsBinarySearch, !kThumperDirectory.empty());
+				ImGui::MenuItem("Binary Search", nullptr, &toolsBinarySearch);
 				
 
 				ImGui::EndMenu();
@@ -742,6 +686,8 @@ void main() {
 		}
 
 		ImGui::EndMainMenuBar();
+
+		hasher.on_gui(hasherVisible);
 
 		if (showDemo) {
 			ImGui::ShowDemoWindow(&showDemo);
@@ -785,4 +731,8 @@ void main() {
 	glfwDestroyWindow(window);
 	glfwTerminate();
 }
+}
+
+namespace aurora {
+	bool should_launch_thumper() { return true; }
 }

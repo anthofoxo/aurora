@@ -4,23 +4,10 @@
 #include <sstream>
 #include <fstream>
 
+#include <Windows.h>
+#include <Shlobj.h>
+
 namespace aurora {
-    std::uint32_t hash(std::span<std::byte const> const bytes) {
-        std::uint32_t value = 0x811c9dc5;
-
-        for (auto const& byte : bytes) {
-            value = (value ^ static_cast<std::uint32_t>(byte)) * 0x1000193;
-        }
-
-        value *= 0x2001;
-        value = value ^ (value >> 0x7);
-        value *= 0x9;
-        value = value ^ (value >> 0x11);
-        value *= 0x21;
-
-        return value;
-    }
-
     std::string unescape(std::string_view const input) {
         std::stringstream output;
         for (size_t i = 0; i < input.length(); ++i) {
@@ -74,5 +61,28 @@ namespace aurora {
 
         stream.write(reinterpret_cast<char const*>(aBytes.data()), aBytes.size_bytes());
         return true;
+    }
+
+    namespace {
+        std::optional<std::string> gProgramFiles;
+    }
+
+    std::string const& get_program_files_directory() {
+        if (gProgramFiles) return *gProgramFiles;
+
+        PWSTR path = NULL;
+        if (SHGetKnownFolderPath(FOLDERID_ProgramFiles, KF_FLAG_DEFAULT, NULL, &path) == S_OK) {
+
+            int sizeNeeded = WideCharToMultiByte(CP_UTF8, 0, path, -1, nullptr, 0, nullptr, nullptr);
+            gProgramFiles = std::string(sizeNeeded - 1, 0);
+            WideCharToMultiByte(CP_UTF8, 0, path, -1, gProgramFiles->data(), sizeNeeded, nullptr, nullptr);
+        }
+        else {
+            gProgramFiles = "C:/Program Files";
+        }
+
+        CoTaskMemFree(path);
+
+        return *gProgramFiles;
     }
 }

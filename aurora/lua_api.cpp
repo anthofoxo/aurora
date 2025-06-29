@@ -8,6 +8,7 @@
 #include <glm/glm.hpp>
 
 #include "au_util.hpp"
+#include "au_hash.hpp"
 #include "api/au_api.hpp"
 
 #include <glad/gl.h>
@@ -17,7 +18,7 @@ namespace {
 	int lua_hash(lua_State* L) {
 		size_t len;
 		char const* data = lua_tolstring(L, 1, &len);
-		std::uint32_t const result = aurora::hash(std::span(reinterpret_cast<std::byte const*>(data), len));
+		std::uint32_t const result = aurora::fnv1a(data, len);
 		lua_pushinteger(L, result);
 		return 1;
 	}

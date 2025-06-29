@@ -11,8 +11,8 @@ stringpooling "On"
 editandcontinue "On"
 
 kind "StaticLib"
-targetdir "%{wks.location}/bin/%{cfg.system}_%{cfg.buildcfg}"
-objdir "%{wks.location}/bin_int/%{cfg.system}_%{cfg.buildcfg}"
+targetdir "%{wks.location}/bin/%{cfg.buildcfg}"
+objdir "%{wks.location}/bin_int/%{cfg.buildcfg}"
 
 filter "configurations:debug"
 runtime "Debug"

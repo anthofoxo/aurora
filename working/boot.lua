@@ -14,7 +14,7 @@ local function tablelength(T)
 end
 
 print("Loading hashtable...")
-local hashtable = dofile("hashtable.lua")
+local hashtable = dofile("aurora/hashtable.lua")
 Aurora.hashtable = function() return hashtable end
 print(string.format("Loaded %d hashes", tablelength(hashtable)))
 
@@ -62,7 +62,7 @@ Aurora.SendMessage = function(target, action, data)
     })
 end
 
-for _, entry in ipairs(Aurora.filesystem.directory_iterator("plugins") or {}) do
+for _, entry in ipairs(Aurora.filesystem.directory_iterator("aurora/plugins") or {}) do
 	if Aurora.filesystem.is_regular_file(entry) and entry:endswith(".lua") then
 		local status, result = pcall(function()
 			local plugin = dofile(entry)

@@ -8,7 +8,7 @@ for _, entry in ipairs(Aurora.filesystem.directory_iterator(Aurora.game_director
     if key then files[key] = entry end
 end
 
-for _, filename in ipairs(dofile("hashtable/pc_list.lua")) do
+for _, filename in ipairs(dofile("aurora/hashtable/pc_list.lua")) do
     if Aurora.filesystem.exists(string.format("%s/cache/%x.pc", Aurora.game_directory(), Aurora.hash(filename))) then
         files[Aurora.hash(filename)] = filename:sub(2)
     end

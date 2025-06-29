@@ -201,10 +201,10 @@ local hashes = {
 	"boss_gate_pellet.ent",
 }
 	
-for _, value in ipairs(dofile("hashtable/pc_list.lua")) do table.insert(hashes, value) end
+for _, value in ipairs(dofile("aurora/hashtable/pc_list.lua")) do table.insert(hashes, value) end
 
-if Aurora.filesystem.exists("hashtable/userdef.lua") then
-	for _, value in ipairs(dofile("hashtable/userdef.lua")) do table.insert(hashes, value) end
+if Aurora.filesystem.exists("aurora/hashtable/userdef.lua") then
+	for _, value in ipairs(dofile("aurora/hashtable/userdef.lua")) do table.insert(hashes, value) end
 end
 
 local hashtable = {}
