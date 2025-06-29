@@ -1,7 +1,8 @@
-## Building on linux
-Install the nessesary packages for glfw
-`sudo apt install libwayland-dev libxkbcommon-dev xorg-dev`
+# Aurora
 
-Generate the wayland files
-./glfw_generate_xdg.sh
-Enter `vendor/glfw`
+## Installation
+
+## Scripting API Reference
+
+## Submodule Dependencies
+* [Dear ImGui](https://github.com/ocornut/imgui/tree/v1.92.0-docking)
