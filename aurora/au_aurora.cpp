@@ -13,14 +13,13 @@
 #include <backends/imgui_impl_opengl3.h>
 
 #include "imspinner.h"
-#include "imgui_memory_editor.h"
-#include "sha1.hpp"
 #include "lua_api.hpp"
 
 #include <lua.hpp>
 #include <spdlog/fmt/fmt.h>
 #include <tinyfiledialogs.h>
 
+#include <iostream>
 #include <algorithm>
 #include <cctype>
 #include <cstdlib>
@@ -39,6 +38,8 @@
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
+#define STB_IMAGE_RESIZE_IMPLEMENTATION
+#include "stb_image_resize2.h"
 
 #include "au_util.hpp"
 #include "spdlog/spdlog.h"
@@ -115,34 +116,6 @@ Console console;
 
 std::string kThumperDirectory;
 
-struct HexEditor {
-	MemoryEditor mMemoryEditor;
-	std::vector<std::byte> mData;
-	std::string mPathPreview;
-
-	void action_loadfile(std::filesystem::path const& aPath) {
-		if (auto data = aurora::read_file(aPath); data.has_value()) {
-			mPathPreview = aPath.string();
-			mData = std::move(data.value());
-		}
-	}
-
-	void action_jump(std::size_t start, std::size_t end) {
-		mMemoryEditor.GotoAddrAndHighlight(start, end);
-	}
-
-	void draw() {
-		std::string const label = fmt::format("Hex Editor {}###Hex Editor", mPathPreview);
-
-		if (ImGui::Begin(label.c_str())) {
-			ImGui::PushFont(gMonoSpace);
-			mMemoryEditor.DrawContents(mData.data(), mData.size());
-			ImGui::PopFont();
-		}
-		ImGui::End();
-	}
-};
-
 void tools_binary_search(bool& aOpen) {
 	struct Match {
 		std::string file;
@@ -167,9 +140,6 @@ void tools_binary_search(bool& aOpen) {
 	}
 
 	if (!aOpen) return;
-
-	static HexEditor hexEditor;
-	hexEditor.draw();
 
 	if (ImGui::Begin("Binary Search", &aOpen)) {
 		ImGui::SetNextItemShortcut(ImGuiMod_Ctrl | ImGuiKey_F);
@@ -250,6 +220,8 @@ void tools_binary_search(bool& aOpen) {
 					hexEditor.action_loadfile(path);
 					hexEditor.action_jump(match.start, match.end);
 				}
+
+
 
 				
 				ImGui::SetItemTooltip("Origin File: %s", match.file.c_str());
@@ -592,6 +564,29 @@ void throw_error_box(std::string const& message) {
 	throw std::runtime_error(message);
 }
 
+void create_window_icons(GLFWwindow* window) {
+	using stbir_deleter = aurora::DeleterOf < [](void* p) {STBIR_FREE(p, 0); } > ;
+	using stbi_deleter = aurora::DeleterOf<stbi_image_free>;
+
+	int x, y;
+	std::unique_ptr<stbi_uc, stbi_deleter> pixels = decltype(pixels)(stbi_load("aurora/icon.png", &x, &y, nullptr, 4));
+
+	if (pixels) {
+		std::array<std::unique_ptr<unsigned char, stbir_deleter>, 4> imageMemory;
+		std::array<GLFWimage, imageMemory.size()> glfwImages;
+
+		for (int i = 0; i < imageMemory.size(); ++i) {
+			int const size = (i + 1) * 16;
+			imageMemory[i] = decltype(imageMemory)::value_type(stbir_resize_uint8_srgb(pixels.get(), x, y, 0, nullptr, size, size, 0, STBIR_RGBA));
+			glfwImages[i].width = size;
+			glfwImages[i].height = size;
+			glfwImages[i].pixels = imageMemory[i].get();
+		}
+
+		glfwSetWindowIcon(window, glfwImages.size(), glfwImages.data());
+	}
+}
+
 namespace aurora {
 void main() {
 	// Load configs
@@ -641,19 +636,21 @@ void main() {
 
 	if (!glfwInit()) throw_error_box("Failed to initialize GLFW");
 
+	auto const* vidmode = glfwGetVideoMode(glfwGetPrimaryMonitor());
+	constexpr int kWidth = 1280;
+	constexpr int kHeight = 720;
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 5);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE);
 	glfwWindowHint(GLFW_MAXIMIZED, GLFW_TRUE);
+	glfwWindowHint(GLFW_POSITION_X, vidmode->width / 2 - kWidth / 2);
+	glfwWindowHint(GLFW_POSITION_Y, vidmode->height / 2 - kHeight / 2);
 
-	GLFWwindow* window = glfwCreateWindow(1280, 720, "Aurora v0.0.4-a.5", nullptr, nullptr);
+	GLFWwindow* window = glfwCreateWindow(1280, 720, "Aurora v0.0.4-a.6", nullptr, nullptr);
 	if (!window) throw_error_box("Failed to create GLFW window");
 
-	GLFWimage image;
-	image.pixels = stbi_load_from_memory(aurora::icon_data, aurora::icon_size, &image.width, &image.height, nullptr, 4);
-	glfwSetWindowIcon(window, 1, &image);
-	stbi_image_free(image.pixels);
+	create_window_icons(window);
 
 	glfwMakeContextCurrent(window);
 	if (!gladLoadGL(&glfwGetProcAddress)) throw_error_box("Failed to initialize GLAD");

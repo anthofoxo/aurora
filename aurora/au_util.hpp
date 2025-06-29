@@ -22,4 +22,10 @@ namespace aurora {
     [[nodiscard]] constexpr bool is_future_ready(std::future<T> const& future) noexcept {
         return future.wait_until(std::chrono::steady_clock::time_point::min()) == std::future_status::ready;
     }
+
+    template <auto fn>
+    struct DeleterOf {
+        template <typename T>
+        constexpr void operator()(T* arg) const { fn(arg); }
+    };
 }
