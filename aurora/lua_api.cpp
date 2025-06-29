@@ -44,6 +44,62 @@ namespace {
 #include "dds-ktx.h"
 #include <iostream>
 
+int api_ddsktx_parse(lua_State* L) {
+	std::size_t size;
+	char const* data = luaL_checklstring(L, 1, &size);
+
+	ddsktx_texture_info tc = { 0 };
+	ddsktx_error error;
+
+	if (ddsktx_parse(&tc, data, static_cast<int>(size), &error)) {
+		GLuint texture;
+		glCreateTextures(GL_TEXTURE_2D, 1, &texture);
+		GLenum format;
+
+		switch (tc.format) {
+		case DDSKTX_FORMAT_BC1:
+			format = GL_COMPRESSED_RGB_S3TC_DXT1_EXT;
+			break;
+		case DDSKTX_FORMAT_BC2:
+			format = GL_COMPRESSED_RGBA_S3TC_DXT3_EXT;
+			break;
+		case DDSKTX_FORMAT_BC3:
+			format = GL_COMPRESSED_RGBA_S3TC_DXT5_EXT;
+			break;
+		case DDSKTX_FORMAT_BGRA8:
+			format = GL_BGRA;
+			break;
+		default:
+			luaL_error(L, "Unsupported dds texture format: %d", tc.format);
+			return 1;
+		}
+
+		ddsktx_sub_data subdata;
+		ddsktx_get_sub(&tc, &subdata, data, static_cast<int>(size), 0, 0, 0);
+
+		glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+
+		glTextureStorage2D(texture, 1, format, subdata.width, subdata.height);
+		if (ddsktx_format_compressed(tc.format)) {
+			glCompressedTextureSubImage2D(texture, 0, 0, 0, subdata.width, subdata.height, format, subdata.size_bytes, subdata.buff);
+		}
+		else {
+			glTextureSubImage2D(texture, 0, 0, 0, subdata.width, subdata.height, format, GL_UNSIGNED_BYTE, subdata.buff);
+		}
+
+		glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+
+		lua_pushinteger(L, texture);
+		return 1;
+	}
+	else {
+		std::cout << error.msg << std::endl;
+		lua_pushnil(L);
+	}
+
+	return 1;
+}
+
 void aurora::register_plugin_api(lua_State* L) {
 	lua_newtable(L);
 	lua_pushcfunction(L, &lua_hash);
@@ -88,61 +144,7 @@ void aurora::register_plugin_api(lua_State* L) {
 	});
 	lua_setfield(L, -2, "write_file");
 
-	lua_pushcfunction(L, [](lua_State* L)-> int {
-		std::size_t size;
-		char const* data = luaL_checklstring(L, 1, &size);
-
-		ddsktx_texture_info tc = { 0 };
-		ddsktx_error error;
-
-		if (ddsktx_parse(&tc, data, size, &error)) {
-			GLuint texture;
-			glCreateTextures(GL_TEXTURE_2D, 1, &texture);
-			GLenum format;
-
-			switch (tc.format) {
-				case DDSKTX_FORMAT_BC1:
-					format = GL_COMPRESSED_RGB_S3TC_DXT1_EXT;
-					break;
-				case DDSKTX_FORMAT_BC2:
-					format = GL_COMPRESSED_RGBA_S3TC_DXT3_EXT;
-					break;
-				case DDSKTX_FORMAT_BC3:
-					format = GL_COMPRESSED_RGBA_S3TC_DXT5_EXT;
-					break;
-				case DDSKTX_FORMAT_BGRA8:
-					format = GL_BGRA;
-					break;
-				default:
-					luaL_error(L, "Unsupported dds texture format: %d", tc.format);
-					return 1;
-			}
-
-			ddsktx_sub_data subdata;
-			ddsktx_get_sub(&tc, &subdata, data, size, 0, 0, 0);
-
-			glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-
-			glTextureStorage2D(texture, 1, format, subdata.width, subdata.height);
-			if (ddsktx_format_compressed(tc.format)) {
-				glCompressedTextureSubImage2D(texture, 0, 0, 0, subdata.width, subdata.height, format, subdata.size_bytes, subdata.buff);
-			}
-			else {
-				glTextureSubImage2D(texture, 0, 0, 0, subdata.width, subdata.height, format, GL_UNSIGNED_BYTE, subdata.buff);
-			}
-
-			glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
-
-			lua_pushinteger(L, texture);
-			return 1;
-		}
-		else {
-			std::cout << error.msg << std::endl;
-			lua_pushnil(L);
-		}
-
-		return 1;
-	});
+	lua_pushcfunction(L, api_ddsktx_parse);
 	lua_setfield(L, -2, "ddsktx_parse");
 
 	aurora::api_register_filesystem(L);
@@ -165,7 +167,7 @@ void aurora::register_plugin_api(lua_State* L) {
 	});
 	lua_setfield(L, -2, "CreateVertexArrays");
 	lua_pushcfunction(L, [](lua_State *L) -> int {
-		GLuint const handle = luaL_checkinteger(L, 1);
+		auto const handle = static_cast<GLuint>(luaL_checkinteger(L, 1));
 		glDeleteVertexArrays(1, &handle);
 		return 0;
 	});
@@ -178,23 +180,23 @@ void aurora::register_plugin_api(lua_State* L) {
 	});
 	lua_setfield(L, -2, "CreateBuffers");
 	lua_pushcfunction(L, [](lua_State *L) -> int {
-		GLuint const handle = luaL_checkinteger(L, 1);
+		auto const handle = static_cast<GLuint>(luaL_checkinteger(L, 1));
 		glDeleteBuffers(1, &handle);
 		return 0;
 	});
 	lua_setfield(L, -2, "DeleteBuffers");
 	lua_pushcfunction(L, [](lua_State *L) -> int {
-		GLuint const buffer = luaL_checkinteger(L, 1);
-		GLsizeiptr const size = luaL_checkinteger(L, 2);
+		auto const buffer = static_cast<GLuint>(luaL_checkinteger(L, 1));
+		auto const size = static_cast<GLsizeiptr>(luaL_checkinteger(L, 2));
 		char const* data = luaL_checkstring(L, 3);
-		GLbitfield const flags = luaL_checkinteger(L, 4);
+		auto const flags = static_cast<GLbitfield>(luaL_checkinteger(L, 4));
 		glNamedBufferStorage(buffer, size, data, flags);
 		return 0;
 	});
 	lua_setfield(L, -2, "NamedBufferStorage");
 
 	lua_pushcfunction(L, [](lua_State *L) -> int {
-		GLenum const target = luaL_checkinteger(L, 1);
+		auto const target = static_cast<GLenum>(luaL_checkinteger(L, 1));
 		GLuint handle;
 		glCreateTextures(target, 1, &handle);
 		lua_pushinteger(L, handle);
@@ -203,25 +205,25 @@ void aurora::register_plugin_api(lua_State* L) {
 	lua_setfield(L, -2, "CreateTextures");
 
 	lua_pushcfunction(L, [](lua_State *L) -> int {
-		GLuint const handle = luaL_checkinteger(L, 1);
+		auto const handle = static_cast<GLuint>(luaL_checkinteger(L, 1));
 		glDeleteTextures(1, &handle);
 		return 0;
 	});
 	lua_setfield(L, -2, "DeleteTextures");
 
 	lua_pushcfunction(L, [](lua_State *L) -> int {
-		GLuint const texture = luaL_checkinteger(L, 1);
-		GLsizei const levels = luaL_checkinteger(L, 2);
-		GLenum const internalformat = luaL_checkinteger(L, 3);
-		GLsizei const width = luaL_checkinteger(L, 4);
-		GLsizei const height = luaL_checkinteger(L, 5);
+		auto const texture = static_cast<GLuint>(luaL_checkinteger(L, 1));
+		auto const levels = static_cast<GLsizei>(luaL_checkinteger(L, 2));
+		auto const internalformat = static_cast<GLenum>(luaL_checkinteger(L, 3));
+		auto const width = static_cast<GLsizei>(luaL_checkinteger(L, 4));
+		auto const height = static_cast<GLsizei>(luaL_checkinteger(L, 5));
 		glTextureStorage2D(texture, levels, internalformat, width, height);
 		return 0;
 	});
 	lua_setfield(L, -2, "TextureStorage2D");
 
 	lua_pushcfunction(L, [](lua_State *L) -> int {
-		glBindFramebuffer(luaL_checkinteger(L, 1), luaL_checkinteger(L, 2));
+		glBindFramebuffer(static_cast<GLenum>(luaL_checkinteger(L, 1)), static_cast<GLuint>(luaL_checkinteger(L, 2)));
 		return 0;
 	});
 	lua_setfield(L, -2, "BindFramebuffer");
@@ -235,26 +237,26 @@ void aurora::register_plugin_api(lua_State* L) {
 	lua_setfield(L, -2, "CreateFramebuffers");
 
 	lua_pushcfunction(L, [](lua_State *L) -> int {
-		GLuint const framebuffer = luaL_checkinteger(L, 1);
+		auto const framebuffer = static_cast<GLuint>(luaL_checkinteger(L, 1));
 		glDeleteFramebuffers(1, &framebuffer);
 		return 0;
 	});
 	lua_setfield(L, -2, "DeleteFramebuffers");
 
 	lua_pushcfunction(L, [](lua_State *L) -> int {
-		GLuint const framebuffer = luaL_checkinteger(L, 1);
-		GLenum const attachment = luaL_checkinteger(L, 2);
-		GLuint const texture = luaL_checkinteger(L, 3);
-		GLint const level = luaL_checkinteger(L, 4);
+		auto const framebuffer = static_cast<GLuint>(luaL_checkinteger(L, 1));
+		auto const attachment = static_cast<GLenum>(luaL_checkinteger(L, 2));
+		auto const texture = static_cast<GLuint>(luaL_checkinteger(L, 3));
+		auto const level = static_cast<GLint>(luaL_checkinteger(L, 4));
 		glNamedFramebufferTexture(framebuffer, attachment, texture, level);
 		return 0;
 	});
 	lua_setfield(L, -2, "NamedFramebufferTexture");
 
 	lua_pushcfunction(L, [](lua_State *L) -> int {
-		GLuint const framebuffer = luaL_checkinteger(L, 1);
-		GLenum const attachment = luaL_checkinteger(L, 2);
-		GLuint const renderbuffer = luaL_checkinteger(L, 3);
+		auto const framebuffer = static_cast<GLuint>(luaL_checkinteger(L, 1));
+		auto const attachment = static_cast<GLenum>(luaL_checkinteger(L, 2));
+		auto const renderbuffer = static_cast<GLuint>(luaL_checkinteger(L, 3));
 		glNamedFramebufferRenderbuffer(framebuffer, attachment, GL_RENDERBUFFER, renderbuffer);
 		return 0;
 	});
@@ -269,44 +271,44 @@ void aurora::register_plugin_api(lua_State* L) {
 	lua_setfield(L, -2, "CreateRenderbuffers");
 
 	lua_pushcfunction(L, [](lua_State *L) -> int {
-		GLuint const renderbuffer = luaL_checkinteger(L, 1);
+		auto const renderbuffer = static_cast<GLuint>(luaL_checkinteger(L, 1));
 		glDeleteRenderbuffers(1, &renderbuffer);
 		return 0;
 	});
 	lua_setfield(L, -2, "DeleteRenderbuffers");
 
 	lua_pushcfunction(L, [](lua_State *L) -> int {
-		GLuint const renderbuffer = luaL_checkinteger(L, 1);
-		GLenum const internalformat = luaL_checkinteger(L, 2);
-		GLsizei const width = luaL_checkinteger(L, 3);
-		GLsizei const height = luaL_checkinteger(L, 4);
+		auto const renderbuffer = static_cast<GLuint>(luaL_checkinteger(L, 1));
+		auto const internalformat = static_cast<GLenum>(luaL_checkinteger(L, 2));
+		auto const width = static_cast<GLsizei>(luaL_checkinteger(L, 3));
+		auto const height = static_cast<GLsizei>(luaL_checkinteger(L, 4));
 		glNamedRenderbufferStorage(renderbuffer, internalformat, width, height);
 		return 0;
 	});
 	lua_setfield(L, -2, "NamedRenderbufferStorage");
 
 	lua_pushcfunction(L, [](lua_State *L) -> int {
-		GLint const x = luaL_checkinteger(L, 1);
-		GLint const y = luaL_checkinteger(L, 2);
-		GLsizei const width = luaL_checkinteger(L, 3);
-		GLsizei const height = luaL_checkinteger(L, 4);
+		auto const x = static_cast<GLint>(luaL_checkinteger(L, 1));
+		auto const y = static_cast<GLint>(luaL_checkinteger(L, 2));
+		auto const width = static_cast<GLsizei>(luaL_checkinteger(L, 3));
+		auto const height = static_cast<GLsizei>(luaL_checkinteger(L, 4));
 		glViewport(x, y, width, height);
 		return 0;
 	});
 	lua_setfield(L, -2, "Viewport");
 
 	lua_pushcfunction(L, [](lua_State *L) -> int {
-		GLuint const vao = luaL_checkinteger(L, 1);
+		auto const vao = static_cast<GLuint>(luaL_checkinteger(L, 1));
 		glBindVertexArray(vao);
 		return 0;
 	});
 	lua_setfield(L, -2, "BindVertexArray");
 	lua_pushcfunction(L, [](lua_State *L) -> int {
-	                  GLuint const vao = luaL_checkinteger(L, 1);
-	                  GLuint const bindingindex = luaL_checkinteger(L, 2);
-	                  GLuint const buffer = luaL_checkinteger(L, 3);
-	                  GLintptr const offset = luaL_checkinteger(L, 4);
-	                  GLsizei const stride = luaL_checkinteger(L, 5);
+	                  auto const vao = static_cast<GLuint>(luaL_checkinteger(L, 1));
+	                  auto const bindingindex = static_cast<GLuint>(luaL_checkinteger(L, 2));
+	                  auto const buffer = static_cast<GLuint>(luaL_checkinteger(L, 3));
+	                  auto const offset = static_cast<GLintptr>(luaL_checkinteger(L, 4));
+	                  auto const stride = static_cast<GLsizei>(luaL_checkinteger(L, 5));
 	                  glVertexArrayVertexBuffer(vao, bindingindex, buffer, offset, stride);
 	                  return 0;
 	                  });
@@ -314,8 +316,8 @@ void aurora::register_plugin_api(lua_State* L) {
 	lua_setfield(L, -2, "VertexArrayVertexBuffer");
 
 	lua_pushcfunction(L, [](lua_State *L) -> int {
-	                  GLuint const vao = luaL_checkinteger(L, 1);
-	                  GLuint const index = luaL_checkinteger(L, 2);
+	                  auto const vao = static_cast<GLuint>(luaL_checkinteger(L, 1));
+	                  auto const index = static_cast<GLuint>(luaL_checkinteger(L, 2));
 	                  glEnableVertexArrayAttrib(vao, index);
 	                  return 0;
 	                  });
@@ -323,9 +325,9 @@ void aurora::register_plugin_api(lua_State* L) {
 	lua_setfield(L, -2, "EnableVertexArrayAttrib");
 
 	lua_pushcfunction(L, [](lua_State *L) -> int {
-					  GLenum const mode = luaL_checkinteger(L, 1);
-					  GLint const first = luaL_checkinteger(L, 2);
-					  GLsizei const count = luaL_checkinteger(L, 3);
+					  auto const mode = static_cast<GLenum>(luaL_checkinteger(L, 1));
+					  auto const first = static_cast<GLint>(luaL_checkinteger(L, 2));
+					  auto const count = static_cast<GLsizei>(luaL_checkinteger(L, 3));
 					  glDrawArrays(mode, first, count);
 					  return 0;
 					  });
@@ -333,12 +335,12 @@ void aurora::register_plugin_api(lua_State* L) {
 	lua_setfield(L, -2, "DrawArrays");
 
 	lua_pushcfunction(L, [](lua_State *L) -> int {
-	                  GLuint const vao = luaL_checkinteger(L, 1);
-	                  GLuint const attribindex = luaL_checkinteger(L, 2);
-	                  GLint const size = luaL_checkinteger(L, 3);
-	                  GLenum const type = luaL_checkinteger(L, 4);
-	                  GLboolean const normalized = lua_toboolean(L, 5);
-	                  GLuint const relativeoffset = luaL_checkinteger(L, 6);
+	                  auto const vao = static_cast<GLuint>(luaL_checkinteger(L, 1));
+	                  auto const attribindex = static_cast<GLuint>(luaL_checkinteger(L, 2));
+	                  auto const size = static_cast<GLint>(luaL_checkinteger(L, 3));
+	                  auto const type = static_cast<GLenum>(luaL_checkinteger(L, 4));
+	                  auto const normalized = static_cast<GLboolean>(lua_toboolean(L, 5));
+	                  auto const relativeoffset = static_cast<GLuint>(luaL_checkinteger(L, 6));
 	                  glVertexArrayAttribFormat(vao, attribindex, size, type, normalized, relativeoffset);
 	                  return 0;
 	                  });
@@ -346,9 +348,9 @@ void aurora::register_plugin_api(lua_State* L) {
 	lua_setfield(L, -2, "VertexArrayAttribFormat");
 
 	lua_pushcfunction(L, [](lua_State *L) -> int {
-					  GLuint const vao = luaL_checkinteger(L, 1);
-					  GLuint const attribindex = luaL_checkinteger(L, 2);
-					  GLuint const bindingindex = luaL_checkinteger(L, 3);
+					  auto const vao = static_cast<GLuint>(luaL_checkinteger(L, 1));
+					  auto const attribindex = static_cast<GLuint>(luaL_checkinteger(L, 2));
+					  auto const bindingindex = static_cast<GLuint>(luaL_checkinteger(L, 3));
 					  glVertexArrayAttribBinding(vao, attribindex, bindingindex);
 					  return 0;
 					  });
@@ -356,17 +358,17 @@ void aurora::register_plugin_api(lua_State* L) {
 	lua_setfield(L, -2, "VertexArrayAttribBinding");
 
 	lua_pushcfunction(L, [](lua_State *L) -> int {
-		GLuint const framebuffer = luaL_checkinteger(L, 1);
-		GLenum const buffer = luaL_checkinteger(L, 2);
-		GLint const drawbuffer = luaL_checkinteger(L, 3);
+		auto const framebuffer = static_cast<GLuint>(luaL_checkinteger(L, 1));
+		auto const buffer = static_cast<GLenum>(luaL_checkinteger(L, 2));
+		auto const drawbuffer = static_cast<GLint>((L, 3));
 
 		float value[4];
-		lua_pushinteger(L, 1); lua_rawget(L, 4); value[0] = lua_tonumber(L, -1); lua_pop(L, 1);
+		lua_pushinteger(L, 1); lua_rawget(L, 4); value[0] = static_cast<float>(lua_tonumber(L, -1)); lua_pop(L, 1);
 
 		if (buffer == GL_COLOR) {
-			lua_pushinteger(L, 2); lua_rawget(L, 4); value[1] = lua_tonumber(L, -1); lua_pop(L, 1);
-			lua_pushinteger(L, 3); lua_rawget(L, 4); value[2] = lua_tonumber(L, -1); lua_pop(L, 1);
-			lua_pushinteger(L, 4); lua_rawget(L, 4); value[3] = lua_tonumber(L, -1); lua_pop(L, 1);
+			lua_pushinteger(L, 2); lua_rawget(L, 4); value[1] = static_cast<float>(lua_tonumber(L, -1)); lua_pop(L, 1);
+			lua_pushinteger(L, 3); lua_rawget(L, 4); value[2] = static_cast<float>(lua_tonumber(L, -1)); lua_pop(L, 1);
+			lua_pushinteger(L, 4); lua_rawget(L, 4); value[3] = static_cast<float>(lua_tonumber(L, -1)); lua_pop(L, 1);
 		}
 
 		glClearNamedFramebufferfv(framebuffer, buffer, drawbuffer, value);
@@ -375,15 +377,15 @@ void aurora::register_plugin_api(lua_State* L) {
 	lua_setfield(L, -2, "ClearNamedFramebufferfv");
 
 	lua_pushcfunction(L, [](lua_State *L) -> int {
-		              GLenum const type = luaL_checkinteger(L, 1);
-					  GLuint const shader = glCreateShader(type);
+		              auto const type = static_cast<GLenum>(luaL_checkinteger(L, 1));
+					  auto const shader = static_cast<GLuint>(glCreateShader(type));
 					  lua_pushinteger(L, shader);
 					  return 1;
 					  });
 	lua_setfield(L, -2, "CreateShader");
 
 	lua_pushcfunction(L, [](lua_State *L) -> int {
-					  GLuint const shader = luaL_checkinteger(L, 1);
+					  auto const shader = static_cast<GLuint>(luaL_checkinteger(L, 1));
 					  std::size_t size;
 					  char const* data = luaL_checklstring(L, 2, &size);
 			          auto const isize = static_cast<GLint>(size);
@@ -393,30 +395,30 @@ void aurora::register_plugin_api(lua_State* L) {
 	lua_setfield(L, -2, "ShaderSource");
 
 	lua_pushcfunction(L, [](lua_State *L) -> int {
-					  GLuint const shader = luaL_checkinteger(L, 1);
+					  auto const shader = static_cast<GLuint>(luaL_checkinteger(L, 1));
 					  glCompileShader(shader);
 					  return 0;
 					  });
 	lua_setfield(L, -2, "CompileShader");
 
 	lua_pushcfunction(L, [](lua_State *L) -> int {
-					  GLuint const program = luaL_checkinteger(L, 1);
-					GLuint const shader = luaL_checkinteger(L, 2);
+					  auto const program = static_cast<GLuint>(luaL_checkinteger(L, 1));
+				      auto const shader = static_cast<GLuint>(luaL_checkinteger(L, 2));
 					  glAttachShader(program, shader);
 					  return 0;
 					  });
 	lua_setfield(L, -2, "AttachShader");
 
 	lua_pushcfunction(L, [](lua_State *L) -> int {
-					  GLuint const program = luaL_checkinteger(L, 1);
-					GLuint const shader = luaL_checkinteger(L, 2);
+					  auto const program = static_cast<GLuint>(luaL_checkinteger(L, 1));
+					  auto const shader = static_cast<GLuint>(luaL_checkinteger(L, 2));
 					  glDetachShader(program, shader);
 					  return 0;
 					  });
 	lua_setfield(L, -2, "DetachShader");
 
 	lua_pushcfunction(L, [](lua_State *L) -> int {
-					  GLuint const shader = luaL_checkinteger(L, 1);
+					  auto const shader = static_cast<GLuint>(luaL_checkinteger(L, 1));
 					  glDeleteShader(shader);
 					  return 0;
 					  });
@@ -430,46 +432,46 @@ void aurora::register_plugin_api(lua_State* L) {
 	lua_setfield(L, -2, "CreateProgram");
 
 	lua_pushcfunction(L, [](lua_State *L) -> int {
-						GLuint const program = luaL_checkinteger(L, 1);
+						auto const program = static_cast<GLuint>(luaL_checkinteger(L, 1));
 						  glLinkProgram(program);
 						  return 0;
 						  });
 	lua_setfield(L, -2, "LinkProgram");
 
 	lua_pushcfunction(L, [](lua_State *L) -> int {
-						GLuint const program = luaL_checkinteger(L, 1);
+						auto const program = static_cast<GLuint>(luaL_checkinteger(L, 1));
 						  glUseProgram(program);
 						  return 0;
 						  });
 	lua_setfield(L, -2, "UseProgram");
 
 	lua_pushcfunction(L, [](lua_State *L) -> int {
-						GLuint const program = luaL_checkinteger(L, 1);
+						auto const program = static_cast<GLuint>(luaL_checkinteger(L, 1));
 						  glDeleteProgram(program);
 						  return 0;
 						  });
 	lua_setfield(L, -2, "DeleteProgram");
 
 	lua_pushcfunction(L, [](lua_State *L) -> int {
-	                  GLuint const program = luaL_checkinteger(L, 1);
+	                  auto const program = static_cast<GLuint>(luaL_checkinteger(L, 1));
 	                  char const* name = luaL_checkstring(L, 2);
-	                  GLint const location = glGetUniformLocation(program, name);
+	                  auto const location = static_cast<GLint>(glGetUniformLocation(program, name));
 	                  lua_pushinteger(L, location);
 	                  return 1;
 	                  });
 	lua_setfield(L, -2, "GetUniformLocation");
 
 	lua_pushcfunction(L, [](lua_State *L) -> int {
-	                  GLuint const program = luaL_checkinteger(L, 1);
-	                  GLint const location = luaL_checkinteger(L, 2);
-	                  GLsizei const count = luaL_checkinteger(L, 3);
-	                  GLboolean const transpose = lua_toboolean(L, 4);
+	                  auto const program = static_cast<GLuint>(luaL_checkinteger(L, 1));
+	                  auto const location = static_cast<GLint>(luaL_checkinteger(L, 2));
+	                  auto const count = static_cast<GLsizei>(luaL_checkinteger(L, 3));
+	                  auto const transpose = static_cast<GLboolean>(lua_toboolean(L, 4));
 
 	                  auto *data = static_cast<float*>(alloca(count * sizeof(glm::mat4)));
 
 	                  for (int i = 0; i < count * 16; ++i) {
 		                  lua_rawgeti(L, 5, i + 1);
-		                  data[i] = lua_tonumber(L, -1);
+		                  data[i] = static_cast<float>(lua_tonumber(L, -1));
 		                  lua_pop(L, 1);
 	                  }
 
@@ -479,8 +481,8 @@ void aurora::register_plugin_api(lua_State* L) {
 	lua_setfield(L, -2, "ProgramUniformMatrix4fv");
 
 	lua_pushcfunction(L, [](lua_State *L) -> int {
-					  GLuint const vao = luaL_checkinteger(L, 1);
-					  GLuint const ebo = luaL_checkinteger(L, 2);
+                      auto const vao = static_cast<GLuint>(luaL_checkinteger(L, 1));
+					  auto const ebo = static_cast<GLuint>(luaL_checkinteger(L, 2));
 					  glVertexArrayElementBuffer(vao, ebo);
 					  return 0;
 					  });
@@ -488,9 +490,9 @@ void aurora::register_plugin_api(lua_State* L) {
 	lua_setfield(L, -2, "VertexArrayElementBuffer");
 
 	lua_pushcfunction(L, [](lua_State *L) -> int {
-	                  GLenum const mode = luaL_checkinteger(L, 1);
-	                  GLsizei const count = luaL_checkinteger(L, 2);
-	                  GLenum const type = luaL_checkinteger(L, 3);
+	                  auto const mode = static_cast<GLenum>(luaL_checkinteger(L, 1));
+	                  auto const count = static_cast<GLsizei>(luaL_checkinteger(L, 2));
+	                  auto const type = static_cast<GLenum>(luaL_checkinteger(L, 3));
 	                  auto const *indices = reinterpret_cast<void*>(static_cast<std::uintptr_t>(luaL_checkinteger(L, 4))
 	                  );
 	                  glDrawElements(mode, count, type, indices);

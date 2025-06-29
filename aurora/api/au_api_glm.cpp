@@ -31,19 +31,19 @@ namespace {
 
         for (int i = 0; i < 3; ++i) {
             lua_rawgeti(L, 1, i + 1);
-            eye[i] = lua_tonumber(L, -1);
+            eye[i] = static_cast<float>(lua_tonumber(L, -1));
             lua_pop(L, 1);
         }
 
         for (int i = 0; i < 3; ++i) {
             lua_rawgeti(L, 2, i + 1);
-            center[i] = lua_tonumber(L, -1);
+            center[i] = static_cast<float>(lua_tonumber(L, -1));
             lua_pop(L, 1);
         }
 
         for (int i = 0; i < 3; ++i) {
             lua_rawgeti(L, 3, i + 1);
-            up[i] = lua_tonumber(L, -1);
+            up[i] = static_cast<float>(lua_tonumber(L, -1));
             lua_pop(L, 1);
         }
 

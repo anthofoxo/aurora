@@ -44,6 +44,12 @@
 ImFont* gVariableSpace = nullptr;
 ImFont* gMonoSpace = nullptr;
 
+static bool gShouldLaunchThumper = false;
+
+namespace aurora {
+	bool should_launch_thumper() { return gShouldLaunchThumper; }
+}
+
 std::unordered_map<std::uint32_t, std::string> gHashtable;
 
 struct Console {
@@ -204,7 +210,7 @@ void tools_binary_search(bool& aOpen) {
 		}
 
 		if (future) {
-			ImGui::ProgressBar(-1.0f);
+			ImGui::ProgressBar(-1.0f * (float)ImGui::GetTime());
 		}
 		else {
 			ImGui::SetNextItemShortcut(ImGuiMod_Ctrl | ImGuiKey_C);
@@ -277,7 +283,7 @@ void cache_scan(std::unordered_set<std::string>& pcFileStorage) {
 std::unordered_set<std::string> pcFileStorage;
 
 int aurora_rhash(lua_State* L) {
-	auto it = gHashtable.find(luaL_checkinteger(L, 1));
+	auto it = gHashtable.find(static_cast<std::uint32_t>(luaL_checkinteger(L, 1)));
 	if (it != gHashtable.end()) {
 		lua_pushlstring(L, it->second.data(), it->second.size());
 		return 1;
@@ -306,7 +312,7 @@ lua_State* aurora_newstate() {
 	lua_setfield(L, -2, "cache_hit");
 
 	lua_pushcfunction(L, [](lua_State* L)-> int {
-		lua_pushstring(L, "./"); // Backward compat, will be deprecated and removed
+		lua_pushliteral(L, ""); // Backward compat, will be deprecated and removed
 		return 1;
 	});
 	lua_setfield(L, -2, "game_directory");
@@ -347,7 +353,7 @@ struct PluginEngine {
 				std::size_t size;
 				char const* data = lua_tolstring(L, -2, &size);
 
-				gHashtable[lua_tointeger(L, -1)] = std::string(data, size);
+				gHashtable[static_cast<std::uint32_t>(lua_tointeger(L, -1))] = std::string(data, size);
 
 				lua_pop(L, 2);
 			}
@@ -587,7 +593,7 @@ void create_window_icons(GLFWwindow* window) {
 			glfwImages[i].pixels = imageMemory[i].get();
 		}
 
-		glfwSetWindowIcon(window, glfwImages.size(), glfwImages.data());
+		glfwSetWindowIcon(window, static_cast<int>(glfwImages.size()), glfwImages.data());
 	}
 }
 
@@ -687,6 +693,17 @@ void main() {
 
 		ImGui::EndMainMenuBar();
 
+
+
+		if (ImGui::Begin("Launcher")) {
+			if (ImGui::Button("Launch Thumper")) {
+				gShouldLaunchThumper = true;
+				glfwSetWindowShouldClose(window, GLFW_TRUE);
+			}
+
+		}
+		ImGui::End();
+
 		hasher.on_gui(hasherVisible);
 
 		if (showDemo) {
@@ -731,8 +748,4 @@ void main() {
 	glfwDestroyWindow(window);
 	glfwTerminate();
 }
-}
-
-namespace aurora {
-	bool should_launch_thumper() { return true; }
 }

@@ -28,7 +28,7 @@ defines "NDEBUG"
 
 filter "system:windows"
 systemversion "latest"
-defines { "NOMIXMAX", "WIN32_LEAN_AND_MEAN" }
+defines { "NOMIXMAX", "WIN32_LEAN_AND_MEAN", "_CRT_SECURE_NO_WARNINGS" }
 buildoptions { "/EHsc", "/Zc:throwingNew", "/Zc:preprocessor", "/Zc:__cplusplus", "/experimental:c11atomics" }
 
 startproject "aurora"

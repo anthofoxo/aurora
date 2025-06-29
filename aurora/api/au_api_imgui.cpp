@@ -89,11 +89,11 @@ namespace {
         auto const image = static_cast<ImTextureID>(static_cast<std::uintptr_t>(luaL_checkinteger(L, 1)));
 
         lua_rawgeti(L, 2, 1);
-        float const width = lua_tonumber(L, -1);
+        float const width = static_cast<float>(lua_tonumber(L, -1));
         lua_pop(L, 1);
 
         lua_rawgeti(L, 2, 2);
-        float const height = lua_tonumber(L, -1);
+        float const height = static_cast<float>(lua_tonumber(L, -1));
         lua_pop(L, 1);
 
         ImVec2 uv0 = { 0.0f, 0.0f };
@@ -102,22 +102,22 @@ namespace {
         if (lua_gettop(L) >= 3) {
             lua_pushinteger(L, 1);
             lua_rawget(L, 3);
-            uv0.x = lua_tonumber(L, -1);
+            uv0.x = static_cast<float>(lua_tonumber(L, -1));
             lua_pop(L, 1);
             lua_pushinteger(L, 2);
             lua_rawget(L, 3);
-            uv0.y = lua_tonumber(L, -1);
+            uv0.y = static_cast<float>(lua_tonumber(L, -1));
             lua_pop(L, 1);
         }
 
         if (lua_gettop(L) >= 4) {
             lua_pushinteger(L, 1);
             lua_rawget(L, 4);
-            uv1.x = lua_tonumber(L, -1);
+            uv1.x = static_cast<float>(lua_tonumber(L, -1));
             lua_pop(L, 1);
             lua_pushinteger(L, 2);
             lua_rawget(L, 4);
-            uv1.y = lua_tonumber(L, -1);
+            uv1.y = static_cast<float>(lua_tonumber(L, -1));
             lua_pop(L, 1);
         }
 
@@ -192,17 +192,17 @@ namespace {
 
     int PushStyleVar(lua_State *L) {
         if (lua_isnumber(L, 2)) {
-            ImGui::PushStyleVar(lua_tointeger(L, 1), lua_tonumber(L, 2));
+            ImGui::PushStyleVar(static_cast<ImGuiStyleVar>(lua_tointeger(L, 1)), static_cast<float>(lua_tonumber(L, 2)));
         }
         else if (lua_istable(L, 2)) {
             lua_rawgeti(L, 2, 1);
-            float x = lua_tonumber(L, -1);
+            float x = static_cast<float>(lua_tonumber(L, -1));
             lua_pop(L, 1);
             lua_rawgeti(L, 2, 2);
-            float y = lua_tonumber(L, -1);
+            float y = static_cast<float>(lua_tonumber(L, -1));
             lua_pop(L, 1);
 
-            ImGui::PushStyleVar(lua_tointeger(L, 1), { x, y });
+            ImGui::PushStyleVar(static_cast<ImGuiStyleVar>(lua_tointeger(L, 1)), { x, y });
         }
         else
             luaL_typeerror(L, 2, "table|number");
@@ -268,19 +268,19 @@ namespace {
 
     int TextColored(lua_State *L) {
         lua_rawgeti(L, 1, 1);
-        float const r = lua_tonumber(L, -1);
+        float const r = static_cast<float>(lua_tonumber(L, -1));
         lua_pop(L, 1);
 
         lua_rawgeti(L, 1, 2);
-        float const g = lua_tonumber(L, -1);
+        float const g = static_cast<float>(lua_tonumber(L, -1));
         lua_pop(L, 1);
 
         lua_rawgeti(L, 1, 3);
-        float const b = lua_tonumber(L, -1);
+        float const b = static_cast<float>(lua_tonumber(L, -1));
         lua_pop(L, 1);
 
         lua_rawgeti(L, 1, 4);
-        float const a = lua_tonumber(L, -1);
+        float const a = static_cast<float>(lua_tonumber(L, -1));
         lua_pop(L, 1);
 
         int const numArgs = lua_gettop(L);
@@ -317,7 +317,7 @@ namespace {
     }
 
     int TreeNodeEx(lua_State *L) {
-        lua_pushboolean(L, ImGui::TreeNodeEx(luaL_checkstring(L, 1), luaL_checkinteger(L, 2)));
+        lua_pushboolean(L, ImGui::TreeNodeEx(luaL_checkstring(L, 1), static_cast<ImGuiTreeNodeFlags>(luaL_checkinteger(L, 2))));
         return 1;
     }
 

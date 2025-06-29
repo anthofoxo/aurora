@@ -4,6 +4,8 @@ local cacheHit = false
 local rhashHit = nil
 local directLookup = nil
 
+-- This plugin still exists since the native hasher does not yet have feature parity
+
 return {
 	gui = {
 		visible = true,
