@@ -335,6 +335,121 @@ struct Credits {
 	}
 };
 
+struct LocalizationEntry {
+	std::uint32_t key;
+	std::string value;
+	std::uint32_t offset;
+
+
+
+	void serialize(lua_State* L) {
+		std::unordered_map<std::uint32_t, std::string> map;
+#define INSERT_HASH(x) map[aurora::fnv1a(std::span(std::string_view(x)))] = x
+
+		INSERT_HASH("level1");
+		INSERT_HASH("level2");
+		INSERT_HASH("level3");
+		INSERT_HASH("level4");
+		INSERT_HASH("level5");
+		INSERT_HASH("level6");
+		INSERT_HASH("level7");
+		INSERT_HASH("level8");
+		INSERT_HASH("level9");
+		INSERT_HASH("accept");
+		INSERT_HASH("no");
+		INSERT_HASH("cancel");
+		INSERT_HASH("continue");
+		INSERT_HASH("play");
+		INSERT_HASH("yes");
+		INSERT_HASH("leaderboard_view");
+		INSERT_HASH("rank");
+		INSERT_HASH("retry");
+		INSERT_HASH("tip");
+
+		auto it = map.find(key);
+		if (it != map.end()) {
+			lua_pushstring(L, it->second.c_str());
+		}
+		else {
+			lua_pushinteger(L, key);
+		}
+
+
+		lua_pushstring(L, value.c_str());
+		lua_rawset(L, -3);
+	}
+};
+
+struct Localization final {
+	std::vector<LocalizationEntry> enteries;
+
+	void deserialize(ByteStream& stream) {
+		auto cstrCount = stream.read_u32();
+		auto byteCount = stream.read_u32();
+
+		enteries.resize(cstrCount);
+
+		for (int i = 0; i < cstrCount; ++i) {
+			enteries[i].value = stream.read_cstr();
+		}
+
+		for (int i = 0; i < cstrCount; ++i) {
+			enteries[i].key = stream.read_u32();
+			enteries[i].offset = stream.read_u32();
+		}
+	}
+
+	void serialize(lua_State* L) {
+		lua_newtable(L);
+		for (int i = 0; i < enteries.size(); ++i) {
+			enteries[i].serialize(L);
+		}
+	}
+};
+
+
+void unpack_localization() {
+	lua_State* L = luaL_newstate();
+
+	if (luaL_dofile(L, "aurora/localization.lua") == LUA_OK) {
+
+		lua_pushnil(L);
+		while (lua_next(L, -2)) {
+			std::size_t size;
+			char const* data = lua_tolstring(L, -1, &size);
+			auto hash = aurora::fnv1a(data, size);
+
+			if (auto bytes = aurora::read_file(std::format("cache/{:x}.pc", hash))) {
+				ByteStream stream;
+				stream.mBuffer = std::move(*bytes);
+
+				lua_State* L = luaL_newstate();
+				luaL_openlibs(L);
+
+				stream.read_u32(); // ignore header // 16
+				Localization locs;
+				locs.deserialize(stream);
+				locs.serialize(L);
+
+				std::string readyToWrite = std::string("return ") + aurora::lapi_serialize(L);
+
+				std::string writePath = std::format("mods/base/localization/{}.lua", std::string(data + 1, size - 5));
+				std::filesystem::create_directories(std::filesystem::path(writePath).parent_path());
+
+				std::ofstream s(writePath, std::ios::binary);
+				s.write(readyToWrite.data(), readyToWrite.size());
+				s.close();
+			}
+
+			lua_pop(L, 1);
+		}
+
+	}
+	lua_pop(L, 1);
+
+	lua_close(L);
+}
+
 void unpack_credits() {
 	lua_State* L = luaL_newstate();
 
@@ -428,12 +543,18 @@ void unpack_gui(bool& visible) {
 
 	if (!visible) return;
 	if (ImGui::Begin("Unpacker")) {
+		ImGui::TextWrapped("%s", "Make sure the backup files are restored before doing this");
+
 		if (ImGui::Button("Unpack Credits")) {
 			unpack_credits();
 		}
 
 		if (ImGui::Button("Unpack Textures")) {
 			unpack_textures();
+		}
+
+		if (ImGui::Button("Unpack Localization")) {
+			unpack_localization();
 		}
 	}
 	ImGui::End();
@@ -642,30 +763,24 @@ void build() {
 
 	for (auto const& [key, table] : gModDb.localization) {
 		post_build_message("`{}`", key);
-
-		struct LocalizationEntry {
-			LocalizationKey key;
-			std::uint32_t offset;
-			std::string value;
-		};
-
 		std::vector<LocalizationEntry> enteries;
 
 		std::uint32_t totalBytes = 0;
 
 		for (auto& [key, value] : table) {
 			LocalizationEntry entry;
-			entry.key = key;
+			entry.key = static_cast<uint32_t>(key);
 			entry.offset = totalBytes;
 			entry.value = value;
 
 			totalBytes += value.size() + 1;
 
-			enteries.emplace_back(entry);
+			enteries.emplace_back(std::move(entry));
 		}
 
 		ByteStream stream;
 		stream.write_u32(16);
+		
 		stream.write_u32(enteries.size());
 		stream.write_u32(totalBytes);
 
@@ -1262,6 +1377,7 @@ bool route_global_shortcut(ImGuiKeyChord const chord) {
 }
 
 void throw_error_box(std::string const& message) {
+	spdlog::critical(message);
 	tinyfd_messageBox("Critical Error", message.c_str(), "ok", "error", 1);
 	throw std::runtime_error(message);
 }
@@ -1304,7 +1420,7 @@ void main() {
 	cache_scan(pcFileStorage);
 
 	glfwSetErrorCallback([](int errorCode, const char *description) {
-		std::cerr << description << '\n';
+		spdlog::error(description);
 	});
 
 	if (!glfwInit()) throw_error_box("Failed to initialize GLFW");
@@ -1320,7 +1436,7 @@ void main() {
 	glfwWindowHint(GLFW_POSITION_X, vidmode->width / 2 - kWidth / 2);
 	glfwWindowHint(GLFW_POSITION_Y, vidmode->height / 2 - kHeight / 2);
 
-	GLFWwindow* window = glfwCreateWindow(1280, 720, "Aurora v0.0.4-a.6", nullptr, nullptr);
+	GLFWwindow* window = glfwCreateWindow(1280, 720, "Aurora v0.0.4-a.7", nullptr, nullptr);
 	if (!window) throw_error_box("Failed to create GLFW window");
 
 	create_window_icons(window);
@@ -1416,6 +1532,8 @@ void main() {
 			ImGui::End();
 		}
 		else {
+			ImGui::SetNextWindowPos(ImVec2(io.DisplaySize.x * 0.5f, io.DisplaySize.y * 0.5f), ImGuiCond_Once, ImVec2(0.5f, 0.5f));
+			ImGui::SetNextWindowSize(ImVec2(800, 600), ImGuiCond_Once);
 			if (ImGui::Begin("Building")) {
 				const float footer_height_to_reserve = ImGui::GetStyle().ItemSpacing.y + ImGui::GetFrameHeightWithSpacing();
 				if (ImGui::BeginChild("ScrollingRegion", ImVec2(0, -footer_height_to_reserve), ImGuiChildFlags_NavFlattened, ImGuiWindowFlags_HorizontalScrollbar)) {
