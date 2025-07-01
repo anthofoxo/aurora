@@ -590,6 +590,13 @@ struct ModDb {
 
 ModDb gModDb;
 
+struct ModEntry {
+	std::string modid;
+	bool enabled;
+};
+
+static std::vector<ModEntry> gFoundMods;
+
 
 void process_mod_hooks(std::string const& modid) {
 	post_build_message("Processing patches `{}`", modid);
@@ -719,45 +726,96 @@ void load_mod(std::string const& modid) {
 	}
 }
 
+#include <unordered_map>
+
+void find_mods() {
+	// load initial mod state
+	lua_State* L = luaL_newstate();
+	if (luaL_dofile(L, "aurora/config.lua") == LUA_OK) {
+		lua_pushnil(L);
+		while (lua_next(L, -2)) {
+			lua_getfield(L, -1, "modid");
+			std::string modid = lua_tostring(L, -1);
+			lua_pop(L, 1);
+
+			lua_getfield(L, -1, "enabled");
+			bool enabled = lua_toboolean(L, -1);
+			lua_pop(L, 1);
+
+			lua_pop(L, 1);
+
+			gFoundMods.emplace_back(modid, enabled);
+		}
+	}
+	lua_close(L);
+
+	// check if mods exist, if not remove them from the list
+
+	for (auto it = gFoundMods.begin(); it != gFoundMods.end();) {
+		if (!std::filesystem::exists(std::filesystem::path("mods") / it->modid)) {
+			it = gFoundMods.erase(it);
+		}
+		else {
+			++it;
+		}
+	}
+
+	// read mods directory, if any mods here arent loaded then add them to the list
+	std::unordered_set<std::string> list;
+	for (auto const& modentry : gFoundMods) { list.insert(modentry.modid); }
+
+	for (const auto& entry : std::filesystem::directory_iterator("mods")) {
+		if (!entry.is_directory()) continue;
+
+		std::string modid = entry.path().filename().generic_string();
+
+		if (!list.contains(modid)) {
+			gFoundMods.emplace_back(modid, false);
+		}
+	}
+}
+
+void save_mod_order_state() {
+	lua_State* L = luaL_newstate();
+	lua_newtable(L);
+	
+	int index = 1;
+	for (auto const& [modid, enabled] : gFoundMods) {
+		lua_newtable(L);
+		lua_pushstring(L, modid.c_str());
+		lua_setfield(L, -2, "modid");
+		lua_pushboolean(L, enabled);
+		lua_setfield(L, -2, "enabled");
+
+		lua_rawseti(L, -2, index++);
+	}
+
+	std::string modloadstate = std::string("return ") + aurora::lapi_serialize(L);
+
+	std::ofstream stream("aurora/config.lua", std::ios::binary);
+	stream << modloadstate;
+	stream.close();
+}
+
 void build() {
+	// Save mod order and enable flags
+	save_mod_order_state();
+
 	if (!std::filesystem::exists("mods/base")) {
 		post_build_message("Thumper content has not been unpacked");
 		post_build_message("Aurora cannot build mod content until this is done");
 		return;
 	}
 
-	post_build_message("Scanning mods directory");
-
-	std::unordered_set<std::string> mods;
-
-	for (auto const& entry : std::filesystem::directory_iterator("mods")) {
-		if (entry.is_directory()) {
-			std::string modid = entry.path().filename().generic_string();
-
-			bool disabled = modid.starts_with('_');
-
-			post_build_message("`{}` ({})", modid, disabled ? "Disabled" : "Enabled");
-
-			if (!disabled) mods.insert(std::move(modid));
-		}
-	}
-
-	if (!mods.contains("base")) {
-		post_build_message("`base` mod not found, canceled mod compilation");
-		return;
-	}
-
-	mods.erase("base");
-	load_mod("base");
-
-	for (auto const& modid : mods) {
+	for (auto const& [modid, enabled] : gFoundMods) {
+		if (!enabled) continue;
 		load_mod(modid);
 	}
 
-	for (auto const& modid : mods) {
+	for (auto const& [modid, enabled] : gFoundMods) {
+		if (!enabled) continue;
 		process_mod_hooks(modid);
 	}
-
 
 	post_build_message("Building assets");
 
@@ -1467,6 +1525,8 @@ void main() {
 	aurora::GuiHasher hasher;
 	bool hasherVisible = false;
 
+	find_mods();
+
 	while(!glfwWindowShouldClose(window)) {
 		glfwPollEvents();
 
@@ -1528,6 +1588,41 @@ void main() {
 					}
 				}
 
+				ImGui::SeparatorText("Mod Load Order");
+
+				ImGui::PushItemFlag(ImGuiItemFlags_AllowDuplicateId, true);
+
+				for (std::size_t n = 0; n < gFoundMods.size(); n++) {
+					auto const& item = gFoundMods[n];
+
+
+					ImGui::PushID(n);
+					
+					
+
+					
+
+					if (ImGui::Button("Up")) {
+						if (n > 0) std::swap(gFoundMods[n], gFoundMods[n - 1]);
+					}
+
+					ImGui::SameLine();
+
+					if (ImGui::Button("Down")) {
+						if(n < gFoundMods.size() - 1) std::swap(gFoundMods[n], gFoundMods[n + 1]);
+					}
+
+					ImGui::SameLine();
+
+					ImGui::Checkbox("###Enabled", &gFoundMods[n].enabled);
+					ImGui::SameLine();
+
+					ImGui::Selectable(item.modid.c_str());
+
+					ImGui::PopID();
+				}
+
+				ImGui::PopItemFlag();
 			}
 			ImGui::End();
 		}

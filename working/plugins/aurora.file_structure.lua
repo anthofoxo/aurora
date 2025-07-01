@@ -2,14 +2,14 @@
 
 local files = {}
 
-for _, entry in ipairs(Aurora.filesystem.directory_iterator(Aurora.game_directory() .. "/cache/") or {}) do
+for _, entry in ipairs(Aurora.filesystem.directory_iterator("cache") or {}) do
     entry = Aurora.filesystem.stem(entry)
     local key = tonumber(entry, 16)
     if key then files[key] = entry end
 end
 
 for _, filename in ipairs(dofile("aurora/hashtable/pc_list.lua")) do
-    if Aurora.filesystem.exists(string.format("%s/cache/%x.pc", Aurora.game_directory(), Aurora.hash(filename))) then
+    if Aurora.filesystem.exists(string.format("cache/%x.pc", Aurora.hash(filename))) then
         files[Aurora.hash(filename)] = filename:sub(2)
     end
 end
@@ -58,7 +58,7 @@ local function recurse(vals)
 
             local actionOpenMesh = function()
                 Aurora.SendMessage("aurora.mesh_viewer", "open", {
-                    file = string.format("%s/cache/%x.pc", Aurora.game_directory(), value.hash)
+                    file = string.format("cache/%x.pc", value.hash)
                 })
             end
 

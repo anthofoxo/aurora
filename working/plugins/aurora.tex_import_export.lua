@@ -17,7 +17,7 @@ end
 ---@param filename string
 ---@return string?
 local function perform_export(filename)
-    local filepath = string.format("%s/cache/%x.pc", Aurora.game_directory(), Aurora.hash(filename))
+    local filepath = string.format("cache/%x.pc", Aurora.hash(filename))
     local filebytes = Aurora.read_file(filepath)
 
     if not filebytes then
@@ -64,7 +64,7 @@ return {
                         selection = value
                         exportPerformed = nil
 
-                        local filepath = string.format("%s/cache/%x.pc", Aurora.game_directory(), Aurora.hash(value))
+                        local filepath = string.format("cache/%x.pc", Aurora.hash(value))
                         local filebytes = Aurora.read_file(filepath)
                         if filebytes then
                             filebytes = string.sub(filebytes, 5)
