@@ -122,6 +122,107 @@ bool cache_file_exists(std::uint32_t value) {
 	return std::filesystem::exists(std::format("cache/{:x}.pc", value));
 }
 
+struct LevelListing {
+	struct Entry {
+		std::string key;
+		std::uint32_t unknown0;
+		std::string path;
+		std::string unlocks;
+		bool defaultLocked;
+		bool unknown1;
+		bool credits;
+		std::uint32_t colorIdx0;
+		std::uint32_t colorIdx1;
+
+		void deserialize(ByteStream& stream) {
+			key = stream.read_sstr();
+			unknown0 = stream.read_u32();
+			path = stream.read_sstr();
+			unlocks = stream.read_sstr();
+			defaultLocked = stream.read_bool();
+			unknown1 = stream.read_bool();
+			credits = stream.read_bool();
+			colorIdx0 = stream.read_u32();
+			colorIdx1 = stream.read_u32();
+		}
+
+		void serialize(ByteStream& stream) {
+			stream.write_sstr(key);
+			stream.write_u32(unknown0);
+			stream.write_sstr(path);
+			stream.write_sstr(unlocks);
+			stream.write_bool(defaultLocked);
+			stream.write_bool(unknown1);
+			stream.write_bool(credits);
+			stream.write_u32(colorIdx0);
+			stream.write_u32(colorIdx1);
+		}
+
+		void deserialize(lua_State* L) {
+			lua_getfield(L, -1, "key"); key = lua_tostring(L, -1); lua_pop(L, 1);
+			lua_getfield(L, -1, "unknown0"); unknown0 = lua_tointeger(L, -1); lua_pop(L, 1);
+			lua_getfield(L, -1, "path"); path = lua_tostring(L, -1); lua_pop(L, 1);
+			lua_getfield(L, -1, "unlocks"); unlocks = lua_tostring(L, -1); lua_pop(L, 1);
+			lua_getfield(L, -1, "defaultLocked"); defaultLocked = lua_toboolean(L, -1); lua_pop(L, 1);
+			lua_getfield(L, -1, "unknown1"); unknown1 = lua_toboolean(L, -1); lua_pop(L, 1);
+			lua_getfield(L, -1, "credits"); credits = lua_toboolean(L, -1); lua_pop(L, 1);
+			lua_getfield(L, -1, "colorIdx0"); colorIdx0 = lua_tointeger(L, -1); lua_pop(L, 1);
+			lua_getfield(L, -1, "colorIdx1"); colorIdx1 = lua_tointeger(L, -1); lua_pop(L, 1);
+		}
+
+		void serialize(lua_State* L) {
+			lua_newtable(L);
+			lua_pushstring(L, key.c_str()); lua_setfield(L, -2, "key");
+			lua_pushinteger(L, unknown0); lua_setfield(L, -2, "unknown0");
+			lua_pushstring(L, path.c_str()); lua_setfield(L, -2, "path");
+			lua_pushstring(L, unlocks.c_str()); lua_setfield(L, -2, "unlocks");
+			lua_pushboolean(L, defaultLocked); lua_setfield(L, -2, "defaultLocked");
+			lua_pushboolean(L, unknown1); lua_setfield(L, -2, "unknown1");
+			lua_pushboolean(L, credits); lua_setfield(L, -2, "credits");
+			lua_pushinteger(L, colorIdx0); lua_setfield(L, -2, "colorIdx0");
+			lua_pushinteger(L, colorIdx1); lua_setfield(L, -2, "colorIdx1");
+		}
+	};
+
+	std::vector<Entry> entries;
+
+	void serialize(ByteStream& stream) {
+		stream.write_u32(entries.size());
+		
+		for (auto& entry : entries) {
+			entry.serialize(stream);
+		}
+	}
+
+	void deserialize(lua_State* L) {
+		entries.clear();
+
+		lua_pushnil(L);
+		while(lua_next(L, -2)) {
+			Entry e;
+			e.deserialize(L);
+			entries.emplace_back(std::move(e));
+			lua_pop(L, 1);
+		}
+	}
+
+	void deserialize(ByteStream& stream) {
+		entries.resize(stream.read_u32());
+
+		for (auto& entry : entries) {
+			entry.deserialize(stream);
+		}
+	}
+
+	void serialize(lua_State* L) {
+		lua_newtable(L);
+		for (int i = 0; i < entries.size(); ++i) {
+			entries[i].serialize(L);
+			lua_rawseti(L, -2, i + 1);
+		}
+	}
+};
+
 struct Credits {
 	struct MajorGroupElement {
 		std::string decoration;
@@ -407,6 +508,32 @@ struct Localization final {
 	}
 };
 
+void unpack_levels() {
+	if (auto bytes = aurora::read_file(std::format("cache/{:x}.pc", aurora::fnv1a("Aui/thumper.levels")))) {
+		ByteStream stream;
+		stream.mBuffer = std::move(*bytes);
+
+		lua_State* L = luaL_newstate();
+		luaL_openlibs(L);
+
+		stream.read_u32(); // ignore header // 16
+		LevelListing locs;
+		locs.deserialize(stream);
+		locs.serialize(L);
+
+		std::string readyToWrite = std::string("return ") + aurora::lapi_serialize(L);
+
+		std::string writePath = "mods/base/levels/ui/thumper.lua";
+		std::filesystem::create_directories(std::filesystem::path(writePath).parent_path());
+
+		std::ofstream s(writePath, std::ios::binary);
+		s.write(readyToWrite.data(), readyToWrite.size());
+		s.close();
+
+		lua_close(L);
+	}
+}
+
 
 void unpack_localization() {
 	lua_State* L = luaL_newstate();
@@ -556,6 +683,10 @@ void unpack_gui(bool& visible) {
 		if (ImGui::Button("Unpack Localization")) {
 			unpack_localization();
 		}
+
+		if (ImGui::Button("Unpack Levels (level listing)")) {
+			unpack_levels();
+		}
 	}
 	ImGui::End();
 }
@@ -586,6 +717,8 @@ struct ModDb {
 	std::unordered_map<std::string, Credits> credits;
 
 	std::unordered_map<std::string, std::string> textures; // maps the texture name to the texture target
+
+	std::unordered_map<std::string, LevelListing> listings;
 };
 
 ModDb gModDb;
@@ -600,6 +733,34 @@ static std::vector<ModEntry> gFoundMods;
 
 void process_mod_hooks(std::string const& modid) {
 	post_build_message("Processing patches `{}`", modid);
+
+	if (std::filesystem::exists(std::format("mods/{}/patches/levels", modid))) {
+		for (auto const& entry : std::filesystem::recursive_directory_iterator(std::format("mods/{}/patches/levels", modid))) {
+			if (entry.is_directory()) continue;
+			if (entry.path().extension().generic_string() != ".lua") continue;
+
+			post_build_message(entry.path().generic_string());
+
+			lua_State* L = luaL_newstate();
+			luaL_openlibs(L);
+
+			std::filesystem::path fspath = std::filesystem::relative(entry.path(), std::format("mods/{}/patches/levels", modid)).generic_string();
+			std::string path = std::format("A{}/{}.levels", fspath.parent_path().generic_string(), fspath.stem().generic_string());
+
+			gModDb.listings[path].serialize(L);
+
+			if (luaL_dofile(L, entry.path().generic_string().c_str()) == LUA_OK) {
+				lua_pushvalue(L, -2);
+				lua_pcall(L, 1, 0, 0);
+				gModDb.listings[path].deserialize(L);
+			}
+			else {
+				post_build_message(lua_tostring(L, -1));
+			}
+			lua_pop(L, 1);
+			lua_close(L);
+		}
+	}
 
 	if (std::filesystem::exists(std::format("mods/{}/patches/credits", modid))) {
 		for (auto const& entry : std::filesystem::recursive_directory_iterator(std::format("mods/{}/patches/credits", modid))) {
@@ -632,6 +793,24 @@ void process_mod_hooks(std::string const& modid) {
 
 void load_mod(std::string const& modid) {
 	post_build_message("Loading `{}`", modid);
+
+	// Apply direct files first
+	if (std::filesystem::exists(std::format("mods/{}/direct", modid))) {
+		for (auto const& entry : std::filesystem::recursive_directory_iterator(std::format("mods/{}/direct", modid))) {
+			if (entry.is_directory()) continue;
+
+			post_build_message(entry.path().generic_string());
+
+			// compute hash
+			std::filesystem::path fspath = std::filesystem::relative(entry.path(), std::format("mods/{}/direct", modid)).generic_string();
+			std::string path = std::format("A{}", fspath.generic_string());
+
+			if (auto bytes = aurora::read_file(entry.path())) {
+				std::uint32_t hashed = aurora::fnv1a(path);
+				write_to_thumper_cache(hashed, *bytes);
+			}
+		}
+	}
 
 	if (std::filesystem::exists(std::format("mods/{}/localization", modid))) {
 		for (auto const& entry : std::filesystem::recursive_directory_iterator(std::format("mods/{}/localization", modid))) {
@@ -689,6 +868,31 @@ void load_mod(std::string const& modid) {
 				credits.deserialize(L);
 
 				gModDb.credits[path] = credits;
+			}
+			else {
+				post_build_message(lua_tostring(L, -1));
+			}
+			lua_pop(L, 1);
+			lua_close(L);
+		}
+	}
+
+	if (std::filesystem::exists(std::format("mods/{}/levels", modid))) {
+		for (auto const& entry : std::filesystem::recursive_directory_iterator(std::format("mods/{}/levels", modid))) {
+			if (entry.is_directory()) continue;
+			if (entry.path().extension().generic_string() != ".lua") continue;
+
+			post_build_message(entry.path().generic_string());
+
+			lua_State* L = luaL_newstate();
+			if (luaL_dofile(L, entry.path().generic_string().c_str()) == LUA_OK) {
+				std::filesystem::path fspath = std::filesystem::relative(entry.path(), std::format("mods/{}/levels", modid)).generic_string();
+				std::string path = std::format("A{}/{}.levels", fspath.parent_path().generic_string(), fspath.stem().generic_string());
+
+				LevelListing credits;
+				credits.deserialize(L);
+
+				gModDb.listings[path] = credits;
 			}
 			else {
 				post_build_message(lua_tostring(L, -1));
@@ -863,6 +1067,17 @@ void build() {
 
 		write_to_thumper_cache(aurora::fnv1a(key), stream.mBuffer);
 	}
+
+	for (auto& [key, table] : gModDb.listings) {
+		post_build_message("`{}`", key);
+
+		ByteStream stream;
+		stream.write_u32(16);
+		table.serialize(stream);
+
+		write_to_thumper_cache(aurora::fnv1a(key), stream.mBuffer);
+	}
+
 	int counter = 0;
 
 	try {
@@ -1463,6 +1678,16 @@ void create_window_icons(GLFWwindow* window) {
 	}
 }
 
+enum struct Comp : std::uint32_t {
+	EditStateComp = aurora::fnv1a("EditStateComp"),
+	TimeDriveComp = aurora::fnv1a("TimeDriveComp"),
+	AnimComp = aurora::fnv1a("AnimComp"),
+	PollComp = aurora::fnv1a("PollComp"),
+	StatusComp = aurora::fnv1a("StatusComp"),
+	ControllerStatusComp = aurora::fnv1a("ControllerStatusComp"),
+	DrawComp = aurora::fnv1a("DrawComp"),
+};
+
 
 namespace aurora {
 void main() {
@@ -1494,7 +1719,7 @@ void main() {
 	glfwWindowHint(GLFW_POSITION_X, vidmode->width / 2 - kWidth / 2);
 	glfwWindowHint(GLFW_POSITION_Y, vidmode->height / 2 - kHeight / 2);
 
-	GLFWwindow* window = glfwCreateWindow(1280, 720, "Aurora v0.0.4-a.7", nullptr, nullptr);
+	GLFWwindow* window = glfwCreateWindow(1280, 720, "Aurora v0.0.4-a.9", nullptr, nullptr);
 	if (!window) throw_error_box("Failed to create GLFW window");
 
 	create_window_icons(window);
@@ -1570,38 +1795,14 @@ void main() {
 			ImGui::SetNextWindowPos(ImVec2(io.DisplaySize.x * 0.5f, io.DisplaySize.y * 0.5f), ImGuiCond_Once, ImVec2(0.5f, 0.5f));
 			ImGui::SetNextWindowSize(ImVec2(800, 600), ImGuiCond_Once);
 			if (ImGui::Begin("Launcher")) {
-				static bool buildModContent = true;
-
-
-				ImGui::Checkbox("Build Mod Content", &buildModContent);
-
-
-
-				if (ImGui::Button("Launch Thumper")) {
-					gShouldLaunchThumper = true;
-
-					if (buildModContent) {
-						buildFuture = std::async(std::launch::async, build);
-					}
-					else {
-						glfwSetWindowShouldClose(window, true);
-					}
-				}
-
-				ImGui::SeparatorText("Mod Load Order");
-
-				ImGui::PushItemFlag(ImGuiItemFlags_AllowDuplicateId, true);
+				
+				ImGui::Columns(2);
 
 				for (std::size_t n = 0; n < gFoundMods.size(); n++) {
 					auto const& item = gFoundMods[n];
 
-
 					ImGui::PushID(n);
 					
-					
-
-					
-
 					if (ImGui::Button("Up")) {
 						if (n > 0) std::swap(gFoundMods[n], gFoundMods[n - 1]);
 					}
@@ -1622,7 +1823,31 @@ void main() {
 					ImGui::PopID();
 				}
 
-				ImGui::PopItemFlag();
+				ImGui::NextColumn();
+
+				ImGui::TextWrapped("%s", "example properties panel");
+
+				ImGui::Columns(1);
+
+				ImGui::Separator();
+
+				static bool buildModContent = true;
+
+
+				ImGui::Checkbox("Build Mod Content", &buildModContent);
+
+
+
+				if (ImGui::Button("Launch Thumper")) {
+					gShouldLaunchThumper = true;
+
+					if (buildModContent) {
+						buildFuture = std::async(std::launch::async, build);
+					}
+					else {
+						glfwSetWindowShouldClose(window, true);
+					}
+				}
 			}
 			ImGui::End();
 		}
