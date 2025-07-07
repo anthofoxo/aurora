@@ -49,62 +49,7 @@
 #include "au_lua_serialize.hpp"
 #include "gui/au_hasher.hpp"
 
-struct ByteStream final {
-	char const* const kError = "ByteStream out of range";
-
-	std::vector<std::byte> mBuffer;
-	std::size_t mOffset = 0;
-
-	template<typename T>
-	T read_gen() {
-		if (mOffset + sizeof(T) > mBuffer.size()) throw std::out_of_range(kError);
-		T value;
-		std::memcpy(&value, mBuffer.data() + mOffset, sizeof(T));
-		mOffset += sizeof(T);
-		return value;
-	}
-
-	bool read_bool() { return read_gen<std::uint8_t>(); }
-	std::uint32_t read_u8() { return read_gen<std::uint8_t>(); }
-	std::uint32_t read_u32() { return read_gen<std::uint32_t>(); }
-
-	std::string read_sstr() {
-		auto size = read_u32();
-		if (mOffset + size > mBuffer.size()) throw std::out_of_range(kError);
-		std::string string = std::string(reinterpret_cast<char const*>(mBuffer.data() + mOffset), size);
-		mOffset += size;
-		return string;
-	}
-
-	std::string read_cstr() {
-		// We cannot guarentee safety with a c string
-		std::size_t size = std::strlen(reinterpret_cast<char const*>(mBuffer.data() + mOffset));
-		std::string string = std::string(reinterpret_cast<char const*>(mBuffer.data() + mOffset), size);
-		mOffset += size;
-		mOffset += 1; // Null terminator
-		return string;
-	}
-
-	template<typename T>
-	void write_gen(T const& value) {
-		for (int i = 0; i < sizeof(T); ++i) mBuffer.emplace_back(static_cast<std::byte>(0));
-		std::memcpy(mBuffer.data() + mBuffer.size() - sizeof(T), &value, sizeof(T));
-	}
-
-	void write_bool(bool value) { return write_gen(value); }
-	void write_u8(std::uint8_t value) { return write_gen(value); }
-	void write_u32(std::uint32_t value) { return write_gen(value); }
-
-	void write_sstr(std::string const& value) {
-		write_u32(value.size());
-		for (auto c : value) mBuffer.emplace_back(static_cast<std::byte>(c));
-	}
-
-	void write_cstr(std::string const& value) {
-		for (auto c : value) mBuffer.emplace_back(static_cast<std::byte>(c));
-		mBuffer.emplace_back(static_cast<std::byte>('\0'));
-	}
-};
+#include "au_serialize.hpp"
 
 void write_to_thumper_cache(std::uint32_t hash, std::span<std::byte const> bytes) {
 	std::string path = std::format("cache/{:x}.pc", hash);
@@ -124,7 +69,6 @@ bool cache_file_exists(std::uint32_t value) {
 	return std::filesystem::exists(std::format("cache/{:x}.pc", value));
 }
 
-
 struct LevelListing {
 	struct Entry {
 		std::string key;
@@ -137,7 +81,7 @@ struct LevelListing {
 		std::uint32_t colorIdx0;
 		std::uint32_t colorIdx1;
 
-		void deserialize(ByteStream& stream) {
+		void deserialize(aurora::ByteStream& stream) {
 			key = stream.read_sstr();
 			unknown0 = stream.read_u32();
 			path = stream.read_sstr();
@@ -149,7 +93,7 @@ struct LevelListing {
 			colorIdx1 = stream.read_u32();
 		}
 
-		void serialize(ByteStream& stream) {
+		void serialize(aurora::ByteStream& stream) {
 			stream.write_sstr(key);
 			stream.write_u32(unknown0);
 			stream.write_sstr(path);
@@ -189,7 +133,7 @@ struct LevelListing {
 
 	std::vector<Entry> entries;
 
-	void serialize(ByteStream& stream) {
+	void serialize(aurora::ByteStream& stream) {
 		stream.write_u32(entries.size());
 		
 		for (auto& entry : entries) {
@@ -209,7 +153,7 @@ struct LevelListing {
 		}
 	}
 
-	void deserialize(ByteStream& stream) {
+	void deserialize(aurora::ByteStream& stream) {
 		entries.resize(stream.read_u32());
 
 		for (auto& entry : entries) {
@@ -226,17 +170,19 @@ struct LevelListing {
 	}
 };
 
+#include "au_serialize.hpp"
+
 struct Credits {
 	struct MajorGroupElement {
 		std::string decoration;
 		std::string text;
 
-		void deserialize(ByteStream& stream) {
+		void deserialize(aurora::ByteStream& stream) {
 			decoration = stream.read_sstr();
 			text = stream.read_sstr();
 		}
 
-		void serialize(ByteStream& stream) const {
+		void serialize(aurora::ByteStream& stream) const {
 			stream.write_sstr(decoration);
 			stream.write_sstr(text);
 		}
@@ -250,7 +196,7 @@ struct Credits {
 			// one new value added to stack
 		}
 
-		void deserialize(lua_State* L) {
+		[[deprecated]] void deserialize(lua_State* L) {
 			lua_getfield(L, -1, "decoration");
 			decoration = lua_tostring(L, -1);
 			lua_pop(L, 1);
@@ -264,7 +210,7 @@ struct Credits {
 	struct MajorGroup {
 		std::vector<MajorGroupElement> elements;
 
-		void deserialize(ByteStream& stream) {
+		void deserialize(aurora::ByteStream& stream) {
 			elements.resize(stream.read_u32());
 
 			for (auto& element : elements) {
@@ -272,7 +218,7 @@ struct Credits {
 			}
 		}
 
-		void serialize(ByteStream& stream) const {
+		void serialize(aurora::ByteStream& stream) const {
 			stream.write_u32(elements.size());
 
 			for (auto const& element : elements) {
@@ -308,7 +254,7 @@ struct Credits {
 		std::string banner;
 		std::vector<std::string> thanks;
 
-		void deserialize(ByteStream& stream) {
+		void deserialize(aurora::ByteStream& stream) {
 			banner = stream.read_sstr();
 			thanks.resize(stream.read_u32());
 
@@ -317,7 +263,7 @@ struct Credits {
 			}
 		}
 
-		void serialize(ByteStream& stream) const {
+		void serialize(aurora::ByteStream& stream) const {
 			stream.write_sstr(banner);
 			stream.write_u32(thanks.size());
 
@@ -363,7 +309,7 @@ struct Credits {
 	std::vector<MajorGroup> major;
 	std::vector<MinorGroup> minor;
 
-	void deserialize(ByteStream& stream) {
+	void deserialize(aurora::ByteStream& stream) {
 		major.resize(stream.read_u32());
 
 		for (auto& group : major) {
@@ -377,7 +323,7 @@ struct Credits {
 		}
 	}
 
-	void serialize(ByteStream& stream) const {
+	void serialize(aurora::ByteStream& stream) const {
 		stream.write_u32(major.size());
 
 		for (auto& group : major) {
@@ -487,7 +433,7 @@ struct LocalizationEntry {
 struct Localization final {
 	std::vector<LocalizationEntry> enteries;
 
-	void deserialize(ByteStream& stream) {
+	void deserialize(aurora::ByteStream& stream) {
 		auto cstrCount = stream.read_u32();
 		auto byteCount = stream.read_u32();
 
@@ -513,7 +459,7 @@ struct Localization final {
 
 void unpack_levels() {
 	if (auto bytes = aurora::read_file(std::format("cache/{:x}.pc", aurora::fnv1a("Aui/thumper.levels")))) {
-		ByteStream stream;
+		aurora::ByteStream stream;
 		stream.mBuffer = std::move(*bytes);
 
 		lua_State* L = luaL_newstate();
@@ -550,7 +496,7 @@ void unpack_localization() {
 			auto hash = aurora::fnv1a(data, size);
 
 			if (auto bytes = aurora::read_file(std::format("cache/{:x}.pc", hash))) {
-				ByteStream stream;
+				aurora::ByteStream stream;
 				stream.mBuffer = std::move(*bytes);
 
 				lua_State* L = luaL_newstate();
@@ -592,7 +538,7 @@ void unpack_credits() {
 			auto hash = aurora::fnv1a(data, size);
 
 			if (auto bytes = aurora::read_file(std::format("cache/{:x}.pc", hash))) {
-				ByteStream stream;
+				aurora::ByteStream stream;
 				stream.mBuffer = std::move(*bytes);
 
 				lua_State* L = luaL_newstate();
@@ -641,7 +587,7 @@ void unpack_textures() {
 
 			// read computed name
 			if (auto bytes = aurora::read_file(std::format("cache/{:x}.pc", hash))) {
-				ByteStream stream;
+				aurora::ByteStream stream;
 				stream.mBuffer = std::move(*bytes);
 
 				stream.read_u32(); // skip first u32
@@ -864,7 +810,7 @@ void load_precompiled_tcle_mods(std::string const& modid) {
 		if (!key.ends_with(".objlib")) continue;
 
 		// move buffer into stream for reading, no need to restore the content afterwards since this is the only step to touch the .objlib
-		ByteStream stream;
+		aurora::ByteStream stream;
 		stream.mBuffer = std::move(value);
 
 		for(int i = 0; i < 6; ++i)
@@ -1171,7 +1117,18 @@ void save_mod_order_state() {
 	stream.close();
 }
 
+void restore_cache_content() {
+	for (auto& entry : std::filesystem::directory_iterator("cache")) {
+		std::string backupFile = std::format("{}.bak", entry.path().generic_string());
+		if (std::filesystem::exists(backupFile)) {
+			std::filesystem::copy_file(backupFile, entry.path(), std::filesystem::copy_options::overwrite_existing);
+		}
+	}
+}
+
 void build() {
+	restore_cache_content(); // Always revert content BEFORE applying mods, this will catch some small issues when the base mods doesnt cover certain situations
+
 	// Save mod order and enable flags
 	save_mod_order_state();
 
@@ -1220,7 +1177,7 @@ void build() {
 			enteries.emplace_back(std::move(entry));
 		}
 
-		ByteStream stream;
+		aurora::ByteStream stream;
 		stream.write_u32(16);
 		
 		stream.write_u32(enteries.size());
@@ -1241,7 +1198,7 @@ void build() {
 	for (auto const& [key, table] : gModDb.credits) {
 		post_build_message("`{}`", key);
 
-		ByteStream stream;
+		aurora::ByteStream stream;
 		stream.write_u32(16);
 		table.serialize(stream);
 
@@ -1251,7 +1208,7 @@ void build() {
 	for (auto& [key, table] : gModDb.listings) {
 		post_build_message("`{}`", key);
 
-		ByteStream stream;
+		aurora::ByteStream stream;
 		stream.write_u32(16);
 		table.serialize(stream);
 
@@ -1272,7 +1229,7 @@ void build() {
 			if (bytes) {
 				std::uint32_t key = aurora::fnv1a(target);
 
-				ByteStream stream;
+				aurora::ByteStream stream;
 				stream.write_u32(14);
 
 				stream.mBuffer.resize(stream.mBuffer.size() + bytes->size());
@@ -1573,14 +1530,7 @@ lua_State* aurora_newstate() {
 	return L;
 }
 
-void restore_cache_content() {
-	for (auto& entry : std::filesystem::directory_iterator("cache")) {
-		std::string backupFile = std::format("{}.bak", entry.path().generic_string());
-		if (std::filesystem::exists(backupFile)) {
-			std::filesystem::copy_file(backupFile, entry.path(), std::filesystem::copy_options::overwrite_existing);
-		}
-	}
-}
+
 
 struct PluginEngine {
 	struct Plugin {
