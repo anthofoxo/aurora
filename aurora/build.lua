@@ -24,6 +24,8 @@ includedirs {
 	"%{wks.location}/vendor/spdlog/include",
 	"%{wks.location}/vendor/glm",
 	"%{wks.location}/vendor/steamworks",
+	"%{wks.location}/vendor/zlib",
+	"%{wks.location}/vendor/zlib/contrib",
 }
 
 links {
@@ -32,6 +34,7 @@ links {
 	"imgui",
 	"lua",
 	"tinyfd",
+	"zlib"
 }
 
 filter "system:windows"

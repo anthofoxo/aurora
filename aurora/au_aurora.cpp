@@ -35,6 +35,8 @@
 #include <vector>
 #include <format>
 
+#include <minizip/unzip.h>
+
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 #define STB_IMAGE_RESIZE_IMPLEMENTATION
@@ -121,6 +123,7 @@ void write_to_thumper_cache(std::uint32_t hash, std::span<std::byte const> bytes
 bool cache_file_exists(std::uint32_t value) {
 	return std::filesystem::exists(std::format("cache/{:x}.pc", value));
 }
+
 
 struct LevelListing {
 	struct Entry {
@@ -791,6 +794,165 @@ void process_mod_hooks(std::string const& modid) {
 	}
 }
 
+
+struct TCLEPrecompiledLevel {
+	std::string name;
+	std::string localizationKey;
+	std::string description;
+	std::string difficulty;
+	std::string authors;
+
+	std::unordered_map<std::string, std::vector<std::byte>> files;
+};
+
+
+void load_precompiled_tcle_mods(std::string const& modid) {
+	post_build_message("Loading TCLE Precompiled `{}`", modid);
+
+	std::string path = std::format("mods/{}.zip", modid);
+
+	unzFile file = unzOpen(path.c_str());
+	if (!file) return;
+
+	unz_global_info global_info;
+	if (unzGetGlobalInfo(file, &global_info) != UNZ_OK) {
+		unzClose(file);
+		return;
+	}
+
+	TCLEPrecompiledLevel level;
+
+	for (decltype(global_info.number_entry) i = 0; i < global_info.number_entry; ++i) {
+		unz_file_info file_info;
+
+		std::array<char, 256> filename;
+
+		if (unzGetCurrentFileInfo(file, &file_info, filename.data(), filename.size(), NULL, 0, NULL, 0) != UNZ_OK) {
+			unzClose(file);
+			continue;
+		}
+
+		if (unzOpenCurrentFile(file) == UNZ_OK) {
+			std::vector<std::byte> buffer;
+			buffer.resize(file_info.uncompressed_size);
+
+			int retValue = unzReadCurrentFile(file, buffer.data(), buffer.size());
+			assert(retValue == file_info.uncompressed_size);
+
+			level.files[std::string(filename.data())] = std::move(buffer);
+		}
+
+		unzCloseCurrentFile(file);
+		unzGoToNextFile(file);
+	}
+
+	unzClose(file);
+
+	// Level content is loaded into memory, start scanning file contents to figure out where to store data
+
+	// Step 1. scan the .tcl file and find out some stuff
+	for (auto const& [key, value] : level.files) {
+		if (!key.ends_with(".TCL")) continue;
+
+		spdlog::info("Found .tcl: {}", key);
+		break;
+	}
+
+	std::string origin;
+
+	for (auto& [key, value] : level.files) {
+		if (!key.ends_with(".objlib")) continue;
+
+		// move buffer into stream for reading, no need to restore the content afterwards since this is the only step to touch the .objlib
+		ByteStream stream;
+		stream.mBuffer = std::move(value);
+
+		for(int i = 0; i < 6; ++i)
+			stream.read_u32(); // skip file header and unknowns fields
+		
+
+		auto importCount = stream.read_u32();
+
+		for (int i = 0; i < importCount; ++i) {
+			stream.read_u32(); // skip unknown
+			stream.read_sstr(); // skip import path
+		}
+
+		origin = stream.read_sstr(); // read the target write path, at this point we dont need to read any further
+
+		std::uint32_t hashed = aurora::fnv1a(std::format("A{}", origin)); // this is the .pc file to write to
+
+		write_to_thumper_cache(hashed, stream.mBuffer);
+
+		spdlog::info("Found .objlib: {}", key);
+		break;
+	}
+
+	for (auto const& [key, value] : level.files) {
+		if (!key.ends_with(".sec")) continue;
+
+		auto path = std::filesystem::path(origin);
+		auto hashInput = std::format("A{}/{}.sec", path.parent_path().generic_string(), path.stem().generic_string());
+
+		std::uint32_t hashed = aurora::fnv1a(hashInput);
+
+		write_to_thumper_cache(hashed, value);
+
+		spdlog::info("Found .sec: {}", key);
+		break;
+	}
+
+	// Process .pc files, these go directly into cache
+	for (auto const& [key, value] : level.files) {
+		if (!key.ends_with(".pc")) continue;
+		std::string stem = std::filesystem::path(key).stem().generic_string();
+		std::uint32_t hashed = std::stoull(stem, 0, 16);
+		write_to_thumper_cache(hashed, value);
+		spdlog::info("Found .pc: {}", key);
+	}
+
+	std::string locKey = std::format("custom.{}", modid);
+	std::transform(locKey.begin(), locKey.end(), locKey.begin(), [](char c) { return std::tolower(c); });
+
+	auto& localization = gModDb.localization["Aui/strings.en.loc"];
+	auto hashed = aurora::fnv1a(locKey);
+	localization[static_cast<LocalizationKey>(hashed)] = modid;
+
+	gModDb.listings["Aui/thumper.levels"].entries.emplace_back(
+		locKey,
+		0,
+		origin,
+		"",
+		false,
+		false,
+		false,
+		0,
+		10
+	);
+}
+
+#if 0
+struct ModDirectoryContent {
+	std::vector<std::string> files;
+
+	ModDirectoryContent(std::string modid) {
+		std::filesystem::path directoryPath = std::filesystem::path("mods") / modid;
+		bool isDirectoryInstall = std::filesystem::exists(directoryPath) && std::filesystem::is_directory(directoryPath);
+		// is not a directory install, its a zip install, this is validated by the find_mods function prior
+
+		if (isDirectoryInstall) {
+			for (auto const& entry : std::filesystem::recursive_directory_iterator(directoryPath)) {
+				files.push_back(std::filesystem::relative(entry.path(), directoryPath).generic_string());
+			}
+		}
+		else {
+			// TODO: read zip files
+			// NOTE: Dev paused, mod loading code needs to be more modular to make an abstract api function across std::filesystem and minizip
+		}
+	}
+};
+#endif
+
 void load_mod(std::string const& modid) {
 	post_build_message("Loading `{}`", modid);
 
@@ -956,7 +1118,8 @@ void find_mods() {
 	// check if mods exist, if not remove them from the list
 
 	for (auto it = gFoundMods.begin(); it != gFoundMods.end();) {
-		if (!std::filesystem::exists(std::filesystem::path("mods") / it->modid)) {
+		
+		if ((!std::filesystem::exists(std::filesystem::path("mods") / it->modid)) && (!std::filesystem::exists(std::filesystem::path("mods") / (it->modid + ".zip")))) {
 			it = gFoundMods.erase(it);
 		}
 		else {
@@ -969,9 +1132,16 @@ void find_mods() {
 	for (auto const& modentry : gFoundMods) { list.insert(modentry.modid); }
 
 	for (const auto& entry : std::filesystem::directory_iterator("mods")) {
-		if (!entry.is_directory()) continue;
+		std::string modid;
 
-		std::string modid = entry.path().filename().generic_string();
+		if (entry.is_directory()) {
+			modid = entry.path().filename().generic_string();
+		}
+		else if (entry.path().extension().generic_string() == ".zip") {
+			modid = entry.path().stem().generic_string();
+		}
+		else
+			continue;
 
 		if (!list.contains(modid)) {
 			gFoundMods.emplace_back(modid, false);
@@ -1013,12 +1183,22 @@ void build() {
 
 	for (auto const& [modid, enabled] : gFoundMods) {
 		if (!enabled) continue;
+		if (std::filesystem::exists(std::filesystem::path("mods") / (modid + ".zip"))) continue; // is a zip, skip
 		load_mod(modid);
 	}
 
 	for (auto const& [modid, enabled] : gFoundMods) {
 		if (!enabled) continue;
+		if (std::filesystem::exists(std::filesystem::path("mods") / (modid + ".zip"))) continue; // is a zip, skip
 		process_mod_hooks(modid);
+	}
+
+	// process customs, this is ALWAYS done after native mods
+	for (auto const& [modid, enabled] : gFoundMods) {
+		if (!enabled) continue;
+		if (!std::filesystem::exists(std::filesystem::path("mods") / (modid + ".zip"))) continue; // Not a zip/TCLE mod
+		
+		load_precompiled_tcle_mods(modid);
 	}
 
 	post_build_message("Building assets");
