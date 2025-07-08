@@ -1747,6 +1747,7 @@ void main() {
 		std::unique_ptr<stbi_uc, stbi_deleter> pixels = decltype(pixels)(stbi_load("aurora/icon.png", &x, &y, nullptr, 4));
 
 		window = { {
+				.title = "Aurora v0.0.4-a.11",
 				.iconPixels = pixels.get(),
 				.iconWidth = x,
 				.iconHeight = y,
