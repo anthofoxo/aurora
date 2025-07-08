@@ -39,8 +39,9 @@
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
-#define STB_IMAGE_RESIZE_IMPLEMENTATION
-#include "stb_image_resize2.h"
+
+
+#include "au_window.hpp"
 
 #include "au_util.hpp"
 #include "spdlog/spdlog.h"
@@ -750,6 +751,8 @@ struct TCLEPrecompiledLevel {
 
 	std::unordered_map<std::string, std::vector<std::byte>> files;
 };
+
+
 
 
 void load_precompiled_tcle_mods(std::string const& modid) {
@@ -1785,28 +1788,7 @@ void throw_error_box(std::string const& message) {
 	throw std::runtime_error(message);
 }
 
-void create_window_icons(GLFWwindow* window) {
-	using stbir_deleter = aurora::DeleterOf < [](void* p) {STBIR_FREE(p, 0); } > ;
-	using stbi_deleter = aurora::DeleterOf<stbi_image_free>;
 
-	int x, y;
-	std::unique_ptr<stbi_uc, stbi_deleter> pixels = decltype(pixels)(stbi_load("aurora/icon.png", &x, &y, nullptr, 4));
-
-	if (pixels) {
-		std::array<std::unique_ptr<unsigned char, stbir_deleter>, 4> imageMemory;
-		std::array<GLFWimage, imageMemory.size()> glfwImages;
-
-		for (int i = 0; i < imageMemory.size(); ++i) {
-			int const size = (i + 1) * 16;
-			imageMemory[i] = decltype(imageMemory)::value_type(stbir_resize_uint8_srgb(pixels.get(), x, y, 0, nullptr, size, size, 0, STBIR_RGBA));
-			glfwImages[i].width = size;
-			glfwImages[i].height = size;
-			glfwImages[i].pixels = imageMemory[i].get();
-		}
-
-		glfwSetWindowIcon(window, static_cast<int>(glfwImages.size()), glfwImages.data());
-	}
-}
 
 enum struct Comp : std::uint32_t {
 	EditStateComp = aurora::fnv1a("EditStateComp"),
@@ -1832,30 +1814,19 @@ void main() {
 	
 	cache_scan(pcFileStorage);
 
-	glfwSetErrorCallback([](int errorCode, const char *description) {
-		spdlog::error(description);
-	});
+	aurora::Window window;
+	
+	{
+		using stbi_deleter = aurora::DeleterOf<stbi_image_free>;
+		int x, y;
+		std::unique_ptr<stbi_uc, stbi_deleter> pixels = decltype(pixels)(stbi_load("aurora/icon.png", &x, &y, nullptr, 4));
 
-	if (!glfwInit()) throw_error_box("Failed to initialize GLFW");
-
-	auto const* vidmode = glfwGetVideoMode(glfwGetPrimaryMonitor());
-	constexpr int kWidth = 1280;
-	constexpr int kHeight = 720;
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 5);
-	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE);
-	glfwWindowHint(GLFW_MAXIMIZED, GLFW_TRUE);
-	glfwWindowHint(GLFW_POSITION_X, vidmode->width / 2 - kWidth / 2);
-	glfwWindowHint(GLFW_POSITION_Y, vidmode->height / 2 - kHeight / 2);
-
-	GLFWwindow* window = glfwCreateWindow(1280, 720, "Aurora v0.0.4-a.10", nullptr, nullptr);
-	if (!window) throw_error_box("Failed to create GLFW window");
-
-	create_window_icons(window);
-
-	glfwMakeContextCurrent(window);
-	if (!gladLoadGL(&glfwGetProcAddress)) throw_error_box("Failed to initialize GLAD");
+		window = { {
+				.iconPixels = pixels.get(),
+				.iconWidth = x,
+				.iconHeight = y,
+		} };
+	}
 
 	PluginEngine pluginEngine;
 	pluginEngine.reload();
@@ -1870,7 +1841,7 @@ void main() {
 	gMonoSpace = io.Fonts->AddFontFromFileTTF("aurora/NotoSansMono-Regular.ttf", 18.0f);
 
 	ImGui::StyleColorsDark();
-	ImGui_ImplGlfw_InitForOpenGL(window, true);
+	ImGui_ImplGlfw_InitForOpenGL(window.handle(), true);
 	ImGui_ImplOpenGL3_Init("#version 450 core");
 
 	console.log("Welcome to Aurora!");
@@ -1882,7 +1853,7 @@ void main() {
 
 	find_mods();
 
-	while(!glfwWindowShouldClose(window)) {
+	while(!glfwWindowShouldClose(window.handle())) {
 		glfwPollEvents();
 
 		ImGui_ImplOpenGL3_NewFrame();
@@ -1975,7 +1946,7 @@ void main() {
 						buildFuture = std::async(std::launch::async, build);
 					}
 					else {
-						glfwSetWindowShouldClose(window, true);
+						glfwSetWindowShouldClose(window.handle(), true);
 					}
 				}
 			}
@@ -2009,7 +1980,7 @@ void main() {
 					
 
 					if (ImGui::Button("Launch")) {
-						glfwSetWindowShouldClose(window, true);
+						glfwSetWindowShouldClose(window.handle(), true);
 						gShouldLaunchThumper = true;
 					}
 
@@ -2047,13 +2018,13 @@ void main() {
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		ImGui::Render();
 		int display_w, display_h;
-		glfwGetFramebufferSize(window, &display_w, &display_h);
+		glfwGetFramebufferSize(window.handle(), &display_w, &display_h);
 		glViewport(0, 0, display_w, display_h);
 		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
-		glfwSwapBuffers(window);
+		glfwSwapBuffers(window.handle());
 	}
 
 	pluginEngine.shutdown();
@@ -2061,9 +2032,5 @@ void main() {
 	ImGui_ImplOpenGL3_Shutdown();
 	ImGui_ImplGlfw_Shutdown();
 	ImGui::DestroyContext();
-
-	glfwMakeContextCurrent(nullptr);
-	glfwDestroyWindow(window);
-	glfwTerminate();
 }
 }
