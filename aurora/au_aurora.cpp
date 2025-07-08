@@ -649,19 +649,6 @@ enum struct LocalizationKey : std::uint32_t {
 	kContinue = aurora::fnv1a(aurora::Context::kConsteval, "continue"),
 };
 
-std::vector<std::string> gBuildMessages;
-std::mutex gBuildMessagesMtx;
-
-void post_build_message(std::string const& string) {
-	std::lock_guard lck{ gBuildMessagesMtx };
-	gBuildMessages.emplace_back(string);
-}
-
-template <typename... Types>
-void post_build_message(std::format_string<Types...> const fmt, Types&&... args) {
-	post_build_message(std::format(fmt, std::forward<Types>(args)...));
-};
-
 struct ModDb {
 	std::unordered_map<std::string, std::unordered_map<LocalizationKey, std::string>> localization;
 	std::unordered_map<std::string, Credits> credits;
@@ -682,14 +669,14 @@ static std::vector<ModEntry> gFoundMods;
 
 
 void process_mod_hooks(std::string const& modid) {
-	post_build_message("Processing patches `{}`", modid);
+	spdlog::info("Processing patches `{}`", modid);
 
 	if (std::filesystem::exists(std::format("mods/{}/patches/levels", modid))) {
 		for (auto const& entry : std::filesystem::recursive_directory_iterator(std::format("mods/{}/patches/levels", modid))) {
 			if (entry.is_directory()) continue;
 			if (entry.path().extension().generic_string() != ".lua") continue;
 
-			post_build_message(entry.path().generic_string());
+			spdlog::info(entry.path().generic_string());
 
 			lua_State* L = luaL_newstate();
 			luaL_openlibs(L);
@@ -705,7 +692,7 @@ void process_mod_hooks(std::string const& modid) {
 				gModDb.listings[path].deserialize(L);
 			}
 			else {
-				post_build_message(lua_tostring(L, -1));
+				spdlog::error("Lua Error {}:", lua_tostring(L, -1));
 			}
 			lua_pop(L, 1);
 			lua_close(L);
@@ -717,7 +704,7 @@ void process_mod_hooks(std::string const& modid) {
 			if (entry.is_directory()) continue;
 			if (entry.path().extension().generic_string() != ".lua") continue;
 
-			post_build_message(entry.path().generic_string());
+			spdlog::info(entry.path().generic_string());
 
 			lua_State* L = luaL_newstate();
 			luaL_openlibs(L);
@@ -733,7 +720,7 @@ void process_mod_hooks(std::string const& modid) {
 				gModDb.credits[path].deserialize(L);
 			}
 			else {
-				post_build_message(lua_tostring(L, -1));
+				spdlog::error("Lua Error: {}", lua_tostring(L, -1));
 			}
 			lua_pop(L, 1);
 			lua_close(L);
@@ -752,11 +739,8 @@ struct TCLEPrecompiledLevel {
 	std::unordered_map<std::string, std::vector<std::byte>> files;
 };
 
-
-
-
 void load_precompiled_tcle_mods(std::string const& modid) {
-	post_build_message("Loading TCLE Precompiled `{}`", modid);
+	spdlog::info("Loading TCLE Precompiled `{}`", modid);
 
 	std::string path = std::format("mods/{}.zip", modid);
 
@@ -903,14 +887,14 @@ struct ModDirectoryContent {
 #endif
 
 void load_mod(std::string const& modid) {
-	post_build_message("Loading `{}`", modid);
+	spdlog::info("Loading `{}`", modid);
 
 	// Apply direct files first
 	if (std::filesystem::exists(std::format("mods/{}/direct", modid))) {
 		for (auto const& entry : std::filesystem::recursive_directory_iterator(std::format("mods/{}/direct", modid))) {
 			if (entry.is_directory()) continue;
 
-			post_build_message(entry.path().generic_string());
+			spdlog::info(entry.path().generic_string());
 
 			// compute hash
 			std::filesystem::path fspath = std::filesystem::relative(entry.path(), std::format("mods/{}/direct", modid)).generic_string();
@@ -928,7 +912,7 @@ void load_mod(std::string const& modid) {
 			if (entry.is_directory()) continue;
 			if (entry.path().extension().generic_string() != ".lua") continue;
 
-			post_build_message(entry.path().generic_string());
+			spdlog::info(entry.path().generic_string());
 
 			lua_State* L = luaL_newstate();
 			if (luaL_dofile(L, entry.path().generic_string().c_str()) == LUA_OK) {
@@ -956,7 +940,7 @@ void load_mod(std::string const& modid) {
 				}
 			}
 			else {
-				post_build_message(lua_tostring(L, -1));
+				spdlog::error("Lua Error: {}", lua_tostring(L, -1));
 			}
 			lua_pop(L, 1);
 			lua_close(L);
@@ -968,7 +952,7 @@ void load_mod(std::string const& modid) {
 			if (entry.is_directory()) continue;
 			if (entry.path().extension().generic_string() != ".lua") continue;
 
-			post_build_message(entry.path().generic_string());
+			spdlog::info(entry.path().generic_string());
 
 			lua_State* L = luaL_newstate();
 			if (luaL_dofile(L, entry.path().generic_string().c_str()) == LUA_OK) {
@@ -981,7 +965,7 @@ void load_mod(std::string const& modid) {
 				gModDb.credits[path] = credits;
 			}
 			else {
-				post_build_message(lua_tostring(L, -1));
+				spdlog::error("Lua Error: {}", lua_tostring(L, -1));
 			}
 			lua_pop(L, 1);
 			lua_close(L);
@@ -993,7 +977,7 @@ void load_mod(std::string const& modid) {
 			if (entry.is_directory()) continue;
 			if (entry.path().extension().generic_string() != ".lua") continue;
 
-			post_build_message(entry.path().generic_string());
+			spdlog::info(entry.path().generic_string());
 
 			lua_State* L = luaL_newstate();
 			if (luaL_dofile(L, entry.path().generic_string().c_str()) == LUA_OK) {
@@ -1006,7 +990,7 @@ void load_mod(std::string const& modid) {
 				gModDb.listings[path] = credits;
 			}
 			else {
-				post_build_message(lua_tostring(L, -1));
+				spdlog::info(lua_tostring(L, -1));
 			}
 			lua_pop(L, 1);
 			lua_close(L);
@@ -1018,7 +1002,7 @@ void load_mod(std::string const& modid) {
 			if (entry.is_directory()) continue;
 			if (entry.path().extension().generic_string() != ".dds") continue;
 
-			post_build_message(entry.path().generic_string());
+			spdlog::info(entry.path().generic_string());
 
 			auto engineRelative = std::filesystem::relative(entry.path(), std::format("mods/{}/textures/engine", modid));
 			bool isEngineRelativePath = !engineRelative.empty() && !engineRelative.string().rfind("..", 0) == 0;
@@ -1136,8 +1120,8 @@ void build() {
 	save_mod_order_state();
 
 	if (!std::filesystem::exists("mods/base")) {
-		post_build_message("Thumper content has not been unpacked");
-		post_build_message("Aurora cannot build mod content until this is done");
+		spdlog::info("Thumper content has not been unpacked");
+		spdlog::info("Aurora cannot build mod content until this is done");
 		return;
 	}
 
@@ -1161,10 +1145,10 @@ void build() {
 		load_precompiled_tcle_mods(modid);
 	}
 
-	post_build_message("Building assets");
+	spdlog::info("Building assets");
 
 	for (auto const& [key, table] : gModDb.localization) {
-		post_build_message("`{}`", key);
+		spdlog::info("`{}`", key);
 		std::vector<LocalizationEntry> enteries;
 
 		std::uint32_t totalBytes = 0;
@@ -1199,7 +1183,7 @@ void build() {
 	}
 
 	for (auto const& [key, table] : gModDb.credits) {
-		post_build_message("`{}`", key);
+		spdlog::info("`{}`", key);
 
 		aurora::ByteStream stream;
 		stream.write_u32(16);
@@ -1209,7 +1193,7 @@ void build() {
 	}
 
 	for (auto& [key, table] : gModDb.listings) {
-		post_build_message("`{}`", key);
+		spdlog::info("`{}`", key);
 
 		aurora::ByteStream stream;
 		stream.write_u32(16);
@@ -1248,7 +1232,7 @@ void build() {
 		std::string s = e.what();
 	}
 
-	post_build_message("Done");
+	spdlog::info("Done");
 }
 
 
@@ -1826,108 +1810,59 @@ void main() {
 		bool v = true;
 		unpack_gui(v);
 
-		static std::optional<std::future<void>> buildFuture = std::nullopt;
-
-		if (!buildFuture.has_value()) {
-			ImGui::SetNextWindowPos(ImVec2(io.DisplaySize.x * 0.5f, io.DisplaySize.y * 0.5f), ImGuiCond_Once, ImVec2(0.5f, 0.5f));
-			ImGui::SetNextWindowSize(ImVec2(800, 600), ImGuiCond_Once);
-			if (ImGui::Begin("Launcher")) {
+		ImGui::SetNextWindowPos(ImVec2(io.DisplaySize.x * 0.5f, io.DisplaySize.y * 0.5f), ImGuiCond_Once, ImVec2(0.5f, 0.5f));
+		ImGui::SetNextWindowSize(ImVec2(800, 600), ImGuiCond_Once);
+		if (ImGui::Begin("Launcher")) {
 				
-				ImGui::Columns(2);
+			ImGui::Columns(2);
 
-				for (std::size_t n = 0; n < gFoundMods.size(); n++) {
-					auto const& item = gFoundMods[n];
+			for (std::size_t n = 0; n < gFoundMods.size(); n++) {
+				auto const& item = gFoundMods[n];
 
-					ImGui::PushID(n);
+				ImGui::PushID(n);
 					
-					if (ImGui::Button("Up")) {
-						if (n > 0) std::swap(gFoundMods[n], gFoundMods[n - 1]);
-					}
-
-					ImGui::SameLine();
-
-					if (ImGui::Button("Down")) {
-						if(n < gFoundMods.size() - 1) std::swap(gFoundMods[n], gFoundMods[n + 1]);
-					}
-
-					ImGui::SameLine();
-
-					ImGui::Checkbox("###Enabled", &gFoundMods[n].enabled);
-					ImGui::SameLine();
-
-					ImGui::Selectable(item.modid.c_str());
-
-					ImGui::PopID();
+				if (ImGui::Button("Up")) {
+					if (n > 0) std::swap(gFoundMods[n], gFoundMods[n - 1]);
 				}
 
-				ImGui::NextColumn();
+				ImGui::SameLine();
 
-				ImGui::TextWrapped("%s", "example properties panel");
-
-				ImGui::Columns(1);
-
-				ImGui::Separator();
-
-				static bool buildModContent = true;
-
-
-				ImGui::Checkbox("Build Mod Content", &buildModContent);
-
-
-
-				if (ImGui::Button("Launch Thumper")) {
-					gShouldLaunchThumper = true;
-
-					if (buildModContent) {
-						buildFuture = std::async(std::launch::async, build);
-					}
-					else {
-						glfwSetWindowShouldClose(window.handle(), true);
-					}
+				if (ImGui::Button("Down")) {
+					if(n < gFoundMods.size() - 1) std::swap(gFoundMods[n], gFoundMods[n + 1]);
 				}
+
+				ImGui::SameLine();
+
+				ImGui::Checkbox("###Enabled", &gFoundMods[n].enabled);
+				ImGui::SameLine();
+
+				ImGui::Selectable(item.modid.c_str());
+
+				ImGui::PopID();
 			}
-			ImGui::End();
-		}
-		else {
-			ImGui::SetNextWindowPos(ImVec2(io.DisplaySize.x * 0.5f, io.DisplaySize.y * 0.5f), ImGuiCond_Once, ImVec2(0.5f, 0.5f));
-			ImGui::SetNextWindowSize(ImVec2(800, 600), ImGuiCond_Once);
-			if (ImGui::Begin("Building")) {
-				const float footer_height_to_reserve = ImGui::GetStyle().ItemSpacing.y + ImGui::GetFrameHeightWithSpacing();
-				if (ImGui::BeginChild("ScrollingRegion", ImVec2(0, -footer_height_to_reserve), ImGuiChildFlags_NavFlattened, ImGuiWindowFlags_HorizontalScrollbar)) {
-					ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(4, 1));
 
-					std::lock_guard lck{ gBuildMessagesMtx };
+			ImGui::NextColumn();
 
-					for (auto const& message : gBuildMessages) {
-						ImGui::TextUnformatted(message.c_str(), message.c_str() + message.size());
-					}
+			ImGui::TextWrapped("%s", "example properties panel");
 
-					bool ScrollToBottom = false;
-					bool AutoScroll = true;
+			ImGui::Columns(1);
 
-					if (ScrollToBottom || (AutoScroll && ImGui::GetScrollY() >= ImGui::GetScrollMaxY()))
-						ImGui::SetScrollHereY(1.0f);
+			ImGui::Separator();
 
-					ImGui::PopStyleVar();
+			static bool buildModContent = true;
+
+			ImGui::Checkbox("Build Mod Content", &buildModContent);
+
+			if (ImGui::Button("Launch Thumper")) {
+				if (buildModContent) {
+					build();
 				}
-				ImGui::EndChild();
 
-				if (aurora::is_future_ready(buildFuture.value())) {
-					
-
-					if (ImGui::Button("Launch")) {
-						glfwSetWindowShouldClose(window.handle(), true);
-						gShouldLaunchThumper = true;
-					}
-
-					
-				}
+				glfwSetWindowShouldClose(window.handle(), true);
+				gShouldLaunchThumper = true;
 			}
-			ImGui::End();
-
 		}
-
-		
+		ImGui::End();
 
 		hasher.on_gui(hasherVisible);
 
