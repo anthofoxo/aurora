@@ -865,28 +865,6 @@ void load_precompiled_tcle_mods(std::string const& modid) {
 	);
 }
 
-#if 0
-struct ModDirectoryContent {
-	std::vector<std::string> files;
-
-	ModDirectoryContent(std::string modid) {
-		std::filesystem::path directoryPath = std::filesystem::path("mods") / modid;
-		bool isDirectoryInstall = std::filesystem::exists(directoryPath) && std::filesystem::is_directory(directoryPath);
-		// is not a directory install, its a zip install, this is validated by the find_mods function prior
-
-		if (isDirectoryInstall) {
-			for (auto const& entry : std::filesystem::recursive_directory_iterator(directoryPath)) {
-				files.push_back(std::filesystem::relative(entry.path(), directoryPath).generic_string());
-			}
-		}
-		else {
-			// TODO: read zip files
-			// NOTE: Dev paused, mod loading code needs to be more modular to make an abstract api function across std::filesystem and minizip
-		}
-	}
-};
-#endif
-
 void load_mod(std::string const& modid) {
 	spdlog::info("Loading `{}`", modid);
 
@@ -1248,22 +1226,6 @@ namespace aurora {
 
 std::unordered_map<std::uint32_t, std::string> gHashtable;
 
-void spawn_process_with_path_argument(std::string const& aApplication, std::string const& aArgumentPath) {
-	std::string arguments = std::format("\"{}\" \"{}\"", std::filesystem::path(aApplication).filename().generic_string(), aArgumentPath);
-
-	STARTUPINFOA si;
-	ZeroMemory(&si, sizeof(si));
-	si.cb = sizeof(si);
-
-	PROCESS_INFORMATION pi;
-	ZeroMemory(&pi, sizeof(pi));
-
-	CreateProcessA(aApplication.c_str(), arguments.data(), NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi);
-
-	CloseHandle(pi.hProcess);
-	CloseHandle(pi.hThread);
-}
-
 std::optional<std::string> mPathImHex;
 std::optional<std::string> mPathHxD;
 
@@ -1370,13 +1332,13 @@ void tools_binary_search(bool& aOpen) {
 				if (ImGui::BeginPopupContextItem()) {
 					if (mPathHxD) {
 						if (ImGui::MenuItem("Open File in HxD")) {
-							spawn_process_with_path_argument(*mPathHxD, fmt::format("cache/{}", match.file));
+							aurora::spawn_process_with_path_argument(*mPathHxD, fmt::format("cache/{}", match.file));
 						}
 					}
 
 					if (mPathImHex) {
 						if (ImGui::MenuItem("Open File in ImHex")) {
-							spawn_process_with_path_argument(*mPathImHex, fmt::format("cache/{}", match.file));
+							aurora::spawn_process_with_path_argument(*mPathImHex, fmt::format("cache/{}", match.file));
 						}
 					}
 
@@ -1722,18 +1684,26 @@ enum struct Comp : std::uint32_t {
 
 
 namespace aurora {
+	void logger_init() {
+		spdlog::default_logger()->sinks().emplace_back(std::make_shared<spdlog::sinks::basic_file_sink_mt>("aurora.log", true));
+		spdlog::set_level(spdlog::level::trace);
+		spdlog::flush_every(std::chrono::seconds(5));
+		spdlog::flush_on(spdlog::level::err);
+		spdlog::flush_on(spdlog::level::critical);
+	}
+
 void main() {
-	spdlog::default_logger()->sinks().emplace_back(std::make_shared<spdlog::sinks::basic_file_sink_mt>("aurora.log", true));
-	spdlog::set_level(spdlog::level::trace);
-	spdlog::flush_every(std::chrono::seconds(5));
-	spdlog::flush_on(spdlog::level::err);
-	spdlog::flush_on(spdlog::level::critical);
+	logger_init();
 
-	mPathImHex = std::format("{}/ImHex/imhex-gui.exe", get_program_files_directory());
-	mPathHxD = std::format("{}/HxD/HxD.exe", get_program_files_directory());
+	if (auto path = std::format("{}/ImHex/imhex-gui.exe", get_program_files_directory()); std::filesystem::exists(path)) {
+		mPathImHex = path;
+		spdlog::debug("Found ImHex");
+	}
 
-	if (!std::filesystem::exists(*mPathImHex)) mPathImHex = std::nullopt;
-	if (!std::filesystem::exists(*mPathHxD)) mPathHxD = std::nullopt;
+	if (auto path = std::format("{}/HxD/HxD.exe", get_program_files_directory()); std::filesystem::exists(path)) {
+		mPathHxD = path;
+		spdlog::debug("Found HxD");
+	}
 
 	bool toolsBinarySearch = false;
 	

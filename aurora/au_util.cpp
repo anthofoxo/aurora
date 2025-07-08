@@ -8,6 +8,22 @@
 #include <Shlobj.h>
 
 namespace aurora {
+    void spawn_process_with_path_argument(std::string const& aApplication, std::string const& aArgumentPath) {
+        std::string arguments = std::format("\"{}\" \"{}\"", std::filesystem::path(aApplication).filename().generic_string(), aArgumentPath);
+
+        STARTUPINFOA si;
+        ZeroMemory(&si, sizeof(si));
+        si.cb = sizeof(si);
+
+        PROCESS_INFORMATION pi;
+        ZeroMemory(&pi, sizeof(pi));
+
+        CreateProcessA(aApplication.c_str(), arguments.data(), NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi);
+
+        CloseHandle(pi.hProcess);
+        CloseHandle(pi.hThread);
+    }
+
     std::string unescape(std::string_view const input) {
         std::stringstream output;
         for (size_t i = 0; i < input.length(); ++i) {

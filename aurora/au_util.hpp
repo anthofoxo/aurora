@@ -14,6 +14,8 @@ namespace aurora {
     std::string unescape(std::string_view input);
     std::string escape(std::string_view input);
 
+    void spawn_process_with_path_argument(std::string const& aApplication, std::string const& aArgumentPath);
+
     template<typename T = std::byte, std::enable_if_t<sizeof(T) == 1, int> = 0>
     [[nodiscard]] std::optional<std::vector<T>> read_file(std::filesystem::path const& aPath) {
         std::ifstream stream(aPath, std::ios::binary);

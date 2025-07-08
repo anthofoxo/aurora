@@ -12,24 +12,6 @@
 #include <filesystem>
 
 namespace aurora {
-	namespace {
-		void spawn_process_with_path_argument(std::string const& aApplication, std::string const& aArgumentPath) {
-			std::string arguments = std::format("\"{}\" \"{}\"", std::filesystem::path(aApplication).filename().generic_string(), aArgumentPath);
-
-			STARTUPINFOA si;
-			ZeroMemory(&si, sizeof(si));
-			si.cb = sizeof(si);
-
-			PROCESS_INFORMATION pi;
-			ZeroMemory(&pi, sizeof(pi));
-
-			CreateProcessA(aApplication.c_str(), arguments.data(), NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi);
-
-			CloseHandle(pi.hProcess);
-			CloseHandle(pi.hThread);
-		}
-	}
-
 	GuiHasher::GuiHasher() {
 		mPathImHex = std::format("{}/ImHex/imhex-gui.exe", get_program_files_directory());
 		mPathHxD = std::format("{}/HxD/HxD.exe", get_program_files_directory());
