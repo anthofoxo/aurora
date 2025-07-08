@@ -1849,7 +1849,7 @@ void main() {
 	glfwWindowHint(GLFW_POSITION_X, vidmode->width / 2 - kWidth / 2);
 	glfwWindowHint(GLFW_POSITION_Y, vidmode->height / 2 - kHeight / 2);
 
-	GLFWwindow* window = glfwCreateWindow(1280, 720, "Aurora v0.0.4-a.9", nullptr, nullptr);
+	GLFWwindow* window = glfwCreateWindow(1280, 720, "Aurora v0.0.4-a.10", nullptr, nullptr);
 	if (!window) throw_error_box("Failed to create GLFW window");
 
 	create_window_icons(window);
