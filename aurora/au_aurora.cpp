@@ -1263,71 +1263,6 @@ namespace aurora {
 
 std::unordered_map<std::uint32_t, std::string> gHashtable;
 
-struct Console {
-	std::vector<std::string> mItems;
-	bool mAutoScroll = true;
-	bool mScrollToBottom = false;
-
-	void log(std::string &&item) { mItems.push_back(std::move(item)); }
-	void log(std::string const &item) { mItems.push_back(item); }
-	void clear() { mItems.clear(); }
-
-	void draw(const char* title, bool* p_open) {
-		ImGui::SetNextWindowSize(ImVec2(520, 600), ImGuiCond_FirstUseEver);
-
-		if (!ImGui::Begin(title, p_open)) {
-			ImGui::End();
-			return;
-		}
-		
-		if (ImGui::SmallButton("Clear")) clear();
-		ImGui::SameLine();
-		bool copy_to_clipboard = ImGui::SmallButton("Copy");
-		
-		ImGui::Separator();
-
-		const float footer_height_to_reserve = ImGui::GetStyle().ItemSpacing.y + ImGui::GetFrameHeightWithSpacing();
-		if (ImGui::BeginChild("ScrollingRegion", ImVec2(0, -footer_height_to_reserve), ImGuiChildFlags_NavFlattened, ImGuiWindowFlags_HorizontalScrollbar)) {
-			if (ImGui::BeginPopupContextWindow()) {
-				if (ImGui::Selectable("Clear")) clear();
-				ImGui::EndPopup();
-			}
-
-			ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(4, 1)); // Tighten spacing
-			if (copy_to_clipboard) ImGui::LogToClipboard();
-
-			for (auto const& item : mItems) {
-
-				// Normally you would store more information in your item than just a string.
-				// (e.g. make Items[] an array of structure, store color/type etc.)
-				ImVec4 color;
-				bool has_color = false;
-				if (item.starts_with("[error]")) { color = ImVec4(1.0f, 0.4f, 0.4f, 1.0f); has_color = true; }
-				else if (item.starts_with("# ")) { color = ImVec4(1.0f, 0.8f, 0.6f, 1.0f); has_color = true; }
-
-				if (has_color) ImGui::PushStyleColor(ImGuiCol_Text, color);
-				ImGui::TextUnformatted(item.c_str());
-				if (has_color) ImGui::PopStyleColor();
-			}
-
-			if (copy_to_clipboard) ImGui::LogFinish();
-
-			// Keep up at the bottom of the scroll region if we were already at the bottom at the beginning of the frame.
-			// Using a scrollbar or mouse-wheel will take away from the bottom edge.
-			if (mScrollToBottom || (mAutoScroll && ImGui::GetScrollY() >= ImGui::GetScrollMaxY()))
-				ImGui::SetScrollHereY(1.0f);
-			mScrollToBottom = false;
-
-			ImGui::PopStyleVar();
-		}
-		ImGui::EndChild();
-
-		ImGui::End();
-	}
-};
-
-Console console;
-
 void spawn_process_with_path_argument(std::string const& aApplication, std::string const& aArgumentPath) {
 	std::string arguments = std::format("\"{}\" \"{}\"", std::filesystem::path(aApplication).filename().generic_string(), aArgumentPath);
 
@@ -1474,12 +1409,12 @@ void tools_binary_search(bool& aOpen) {
 }
 
 int lua_print(lua_State* L) {
-	console.log(lua_tostring(L, 1));
+	spdlog::info(lua_tostring(L, 1));
 	return 0;
 }
 
 void cache_scan(std::unordered_set<std::string>& pcFileStorage) {
-	console.log("Scanning cache...");
+	spdlog::info("Scanning cache...");
 
 	pcFileStorage.clear();
 
@@ -1487,7 +1422,7 @@ void cache_scan(std::unordered_set<std::string>& pcFileStorage) {
 		pcFileStorage.insert(entry.path().filename().generic_string());
 	}
 
-	console.log(fmt::format("{} file(s)", pcFileStorage.size()));
+	spdlog::info(fmt::format("{} file(s)", pcFileStorage.size()));
 
 }
 
@@ -1549,7 +1484,7 @@ struct PluginEngine {
 		L = aurora_newstate();
 
 		if (luaL_dofile(L, "aurora/boot.lua") != LUA_OK) {
-			console.log(lua_tostring(L, -1));
+			spdlog::error("Lua Error: {}", lua_tostring(L, -1));
 			shutdown();
 			return;
 		}
@@ -1803,6 +1738,8 @@ enum struct Comp : std::uint32_t {
 
 namespace aurora {
 void main() {
+	spdlog::set_level(spdlog::level::trace);
+
 	mPathImHex = std::format("{}/ImHex/imhex-gui.exe", get_program_files_directory());
 	mPathHxD = std::format("{}/HxD/HxD.exe", get_program_files_directory());
 
@@ -1810,7 +1747,6 @@ void main() {
 	if (!std::filesystem::exists(*mPathHxD)) mPathHxD = std::nullopt;
 
 	bool toolsBinarySearch = false;
-	bool open = true;
 	
 	cache_scan(pcFileStorage);
 
@@ -1844,7 +1780,7 @@ void main() {
 	ImGui_ImplGlfw_InitForOpenGL(window.handle(), true);
 	ImGui_ImplOpenGL3_Init("#version 450 core");
 
-	console.log("Welcome to Aurora!");
+	spdlog::info("Welcome to Aurora!");
 
 	bool showDemo = false;
 
@@ -2010,10 +1946,6 @@ void main() {
 		pluginEngine.update();
 
 		tools_binary_search(toolsBinarySearch);
-
-		if (open) {
-			console.draw("Console", &open);
-		}
 
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		ImGui::Render();
