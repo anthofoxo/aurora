@@ -1,5 +1,6 @@
 #ifdef _WIN32
 #	include <Windows.h>
+#	include <shellapi.h>
 #	undef max
 #	undef min
 #endif
@@ -1004,9 +1005,9 @@ void load_mod(std::string const& modid) {
 	}
 }
 
-#include <unordered_map>
-
 void find_mods() {
+	gFoundMods.clear();
+
 	// load initial mod state
 	lua_State* L = luaL_newstate();
 	if (luaL_dofile(L, "aurora/config.lua") == LUA_OK) {
@@ -1213,7 +1214,6 @@ void build() {
 
 	spdlog::info("Done");
 }
-
 
 ImFont* gVariableSpace = nullptr;
 ImFont* gMonoSpace = nullptr;
@@ -1664,14 +1664,6 @@ bool route_global_shortcut(ImGuiKeyChord const chord) {
 	return !isRouted && ImGui::IsKeyChordPressed(chord);
 }
 
-void throw_error_box(std::string const& message) {
-	spdlog::critical(message);
-	tinyfd_messageBox("Critical Error", message.c_str(), "ok", "error", 1);
-	throw std::runtime_error(message);
-}
-
-
-
 enum struct Comp : std::uint32_t {
 	EditStateComp = aurora::fnv1a("EditStateComp"),
 	TimeDriveComp = aurora::fnv1a("TimeDriveComp"),
@@ -1682,6 +1674,7 @@ enum struct Comp : std::uint32_t {
 	DrawComp = aurora::fnv1a("DrawComp"),
 };
 
+#include "IconsFontAwesome6.h"
 
 namespace aurora {
 	void logger_init() {
@@ -1734,6 +1727,12 @@ void main() {
 	io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 
 	gVariableSpace = io.Fonts->AddFontFromFileTTF("aurora/NotoSans-Regular.ttf", 18.0f);
+
+	ImFontConfig config;
+	config.MergeMode = true;
+	config.GlyphMinAdvanceX = 18.0f; // Use if you want to make the icon monospaced
+	io.Fonts->AddFontFromFileTTF("aurora/fa-solid-900.ttf", 18.0f, &config);
+
 	gMonoSpace = io.Fonts->AddFontFromFileTTF("aurora/NotoSansMono-Regular.ttf", 18.0f);
 
 	ImGui::StyleColorsDark();
@@ -1789,8 +1788,28 @@ void main() {
 
 		ImGui::SetNextWindowPos(ImVec2(io.DisplaySize.x * 0.5f, io.DisplaySize.y * 0.5f), ImGuiCond_Once, ImVec2(0.5f, 0.5f));
 		ImGui::SetNextWindowSize(ImVec2(800, 600), ImGuiCond_Once);
-		if (ImGui::Begin("Launcher")) {
-				
+		if (ImGui::Begin("Launcher", nullptr, ImGuiWindowFlags_MenuBar)) {
+			
+			if (ImGui::BeginMenuBar()) {
+
+				if (ImGui::BeginMenu("File")) {
+					if (ImGui::MenuItemEx("Open Mods Directory", ICON_FA_FOLDER_OPEN)) {
+						ShellExecuteA(NULL, "explore", (std::filesystem::current_path() / "mods").generic_string().c_str(), NULL, NULL, SW_SHOWDEFAULT);
+					}
+
+					ImGui::Separator();
+
+					if (ImGui::MenuItemEx("Rescan Mods Directory", ICON_FA_ROTATE)) {
+						save_mod_order_state();
+						find_mods();
+					}
+
+					ImGui::EndMenu();
+				}
+
+				ImGui::EndMenuBar();
+			}
+
 			ImGui::Columns(2);
 
 			for (std::size_t n = 0; n < gFoundMods.size(); n++) {
