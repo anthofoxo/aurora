@@ -108,14 +108,14 @@ struct LevelListing {
 
 		void deserialize(lua_State* L) {
 			lua_getfield(L, -1, "key"); key = lua_tostring(L, -1); lua_pop(L, 1);
-			lua_getfield(L, -1, "unknown0"); unknown0 = lua_tointeger(L, -1); lua_pop(L, 1);
+			lua_getfield(L, -1, "unknown0"); unknown0 = static_cast<std::uint32_t>(lua_tointeger(L, -1)); lua_pop(L, 1);
 			lua_getfield(L, -1, "path"); path = lua_tostring(L, -1); lua_pop(L, 1);
 			lua_getfield(L, -1, "unlocks"); unlocks = lua_tostring(L, -1); lua_pop(L, 1);
 			lua_getfield(L, -1, "defaultLocked"); defaultLocked = lua_toboolean(L, -1); lua_pop(L, 1);
 			lua_getfield(L, -1, "unknown1"); unknown1 = lua_toboolean(L, -1); lua_pop(L, 1);
 			lua_getfield(L, -1, "credits"); credits = lua_toboolean(L, -1); lua_pop(L, 1);
-			lua_getfield(L, -1, "colorIdx0"); colorIdx0 = lua_tointeger(L, -1); lua_pop(L, 1);
-			lua_getfield(L, -1, "colorIdx1"); colorIdx1 = lua_tointeger(L, -1); lua_pop(L, 1);
+			lua_getfield(L, -1, "colorIdx0"); colorIdx0 = static_cast<std::uint32_t>(lua_tointeger(L, -1)); lua_pop(L, 1);
+			lua_getfield(L, -1, "colorIdx1"); colorIdx1 = static_cast<std::uint32_t>(lua_tointeger(L, -1)); lua_pop(L, 1);
 		}
 
 		void serialize(lua_State* L) {
@@ -135,7 +135,7 @@ struct LevelListing {
 	std::vector<Entry> entries;
 
 	void serialize(aurora::ByteStream& stream) {
-		stream.write_u32(entries.size());
+		stream.write_u32(static_cast<std::uint32_t>(entries.size()));
 		
 		for (auto& entry : entries) {
 			entry.serialize(stream);
@@ -197,7 +197,7 @@ struct Credits {
 			// one new value added to stack
 		}
 
-		[[deprecated]] void deserialize(lua_State* L) {
+		void deserialize(lua_State* L) {
 			lua_getfield(L, -1, "decoration");
 			decoration = lua_tostring(L, -1);
 			lua_pop(L, 1);
@@ -220,7 +220,7 @@ struct Credits {
 		}
 
 		void serialize(aurora::ByteStream& stream) const {
-			stream.write_u32(elements.size());
+			stream.write_u32(static_cast<std::uint32_t>(elements.size()));
 
 			for (auto const& element : elements) {
 				element.serialize(stream);
@@ -266,7 +266,7 @@ struct Credits {
 
 		void serialize(aurora::ByteStream& stream) const {
 			stream.write_sstr(banner);
-			stream.write_u32(thanks.size());
+			stream.write_u32(static_cast<std::uint32_t>(thanks.size()));
 
 			for (auto& str : thanks) {
 				stream.write_sstr(str);
@@ -325,13 +325,13 @@ struct Credits {
 	}
 
 	void serialize(aurora::ByteStream& stream) const {
-		stream.write_u32(major.size());
+		stream.write_u32(static_cast<std::uint32_t>(major.size()));
 
 		for (auto& group : major) {
 			group.serialize(stream);
 		}
 
-		stream.write_u32(minor.size());
+		stream.write_u32(static_cast<std::uint32_t>(minor.size()));
 
 		for (auto& group : minor) {
 			group.serialize(stream);
@@ -440,11 +440,11 @@ struct Localization final {
 
 		enteries.resize(cstrCount);
 
-		for (int i = 0; i < cstrCount; ++i) {
+		for (unsigned int i = 0; i < cstrCount; ++i) {
 			enteries[i].value = stream.read_cstr();
 		}
 
-		for (int i = 0; i < cstrCount; ++i) {
+		for (unsigned int i = 0; i < cstrCount; ++i) {
 			enteries[i].key = stream.read_u32();
 			enteries[i].offset = stream.read_u32();
 		}
@@ -760,7 +760,7 @@ void load_precompiled_tcle_mods(std::string const& modid) {
 
 		std::array<char, 256> filename;
 
-		if (unzGetCurrentFileInfo(file, &file_info, filename.data(), filename.size(), NULL, 0, NULL, 0) != UNZ_OK) {
+		if (unzGetCurrentFileInfo(file, &file_info, filename.data(), static_cast<uLong>(filename.size()), nullptr, 0, nullptr, 0) != UNZ_OK) {
 			unzClose(file);
 			continue;
 		}
@@ -769,7 +769,7 @@ void load_precompiled_tcle_mods(std::string const& modid) {
 			std::vector<std::byte> buffer;
 			buffer.resize(file_info.uncompressed_size);
 
-			int retValue = unzReadCurrentFile(file, buffer.data(), buffer.size());
+			int retValue = unzReadCurrentFile(file, buffer.data(), static_cast<unsigned int>(buffer.size()));
 			assert(retValue == file_info.uncompressed_size);
 
 			level.files[std::string(filename.data())] = std::move(buffer);
@@ -806,7 +806,7 @@ void load_precompiled_tcle_mods(std::string const& modid) {
 
 		auto importCount = stream.read_u32();
 
-		for (int i = 0; i < importCount; ++i) {
+		for (unsigned int i = 0; i < importCount; ++i) {
 			stream.read_u32(); // skip unknown
 			stream.read_sstr(); // skip import path
 		}
@@ -839,7 +839,7 @@ void load_precompiled_tcle_mods(std::string const& modid) {
 	for (auto const& [key, value] : level.files) {
 		if (!key.ends_with(".pc")) continue;
 		std::string stem = std::filesystem::path(key).stem().generic_string();
-		std::uint32_t hashed = std::stoull(stem, 0, 16);
+		std::uint32_t hashed = std::stoul(stem, 0, 16);
 		write_to_thumper_cache(hashed, value);
 		spdlog::info("Found .pc: {}", key);
 	}
@@ -1159,7 +1159,7 @@ void build() {
 			entry.offset = totalBytes;
 			entry.value = value;
 
-			totalBytes += value.size() + 1;
+			totalBytes += static_cast<std::uint32_t>(value.size() + 1ull);
 
 			enteries.emplace_back(std::move(entry));
 		}
@@ -1167,7 +1167,7 @@ void build() {
 		aurora::ByteStream stream;
 		stream.write_u32(16);
 		
-		stream.write_u32(enteries.size());
+		stream.write_u32(static_cast<std::uint32_t>(enteries.size()));
 		stream.write_u32(totalBytes);
 
 		for (auto const& entry : enteries) {
@@ -1773,6 +1773,8 @@ void main() {
 
 	find_mods();
 
+	bool buildModContent = true;
+
 	while(!glfwWindowShouldClose(window.handle())) {
 		glfwPollEvents();
 
@@ -1786,7 +1788,6 @@ void main() {
 
 		if (ImGui::BeginMainMenuBar()) {
 			if (ImGui::BeginMenu("View")) {
-				ImGui::MenuItem("Console", nullptr, &open);
 				ImGui::MenuItem("Hasher", nullptr, &hasherVisible);
 				ImGui::Separator();
 				ImGui::MenuItem("Dear ImGui Demo", ImGui::GetKeyChordName(ImGuiMod_Ctrl | ImGuiMod_Shift | ImGuiKey_D), &showDemo);
@@ -1819,7 +1820,7 @@ void main() {
 			for (std::size_t n = 0; n < gFoundMods.size(); n++) {
 				auto const& item = gFoundMods[n];
 
-				ImGui::PushID(n);
+				ImGui::PushID(reinterpret_cast<void const*>(static_cast<std::uintptr_t>(n)));
 					
 				if (ImGui::Button("Up")) {
 					if (n > 0) std::swap(gFoundMods[n], gFoundMods[n - 1]);
@@ -1847,9 +1848,7 @@ void main() {
 
 			ImGui::Columns(1);
 
-			ImGui::Separator();
-
-			static bool buildModContent = true;
+			ImGui::Separator();			
 
 			ImGui::Checkbox("Build Mod Content", &buildModContent);
 

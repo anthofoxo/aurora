@@ -13,3 +13,7 @@ files {
 	"%{prj.location}/contrib/minizip/*.c",
 	"%{prj.location}/contrib/minizip/*.h",
 }
+
+removefiles {
+	"%{prj.location}/contrib/minizip/miniunz.c",
+}

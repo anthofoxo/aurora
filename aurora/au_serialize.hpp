@@ -56,7 +56,7 @@ namespace aurora {
 		void write_u32(std::uint32_t value) { return write_gen(value); }
 
 		void write_sstr(std::string const& value) {
-			write_u32(value.size());
+			write_u32(static_cast<std::uint32_t>(value.size()));
 			for (auto c : value) mBuffer.emplace_back(static_cast<std::byte>(c));
 		}
 
