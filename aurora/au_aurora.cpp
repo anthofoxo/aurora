@@ -15,8 +15,10 @@
 #include "lua_api.hpp"
 
 #include <lua.hpp>
-#include <spdlog/fmt/fmt.h>
 #include <tinyfiledialogs.h>
+
+#include <spdlog/spdlog.h>
+#include <spdlog/sinks/basic_file_sink.h>
 
 #include <unordered_map>
 #include <iostream>
@@ -44,7 +46,6 @@
 #include "au_window.hpp"
 
 #include "au_util.hpp"
-#include "spdlog/spdlog.h"
 
 #include "au_hash.hpp"
 #include "au_lua_serialize.hpp"
@@ -1722,7 +1723,11 @@ enum struct Comp : std::uint32_t {
 
 namespace aurora {
 void main() {
+	spdlog::default_logger()->sinks().emplace_back(std::make_shared<spdlog::sinks::basic_file_sink_mt>("aurora.log", true));
 	spdlog::set_level(spdlog::level::trace);
+	spdlog::flush_every(std::chrono::seconds(5));
+	spdlog::flush_on(spdlog::level::err);
+	spdlog::flush_on(spdlog::level::critical);
 
 	mPathImHex = std::format("{}/ImHex/imhex-gui.exe", get_program_files_directory());
 	mPathHxD = std::format("{}/HxD/HxD.exe", get_program_files_directory());
