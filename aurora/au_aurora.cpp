@@ -7,6 +7,7 @@
 
 #include <glad/gl.h>
 #include <GLFW/glfw3.h>
+#define IMGUI_DEFINE_MATH_OPERATORS
 #include <imgui.h>
 #include <imgui_internal.h>
 #include <misc/cpp/imgui_stdlib.h>
@@ -621,7 +622,7 @@ void unpack_textures() {
 void unpack_gui(bool& visible) {
 
 	if (!visible) return;
-	if (ImGui::Begin("Unpacker")) {
+	if (ImGui::Begin("Unpacker", &visible)) {
 		ImGui::TextWrapped("%s", "Make sure the backup files are restored before doing this");
 
 		if (ImGui::Button("Unpack Credits")) {
@@ -1685,6 +1686,8 @@ namespace aurora {
 		spdlog::flush_on(spdlog::level::critical);
 	}
 
+#include <array>
+
 void main() {
 	logger_init();
 
@@ -1749,8 +1752,9 @@ void main() {
 	find_mods();
 
 	bool buildModContent = true;
+	bool viewUnpackGui = false;
 
-	while(!glfwWindowShouldClose(window.handle())) {
+	while (!glfwWindowShouldClose(window.handle())) {
 		glfwPollEvents();
 
 		ImGui_ImplOpenGL3_NewFrame();
@@ -1764,15 +1768,16 @@ void main() {
 		if (ImGui::BeginMainMenuBar()) {
 			if (ImGui::BeginMenu("View")) {
 				ImGui::MenuItem("Hasher", nullptr, &hasherVisible);
+				ImGui::MenuItem("Unpacker", nullptr, &viewUnpackGui);
 				ImGui::Separator();
 				ImGui::MenuItem("Dear ImGui Demo", ImGui::GetKeyChordName(ImGuiMod_Ctrl | ImGuiMod_Shift | ImGuiKey_D), &showDemo);
 				ImGui::EndMenu();
 			}
 
 			if (ImGui::BeginMenu("Tools")) {
-				
+
 				ImGui::MenuItem("Binary Search", nullptr, &toolsBinarySearch);
-				
+
 				if (ImGui::MenuItem("Restore Cache Backup")) {
 					restore_cache_content();
 				}
@@ -1783,9 +1788,11 @@ void main() {
 
 		ImGui::EndMainMenuBar();
 
-		bool v = true;
-		unpack_gui(v);
+		unpack_gui(viewUnpackGui);
 
+		static std::string selectionContext;
+
+		static std::once_flag flag; std::call_once(flag, ImGui::SetNextWindowFocus);
 		ImGui::SetNextWindowPos(ImVec2(io.DisplaySize.x * 0.5f, io.DisplaySize.y * 0.5f), ImGuiCond_Once, ImVec2(0.5f, 0.5f));
 		ImGui::SetNextWindowSize(ImVec2(800, 600), ImGuiCond_Once);
 		if (ImGui::Begin("Launcher", nullptr, ImGuiWindowFlags_MenuBar)) {
@@ -1793,11 +1800,19 @@ void main() {
 			if (ImGui::BeginMenuBar()) {
 
 				if (ImGui::BeginMenu("File")) {
-					if (ImGui::MenuItemEx("Open Mods Directory", ICON_FA_FOLDER_OPEN)) {
-						ShellExecuteA(NULL, "explore", (std::filesystem::current_path() / "mods").generic_string().c_str(), NULL, NULL, SW_SHOWDEFAULT);
+					if (ImGui::MenuItem("Enable All")) {
+						for (auto& item : gFoundMods) item.enabled = true;
+					}
+
+					if (ImGui::MenuItem("Disable All")) {
+						for (auto& item : gFoundMods) item.enabled = false;
 					}
 
 					ImGui::Separator();
+
+					if (ImGui::MenuItemEx("Open Mods Directory", ICON_FA_FOLDER_OPEN)) {
+						ShellExecuteA(nullptr, "explore", (std::filesystem::current_path() / "mods").generic_string().c_str(), NULL, NULL, SW_SHOWDEFAULT);
+					}
 
 					if (ImGui::MenuItemEx("Rescan Mods Directory", ICON_FA_ROTATE)) {
 						save_mod_order_state();
@@ -1812,40 +1827,120 @@ void main() {
 
 			ImGui::Columns(2);
 
-			for (std::size_t n = 0; n < gFoundMods.size(); n++) {
-				auto const& item = gFoundMods[n];
+			float footerSize = ImGui::GetStyle().ItemSpacing.y + ImGui::GetFrameHeightWithSpacing();
 
-				ImGui::PushID(reinterpret_cast<void const*>(static_cast<std::uintptr_t>(n)));
-					
-				if (ImGui::Button("Up")) {
-					if (n > 0) std::swap(gFoundMods[n], gFoundMods[n - 1]);
+			ImGui::SeparatorText("Inactive");
+			if (ImGui::BeginChild("Inactive", { 0.0f, -footerSize }, ImGuiChildFlags_None, ImGuiWindowFlags_AlwaysVerticalScrollbar)) {
+				for (auto& item : gFoundMods) {
+					if (item.enabled) continue;
+
+					std::underlying_type_t<ImGuiTreeNodeFlags_> flags = ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_SpanAvailWidth;
+					if (selectionContext == item.modid) { flags |= ImGuiTreeNodeFlags_Selected; }
+
+					std::optional<char const*> issue = std::nullopt;
+
+					if (item.modid == "base") {
+						issue = "WARN: `base` is not being loaded. This will cause loss of base game content.";
+					}
+
+					if (issue) ImGui::PushStyleColor(ImGuiCol_Text, { 1.0f, fmodf(glfwGetTime(), 1.0f), fmodf(glfwGetTime(), 1.0f), 1.0f });
+
+					if (ImGui::TreeNodeEx(item.modid.c_str(), flags)) ImGui::TreePop();
+
+					if (issue) {
+						ImGui::PushStyleColor(ImGuiCol_Text, { 1.0f, 0.0f, 0.0f, 1.0f });
+						ImGui::SetItemTooltip("%s", *issue);
+						ImGui::PopStyleColor(2);
+					}
+
+					if (ImGui::IsItemActivated()) { selectionContext = item.modid; }
+
+					if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left) && ImGui::IsItemHovered(ImGuiHoveredFlags_None)) {
+						item.enabled ^= true;
+					}
 				}
-
-				ImGui::SameLine();
-
-				if (ImGui::Button("Down")) {
-					if(n < gFoundMods.size() - 1) std::swap(gFoundMods[n], gFoundMods[n + 1]);
-				}
-
-				ImGui::SameLine();
-
-				ImGui::Checkbox("###Enabled", &gFoundMods[n].enabled);
-				ImGui::SameLine();
-
-				ImGui::Selectable(item.modid.c_str());
-
-				ImGui::PopID();
 			}
+
+			ImGui::EndChild();
 
 			ImGui::NextColumn();
 
-			ImGui::TextWrapped("%s", "example properties panel");
+			ImGui::SeparatorText("Active");
+			if (ImGui::BeginChild("Active", { 0.0f, -footerSize }, ImGuiChildFlags_None, ImGuiWindowFlags_AlwaysVerticalScrollbar)) {
+				for (std::size_t n = 0; n < gFoundMods.size(); ++n) {
+					auto& item = gFoundMods[n];
+					if (!item.enabled) continue;
+
+					std::underlying_type_t<ImGuiTreeNodeFlags_> flags = ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_SpanAvailWidth;
+					if (selectionContext == item.modid) { flags |= ImGuiTreeNodeFlags_Selected; }
+
+					std::optional<char const*> issue = std::nullopt;
+
+					if (n == 0 && gFoundMods[n].modid != "base") {
+						issue = "WARN: `base` is not the first loaded mod in the list. This will cause loss of base game content.";
+					}
+					else if (n != 0 && gFoundMods[n].modid == "base") {
+						issue = "WARN: `base` is not the first loaded mod in the list. This will cause loss of base game content.";
+					}
+					else if (item.modid == "aurora.base" && n != 1) {
+						issue = "WARN: `aurora.base` is not loaded directly after `base`. This will cause loss of base aurora content.";
+					}
+
+					if (issue) ImGui::PushStyleColor(ImGuiCol_Text, { 1.0f, fmodf(glfwGetTime(), 1.0f), fmodf(glfwGetTime(), 1.0f), 1.0f });
+
+					// A duplicate id may be present for one frame when switching state from inactive -> active
+					ImGui::PushItemFlag(ImGuiItemFlags_AllowDuplicateId, true);
+					if (ImGui::TreeNodeEx(item.modid.c_str(), flags)) ImGui::TreePop();
+
+					if (issue) {
+						ImGui::PushStyleColor(ImGuiCol_Text, { 1.0f, 0.0f, 0.0f, 1.0f });
+						ImGui::SetItemTooltip("%s", *issue);
+						ImGui::PopStyleColor(2);
+					}
+
+					
+
+					//if (n == 1 && gFoundMods[n].modid != "aurora.base") {
+					//	auto* window = ImGui::GetCurrentWindow();
+					//	ImGui::GetForegroundDrawList(window)->AddRect(window->Pos, window->Pos + window->Size, IM_COL32(255, 255, 0, 255));
+					//	ImGui::SetItemTooltip("%s", "`aurora.base` is not the second loaded mod in the list. This may cause issues when applying mods.");
+					//}
+
+					ImGui::PopItemFlag();
+
+					if (ImGui::IsItemActivated()) { selectionContext = item.modid; }
+
+					if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left) && ImGui::IsItemHovered(ImGuiHoveredFlags_None)) {
+						item.enabled ^= true;
+					}
+
+					if (ImGui::BeginDragDropSource()) {
+						ImGui::SetDragDropPayload("modid_reorder", &n, sizeof(std::size_t));
+						ImGui::TextUnformatted(item.modid.c_str());
+						ImGui::EndDragDropSource();
+					}
+
+					if (ImGui::BeginDragDropTarget()) {
+						if (ImGuiPayload const* payload = ImGui::AcceptDragDropPayload("modid_reorder")) {
+							IM_ASSERT(payload->DataSize == sizeof(std::size_t));
+							std::size_t const sourceIdx = *reinterpret_cast<std::size_t const*>(payload->Data);
+							std::swap(gFoundMods[sourceIdx], gFoundMods[n]);
+						}
+
+						ImGui::EndDragDropTarget();
+					}
+				}
+			}
+			ImGui::EndChild();
+
 
 			ImGui::Columns(1);
 
 			ImGui::Separator();			
 
 			ImGui::Checkbox("Build Mod Content", &buildModContent);
+
+			ImGui::SameLine();
 
 			if (ImGui::Button("Launch Thumper")) {
 				if (buildModContent) {
@@ -1854,6 +1949,24 @@ void main() {
 
 				glfwSetWindowShouldClose(window.handle(), true);
 				gShouldLaunchThumper = true;
+			}
+		}
+		ImGui::End();
+
+		if (ImGui::Begin("Mod Details")) {
+			if (!selectionContext.empty()) {
+				ModEntry* entry = nullptr;
+
+				for (auto& item : gFoundMods) {
+					if (item.modid == selectionContext) {
+						entry = &item;
+						break;
+					}
+				}
+
+				assert(entry);
+
+				ImGui::TextUnformatted(entry->modid.c_str());
 			}
 		}
 		ImGui::End();
