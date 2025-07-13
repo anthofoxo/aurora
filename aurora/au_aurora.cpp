@@ -2135,7 +2135,7 @@ void main() {
 		}
 		ImGui::End();
 
-		hasher.on_gui(hasherVisible);
+		hasher.on_gui(hasherVisible, gHashtable);
 
 		if (showDemo) {
 			ImGui::ShowDemoWindow(&showDemo);

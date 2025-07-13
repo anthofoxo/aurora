@@ -20,7 +20,7 @@ namespace aurora {
 		if (!std::filesystem::exists(*mPathHxD)) mPathHxD = std::nullopt;
 	}
 
-	void GuiHasher::on_gui(bool& aVisible) {
+	void GuiHasher::on_gui(bool& aVisible, std::unordered_map<std::uint32_t, std::string> const& aHashtable) {
 		if (!aVisible) return;
 
 		ImGui::SetNextWindowSize(ImVec2(640, 480), ImGuiCond_FirstUseEver);
@@ -35,12 +35,34 @@ namespace aurora {
 			std::string const path = std::format("cache/{:x}.pc", mResultHash);
 			if (std::filesystem::exists(path)) mResultFile = path;
 			else mResultFile = std::nullopt;
+
+			try {
+				mHashtableHit = std::nullopt;
+
+				if (mInput.size() <= 8) { // inputs larger than 8 chars will never have a hash hit
+					std::uint32_t hashed = std::stoul(mInput, 0, 16);
+					if (auto it = aHashtable.find(hashed); it != aHashtable.end()) {
+						mHashtableHit = it->second;
+					}
+				}
+			}
+			catch (std::invalid_argument const& e) {}
+
+			mIsInHashtable = aHashtable.contains(mResultHash);
 		}
 
 		ImGui::LabelText("Output", "0x%x", mResultHash);
 
 		if (mResultFile) {
 			ImGui::LabelText("File", "%s", mResultFile->c_str());
+		}
+
+		if (mHashtableHit) {
+			ImGui::LabelText("Hashtable Hit", "%s", mHashtableHit->c_str());
+		}
+
+		if (mIsInHashtable) {
+			ImGui::TextUnformatted("Found in hashtable");
 		}
 
 		ImGui::SeparatorText("Actions");
