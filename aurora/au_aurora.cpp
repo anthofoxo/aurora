@@ -55,6 +55,9 @@
 
 #include "au_serialize.hpp"
 
+
+std::unordered_map<std::uint32_t, std::string> gHashtable;
+
 void write_to_thumper_cache(std::uint32_t hash, std::span<std::byte const> bytes) {
 	std::string path = std::format("cache/{:x}.pc", hash);
 
@@ -72,6 +75,140 @@ void write_to_thumper_cache(std::uint32_t hash, std::span<std::byte const> bytes
 bool cache_file_exists(std::uint32_t value) {
 	return std::filesystem::exists(std::format("cache/{:x}.pc", value));
 }
+
+struct AuroraParseError : public std::runtime_error {
+	explicit AuroraParseError(std::string const& message) : std::runtime_error(message.c_str()) {}
+	explicit AuroraParseError(char const* message) : std::runtime_error(message) {}
+};
+
+
+std::string hashedStringGui(std::uint32_t hash) {
+	auto it = gHashtable.find(hash);
+
+	if (it != gHashtable.end()) return std::string(it->second);
+
+	return std::format("[{:x}]", hash);
+}
+
+struct ObjlibParser final {
+	struct GlobalImport {
+		std::uint32_t unknown;
+		std::string path;
+
+		void deserialize(aurora::ByteStream& s) {
+			unknown = s.read_u32();
+			path = s.read_sstr();
+		}
+	};
+
+	struct ObjectImport {
+		std::uint32_t type;
+		std::string name;
+		std::uint32_t unknown;
+		std::string path;
+
+		void deserialize(aurora::ByteStream& s) {
+			type = s.read_u32();
+			name = s.read_sstr();
+			unknown = s.read_u32();
+			path = s.read_sstr();
+		}
+	};
+
+	struct ObjectDeclaration {
+		std::uint32_t type;
+		std::string name;
+
+		void deserialize(aurora::ByteStream& s) {
+			type = s.read_u32();
+			name = s.read_sstr();
+		}
+	};
+
+	void parse(std::string_view aPath) {
+		std::vector<std::byte> buffer;
+
+		if (auto tempBuffer = aurora::read_file(std::format("cache/{}", aPath))) { buffer = tempBuffer.value(); }
+		else if (cache_file_exists(aurora::fnv1a(aPath))) { buffer = *aurora::read_file(std::format("cache/{:x}.pc", aurora::fnv1a(aPath))); }
+
+		if (buffer.size() == 0) throw AuroraParseError("Failed to parse file, no bytes returned");
+
+		aurora::ByteStream s;
+		s.mBuffer = std::move(buffer);
+
+		mFileType = s.read_u32();
+		mObjlibType = s.read_u32();
+
+		// Ignore, sometimes 3 values, sometimes 4
+		s.read_u32();
+		s.read_u32();
+		s.read_u32();
+		s.read_u32();
+
+		mGlobalImports.resize(s.read_u32());
+		for (auto& element : mGlobalImports) element.deserialize(s);
+
+		mPath = s.read_sstr();
+
+		mObjectImports.resize(s.read_u32());
+		for (auto& element : mObjectImports) element.deserialize(s);
+
+		mObjectDeclarations.resize(s.read_u32());
+		for (auto& element : mObjectDeclarations) element.deserialize(s);
+	}
+
+	void gui() {
+		ImGui::LabelText("File Type", "%d", mFileType);
+		ImGui::LabelText("Objlib Type", "%x", mObjlibType); // LevelLib
+
+		if (ImGui::CollapsingHeader("Global Imports")) {
+			ImGui::PushID("Global Imports");
+			for (std::size_t i = 0; i < mGlobalImports.size(); ++i) {
+				if (ImGui::TreeNode(mGlobalImports[i].path.c_str())) {
+
+					ImGui::LabelText("Unknown", "%d", mGlobalImports[i].unknown);
+
+					ImGui::TreePop();
+				}
+			}
+			ImGui::PopID();
+		}
+
+		ImGui::LabelText("Path", "%s", mPath.c_str());
+
+		if (ImGui::CollapsingHeader("Object Imports")) {
+			ImGui::PushID("Object Imports");
+			for (std::size_t i = 0; i < mObjectImports.size(); ++i) {
+				if (ImGui::TreeNode(mObjectImports[i].name.c_str())) {
+					ImGui::LabelText("Type", "%s", hashedStringGui(mObjectImports[i].type).c_str());
+					ImGui::LabelText("Unknown", "%d", mObjectImports[i].unknown);
+					ImGui::LabelText("Path", "%s", mObjectImports[i].path.c_str());
+
+					ImGui::TreePop();
+				}
+			}
+			ImGui::PopID();
+		}
+
+		if (ImGui::CollapsingHeader("Object Declarations")) {
+			ImGui::PushID("Object Declarations");
+
+			for (std::size_t i = 0; i < mObjectDeclarations.size(); ++i) {
+				ImGui::Text("%s (%s)", mObjectDeclarations[i].name.c_str(), hashedStringGui(mObjectDeclarations[i].type).c_str());
+			}
+			ImGui::PopID();
+		}
+	}
+
+	std::uint32_t mFileType;
+	std::uint32_t mObjlibType;
+	std::vector<GlobalImport> mGlobalImports;
+	std::string mPath;
+	std::vector<ObjectImport> mObjectImports;
+	std::vector<ObjectDeclaration> mObjectDeclarations;
+};
+
+static ObjlibParser gObjlibParserStaticData;
 
 struct LevelListing {
 	struct Entry {
@@ -1225,7 +1362,6 @@ namespace aurora {
 	bool should_launch_thumper() { return gShouldLaunchThumper; }
 }
 
-std::unordered_map<std::uint32_t, std::string> gHashtable;
 
 std::optional<std::string> mPathImHex;
 std::optional<std::string> mPathHxD;
@@ -1789,6 +1925,34 @@ void main() {
 		ImGui::EndMainMenuBar();
 
 		unpack_gui(viewUnpackGui);
+
+		if (ImGui::Begin("Objlib Parser")) {
+			static std::string path = "Alevels/demo.objlib";
+			static std::string status = "Waiting";
+
+			ImGui::InputText("Path", &path);
+
+			ImGui::SameLine();
+
+			if (ImGui::Button("Parse")) {
+				try {
+					status = "Parsing...";
+					gObjlibParserStaticData.parse(path);
+					status = "OK";
+				}
+				catch (AuroraParseError const& e) {
+					status = e.what();
+				}
+			}
+
+			ImGui::Text("%s", status.c_str());
+
+			ImGui::Separator();
+
+			gObjlibParserStaticData.gui();
+			
+		}
+		ImGui::End();
 
 		static std::string selectionContext;
 

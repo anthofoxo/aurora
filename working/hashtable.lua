@@ -1,4 +1,28 @@
 local hashes = {
+	-- Objlib Object Declaration Type Names
+	"SequinLeaf",
+	"Sample",
+	"EntitySpawner",
+	"SequinMaster",
+	"SequinDrawer",
+	"SequinGate",
+	"SequinLevel",
+	"Path",
+	"Mesh",
+	"Mat",
+	"Flow",
+	"TraitAnim",
+	"Cam",
+	"Env",
+	"PathDecorator",
+	"Tex2D",
+	"Tex3D",
+	"Xfmer",
+	"ChannelGroup",
+	"DSP",
+	"Bender",
+
+	-- Localization Keys
 	"accept",
 	"no",
 	"level1",
