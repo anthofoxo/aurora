@@ -208,6 +208,7 @@ struct ObjlibParser final {
 	std::vector<ObjectDeclaration> mObjectDeclarations;
 };
 
+static bool gObjlibParserStaticDataVisible = false;
 static ObjlibParser gObjlibParserStaticData;
 
 struct LevelListing {
@@ -1920,39 +1921,49 @@ void main() {
 
 				ImGui::EndMenu();
 			}
+
+			if (ImGui::BeginMenu("Experimental")) {
+				ImGui::MenuItem("Objlib Level Parser", nullptr, &gObjlibParserStaticDataVisible);
+
+				ImGui::EndMenu();
+			}
 		}
 
 		ImGui::EndMainMenuBar();
 
 		unpack_gui(viewUnpackGui);
+		
 
-		if (ImGui::Begin("Objlib Parser")) {
-			static std::string path = "Alevels/demo.objlib";
-			static std::string status = "Waiting";
+		if (gObjlibParserStaticDataVisible) {
+			if (ImGui::Begin("Objlib Parser", &gObjlibParserStaticDataVisible)) {
+				static std::string path = "Alevels/demo.objlib";
+				static std::string status = "Waiting";
 
-			ImGui::InputText("Path", &path);
+				ImGui::InputText("Path", &path);
 
-			ImGui::SameLine();
+				ImGui::SameLine();
 
-			if (ImGui::Button("Parse")) {
-				try {
-					status = "Parsing...";
-					gObjlibParserStaticData.parse(path);
-					status = "OK";
+				if (ImGui::Button("Parse")) {
+					try {
+						status = "Parsing...";
+						gObjlibParserStaticData.parse(path);
+						status = "OK";
+					}
+					catch (AuroraParseError const& e) {
+						status = e.what();
+					}
 				}
-				catch (AuroraParseError const& e) {
-					status = e.what();
-				}
+
+				ImGui::Text("%s", status.c_str());
+
+				ImGui::Separator();
+
+				gObjlibParserStaticData.gui();
+
 			}
-
-			ImGui::Text("%s", status.c_str());
-
-			ImGui::Separator();
-
-			gObjlibParserStaticData.gui();
-			
+			ImGui::End();
 		}
-		ImGui::End();
+		
 
 		static std::string selectionContext;
 
