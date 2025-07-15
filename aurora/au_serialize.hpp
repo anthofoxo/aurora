@@ -28,6 +28,8 @@ namespace aurora {
 		std::uint32_t read_u8() { return read_gen<std::uint8_t>(); }
 		std::uint32_t read_u32() { return read_gen<std::uint32_t>(); }
 
+		std::uint32_t read_f32() { return read_gen<float>(); }
+
 		std::string read_sstr() {
 			auto size = read_u32();
 			if (mOffset + size > mBuffer.size()) throw std::out_of_range(kError);

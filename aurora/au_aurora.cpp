@@ -125,6 +125,99 @@ struct ObjlibParser final {
 		}
 	};
 
+	struct SequinMasterLvl final {
+		std::string lvlName;
+		std::string gateName;
+		bool isCheckpoint;
+		std::string checkpointLeaderLvlName;
+		std::string restLvlName;
+
+		bool unknownBool0;
+		bool unknownBool1;
+		uint32_t unknown0;
+		bool unknownBool2;
+
+		bool playPlus;
+
+		void deserialize(aurora::ByteStream& aStream) {
+			lvlName = aStream.read_sstr();
+			gateName = aStream.read_sstr();
+			isCheckpoint = aStream.read_u8();
+			checkpointLeaderLvlName = aStream.read_sstr();
+			restLvlName = aStream.read_sstr();
+
+			unknownBool0 = aStream.read_u8();
+			unknownBool1 = aStream.read_u8();
+			unknown0 = aStream.read_u32();
+			unknownBool2 = aStream.read_u8();
+
+			playPlus = aStream.read_u8();
+		}
+	};
+
+	struct SequinMaster final {
+		static constexpr std::array<std::uint32_t, 4> kHeader = { 33, 33, 4, 2 };
+
+		std::array<uint32_t, 4> header = kHeader;
+		uint32_t hash0;
+		uint32_t unknown0 = 1;
+		uint32_t hash1;
+		std::string timeUnit = "kTimeBeats";
+		uint32_t hash2;		//editstatecomp
+		uint32_t unknown1 = 0;
+		float unknown2;
+		std::string skybox;
+		std::string introLvl;
+
+		std::vector<SequinMasterLvl> sublevels;
+
+		uint8_t footer1;
+		uint8_t footer2;
+		uint32_t footer3;
+		uint32_t footer4;
+		uint32_t footer5;
+		uint32_t footer6;
+		float footer7;
+		float footer8;
+		float footer9;
+		std::string checkpointLvl;
+		std::string pathGameplay = "path.gameplay";
+
+		void deserialize(aurora::ByteStream& aStream) {
+			for (size_t i = 0; i < kHeader.size(); ++i) {
+				assert(header[i] = aStream.read_u32() == kHeader[i]);
+			}
+
+			hash0 = aStream.read_u32();
+			unknown0 = aStream.read_u32();
+			hash1 = aStream.read_u32();
+			timeUnit = aStream.read_sstr();
+			hash2 = aStream.read_u32();
+			unknown1 = aStream.read_u32();
+			unknown2 = aStream.read_f32();
+			skybox = aStream.read_sstr();
+			introLvl = aStream.read_sstr();
+
+			sublevels.resize(aStream.read_u32());
+
+			for (auto& sublevel : sublevels) {
+				sublevel.deserialize(aStream);
+			}
+
+			footer1 = aStream.read_u8();
+			footer2 = aStream.read_u8();
+			footer3 = aStream.read_u32();
+			footer4 = aStream.read_u32();
+			footer5 = aStream.read_u32();
+			footer6 = aStream.read_u32();
+			footer7 = aStream.read_f32();
+			footer8 = aStream.read_f32();
+			footer9 = aStream.read_f32();
+			checkpointLvl = aStream.read_sstr();
+			pathGameplay = aStream.read_sstr();
+		}
+	};
+
 	void parse(std::string_view aPath) {
 		std::vector<std::byte> buffer;
 
@@ -155,9 +248,130 @@ struct ObjlibParser final {
 
 		mObjectDeclarations.resize(s.read_u32());
 		for (auto& element : mObjectDeclarations) element.deserialize(s);
+
+		// object readback
+
+		for (auto& declaration : mObjectDeclarations) {
+			if (declaration.type == aurora::fnv1a("SequinMaster")) {
+				std::span<std::byte const> headerBytes = std::as_bytes(std::span(SequinMaster::kHeader));
+
+				auto it = std::search(s.mBuffer.begin() + s.mOffset, s.mBuffer.end(), headerBytes.begin(), headerBytes.end());
+
+				if (it != s.mBuffer.end()) {
+					s.mOffset += std::distance(s.mBuffer.begin() + s.mOffset, it);
+
+					SequinMaster master;
+					master.deserialize(s);
+					mMasters[declaration.name] = std::move(master);
+
+				}
+			}
+		}
+
+		loadedFile = aPath;
+	}
+
+	std::string mSelectedObject;
+	std::unordered_map<std::string, SequinMaster> mMasters;
+
+	std::string loadedFile;
+
+	void guiEditors() {
+		std::string title = std::format("Master: {} ({})###Master", mSelectedObject, loadedFile);
+		if (auto it = mMasters.find(mSelectedObject); it != mMasters.end()) {
+			if (ImGui::Begin(title.c_str())) {
+				auto& ref = it->second;
+				ImGui::InputText("Time Unit", &ref.timeUnit);
+				ImGui::InputText("Skybox", &ref.skybox);
+				ImGui::InputText("Intro", &ref.introLvl);
+				ImGui::InputText("Checkpoint", &ref.checkpointLvl);
+				ImGui::InputText("Gameplay", &ref.pathGameplay);
+
+				ImGui::InputScalar("hash0", ImGuiDataType_U32, &ref.hash0);
+				ImGui::InputScalar("unknown0", ImGuiDataType_U32, &ref.unknown0);
+				ImGui::InputScalar("hash1", ImGuiDataType_U32, &ref.hash1);
+				ImGui::InputScalar("hash2", ImGuiDataType_U32, &ref.hash2);
+				ImGui::InputScalar("unknown1", ImGuiDataType_U32, &ref.unknown1);
+
+				ImGui::InputFloat("Unknown 2", &ref.unknown2);
+
+				ImGui::InputScalar("footer1", ImGuiDataType_U8, &ref.footer1);
+				ImGui::InputScalar("footer2", ImGuiDataType_U8, &ref.footer2);
+
+				ImGui::InputScalar("footer3", ImGuiDataType_U32, &ref.footer3);
+				ImGui::InputScalar("footer4", ImGuiDataType_U32, &ref.footer4);
+				ImGui::InputScalar("footer5", ImGuiDataType_U32, &ref.footer5);
+				ImGui::InputScalar("footer6", ImGuiDataType_U32, &ref.footer6);
+
+				ImGui::InputFloat("Footer 7", &ref.footer7);
+				ImGui::InputFloat("Footer 8", &ref.footer8);
+				ImGui::InputFloat("Footer 9", &ref.footer9);
+
+
+
+
+
+
+
+
+
+
+				ImGui::Separator();
+
+
+
+				for (auto it = ref.sublevels.begin(); it != ref.sublevels.end();) {
+					bool shouldDelete = false;
+
+					auto& element = *it;
+
+					std::string const& name = element.gateName.empty() ? element.lvlName : element.gateName;
+					bool open = ImGui::TreeNodeEx(name.c_str());
+
+					if (ImGui::BeginPopupContextItem()) {
+						if (ImGui::MenuItem("Delete")) {
+							shouldDelete = true;
+						}
+
+						ImGui::EndPopup();
+					}
+
+					if (open) {
+
+						ImGui::InputText("Level", &element.lvlName);
+						ImGui::InputText("Gate", &element.gateName);
+						ImGui::Checkbox("Has Checkpoint", &element.isCheckpoint);
+						ImGui::InputText("Leader Level", &element.checkpointLeaderLvlName);
+						ImGui::InputText("Rest Level", &element.restLvlName);
+						ImGui::Checkbox("Unknown Bool 0", &element.unknownBool0);
+						ImGui::Checkbox("Unknown Bool 1", &element.unknownBool1);
+						ImGui::InputScalar("Unknown 0", ImGuiDataType_U32, &element.unknown0);
+						ImGui::Checkbox("Unknown Bool 2", &element.unknownBool2);
+						ImGui::Checkbox("Play Plus", &element.playPlus);
+
+						ImGui::TreePop();
+					}
+
+					if (shouldDelete) {
+						it = ref.sublevels.erase(it);
+					}
+					else {
+						++it;
+					}
+				}
+			}
+			ImGui::End();
+		}
+
+			
 	}
 
 	void gui() {
+
+		ImGui::InputText("Selected File", &mSelectedObject);
+
+		ImGui::Separator();
+
 		ImGui::LabelText("File Type", "%d", mFileType);
 		ImGui::LabelText("Objlib Type", "%x", mObjlibType); // LevelLib
 
@@ -194,10 +408,14 @@ struct ObjlibParser final {
 			ImGui::PushID("Object Declarations");
 
 			for (std::size_t i = 0; i < mObjectDeclarations.size(); ++i) {
-				ImGui::Text("%s (%s)", mObjectDeclarations[i].name.c_str(), hashedStringGui(mObjectDeclarations[i].type).c_str());
+				std::string text = std::format("{} ({})", mObjectDeclarations[i].name.c_str(), hashedStringGui(mObjectDeclarations[i].type).c_str());
+				if (ImGui::Selectable(text.c_str(), mSelectedObject == mObjectDeclarations[i].name)) {
+					mSelectedObject = mObjectDeclarations[i].name;
+				}
 			}
 			ImGui::PopID();
 		}
+
 	}
 
 	std::uint32_t mFileType;
@@ -1934,9 +2152,11 @@ void main() {
 		unpack_gui(viewUnpackGui);
 		
 
+		static std::string path = "Alevels/demo.objlib";
+
 		if (gObjlibParserStaticDataVisible) {
 			if (ImGui::Begin("Objlib Parser", &gObjlibParserStaticDataVisible)) {
-				static std::string path = "Alevels/demo.objlib";
+				
 				static std::string status = "Waiting";
 
 				ImGui::InputText("Path", &path);
@@ -1962,6 +2182,8 @@ void main() {
 
 			}
 			ImGui::End();
+
+			gObjlibParserStaticData.guiEditors();
 		}
 		
 
