@@ -533,216 +533,41 @@ struct LevelListing {
 
 #include "au_serialize.hpp"
 
-struct Credits {
-	struct MajorGroupElement {
+struct Credits : public aurora::Serializable {
+	struct MajorGroupElement : public aurora::Serializable {
 		std::string decoration;
 		std::string text;
 
-		void deserialize(aurora::ByteStream& stream) {
-			decoration = stream.read_sstr();
-			text = stream.read_sstr();
-		}
-
-		void serialize(aurora::ByteStream& stream) const {
-			stream.write_sstr(decoration);
-			stream.write_sstr(text);
-		}
-
-		void serialize(lua_State* L) {
-			lua_newtable(L);
-			lua_pushstring(L, decoration.c_str());
-			lua_setfield(L, -2, "decoration");
-			lua_pushstring(L, text.c_str());
-			lua_setfield(L, -2, "text");
-			// one new value added to stack
-		}
-
-		void deserialize(lua_State* L) {
-			lua_getfield(L, -1, "decoration");
-			decoration = lua_tostring(L, -1);
-			lua_pop(L, 1);
-
-			lua_getfield(L, -1, "text");
-			text = lua_tostring(L, -1);
-			lua_pop(L, 1);
+		void serialize(aurora::Serializer& a) override {
+			AU_FIELD(a, decoration);
+			AU_FIELD(a, text);
 		}
 	};
 
-	struct MajorGroup {
+	struct MajorGroup : public aurora::Serializable {
 		std::vector<MajorGroupElement> elements;
 
-		void deserialize(aurora::ByteStream& stream) {
-			elements.resize(stream.read_u32());
-
-			for (auto& element : elements) {
-				element.deserialize(stream);
-			}
-		}
-
-		void serialize(aurora::ByteStream& stream) const {
-			stream.write_u32(static_cast<std::uint32_t>(elements.size()));
-
-			for (auto const& element : elements) {
-				element.serialize(stream);
-			}
-		}
-
-		void serialize(lua_State* L) {
-			lua_newtable(L);
-
-			for (int i = 0; i < elements.size(); ++i) {
-				elements[i].serialize(L);
-				lua_rawseti(L, -2, i + 1);
-			}
-		}
-
-		void deserialize(lua_State* L) {
-			elements.clear();
-
-			lua_pushnil(L);
-			while (lua_next(L, -2)) {
-				MajorGroupElement element;
-				element.deserialize(L);
-
-				elements.emplace_back(std::move(element));
-
-				lua_pop(L, 1);
-			}
+		void serialize(aurora::Serializer& a) override {
+			AU_FIELD(a, elements);
 		}
 	};
 
-	struct MinorGroup {
+	struct MinorGroup : public aurora::Serializable {
 		std::string banner;
 		std::vector<std::string> thanks;
 
-		void deserialize(aurora::ByteStream& stream) {
-			banner = stream.read_sstr();
-			thanks.resize(stream.read_u32());
-
-			for (auto& str : thanks) {
-				str = stream.read_sstr();
-			}
-		}
-
-		void serialize(aurora::ByteStream& stream) const {
-			stream.write_sstr(banner);
-			stream.write_u32(static_cast<std::uint32_t>(thanks.size()));
-
-			for (auto& str : thanks) {
-				stream.write_sstr(str);
-			}
-		}
-
-		void serialize(lua_State* L) {
-			lua_newtable(L);
-			lua_pushstring(L, banner.c_str());
-			lua_setfield(L, -2, "banner");
-
-			lua_newtable(L);
-			for (int i = 0; i < thanks.size(); ++i) {
-				lua_pushstring(L, thanks[i].c_str());
-				lua_rawseti(L, -2, i + 1);
-			}
-
-			lua_setfield(L, -2, "elements");
-		}
-
-		void deserialize(lua_State* L) {
-			thanks.clear();
-
-			lua_getfield(L, -1, "banner");
-			banner = lua_tostring(L, -1);
-			lua_pop(L, 1);
-
-			lua_getfield(L, -1, "elements");
-
-			lua_pushnil(L);
-			while (lua_next(L, -2)) {
-				thanks.emplace_back(lua_tostring(L, -1));
-
-				lua_pop(L, 1);
-			}
-
-			lua_pop(L, 1);
+		void serialize(aurora::Serializer& a) override {
+			AU_FIELD(a, banner);
+			AU_FIELD(a, thanks);
 		}
 	};
 
-	std::vector<MajorGroup> major;
-	std::vector<MinorGroup> minor;
+	std::vector<MajorGroup> main;
+	std::vector<MinorGroup> tail;
 
-	void deserialize(aurora::ByteStream& stream) {
-		major.resize(stream.read_u32());
-
-		for (auto& group : major) {
-			group.deserialize(stream);
-		}
-
-		minor.resize(stream.read_u32());
-
-		for (auto& group : minor) {
-			group.deserialize(stream);
-		}
-	}
-
-	void serialize(aurora::ByteStream& stream) const {
-		stream.write_u32(static_cast<std::uint32_t>(major.size()));
-
-		for (auto& group : major) {
-			group.serialize(stream);
-		}
-
-		stream.write_u32(static_cast<std::uint32_t>(minor.size()));
-
-		for (auto& group : minor) {
-			group.serialize(stream);
-		}
-	}
-
-	void serialize(lua_State* L) {
-		lua_newtable(L);
-
-		lua_newtable(L);
-		for (int i = 0; i < major.size(); ++i) {
-			major[i].serialize(L);
-			lua_rawseti(L, -2, i + 1);
-		}
-		lua_setfield(L, -2, "main");
-
-		lua_newtable(L);
-		for (int i = 0; i < minor.size(); ++i) {
-			minor[i].serialize(L);
-			lua_rawseti(L, -2, i + 1);
-		}
-		lua_setfield(L, -2, "tail");
-	}
-
-	void deserialize(lua_State* L) {
-		major.clear();
-		minor.clear();
-
-		lua_getfield(L, -1, "main");
-
-		lua_pushnil(L);
-		while (lua_next(L, -2)) {
-			MajorGroup group;
-			group.deserialize(L);
-			major.emplace_back(std::move(group));
-
-			lua_pop(L, 1);
-		}
-
-		lua_pop(L, 1);
-		lua_getfield(L, -1, "tail");
-		lua_pushnil(L);
-		while (lua_next(L, -2)) {
-			MinorGroup group;
-			group.deserialize(L);
-			minor.emplace_back(std::move(group));
-
-			lua_pop(L, 1);
-		}
-
-		lua_pop(L, 1);
+	void serialize(aurora::Serializer& a) override {
+		AU_FIELD(a, main);
+		AU_FIELD(a, tail);
 	}
 };
 
@@ -899,16 +724,18 @@ void unpack_credits() {
 			auto hash = aurora::fnv1a(data, size);
 
 			if (auto bytes = aurora::read_file(std::format("cache/{:x}.pc", hash))) {
-				aurora::ByteStream stream;
-				stream.mBuffer = std::move(*bytes);
+				aurora::SerializerReaderBinary serialBinary;
+				serialBinary.mBuffer = std::move(*bytes);
+				serialBinary.mOffset = 4;
 
 				lua_State* L = luaL_newstate();
 				luaL_openlibs(L);
+				aurora::SerializerWriterLua serialLua;
+				serialLua.L = L;
 
-				stream.read_u32();
 				Credits credits;
-				credits.deserialize(stream);
-				credits.serialize(L);
+				serialBinary.process(credits);
+				serialLua.process(credits);
 
 				std::string readyToWrite = std::string("return ") + aurora::lapi_serialize(L);
 
@@ -918,6 +745,8 @@ void unpack_credits() {
 				std::ofstream s(writePath, std::ios::binary);
 				s.write(readyToWrite.data(), readyToWrite.size());
 				s.close();
+
+				lua_close(L);
 			}
 
 			lua_pop(L, 1);
@@ -1027,7 +856,6 @@ struct ModEntry {
 
 static std::vector<ModEntry> gFoundMods;
 
-
 void process_mod_hooks(std::string const& modid) {
 	spdlog::info("Processing patches `{}`", modid);
 
@@ -1072,12 +900,17 @@ void process_mod_hooks(std::string const& modid) {
 			std::filesystem::path fspath = std::filesystem::relative(entry.path(), std::format("mods/{}/patches/credits", modid)).generic_string();
 			std::string path = std::format("A{}/{}.credits", fspath.parent_path().generic_string(), fspath.stem().generic_string());
 
-			gModDb.credits[path].serialize(L);
+			aurora::SerializerWriterLua serialWriter;
+			aurora::SerializerReaderLua serialReader;
+			serialWriter.L = L;
+			serialReader.L = L;
+
+			serialWriter.process(gModDb.credits[path]);
 
 			if (luaL_dofile(L, entry.path().generic_string().c_str()) == LUA_OK) {
 				lua_pushvalue(L, -2);
 				lua_pcall(L, 1, 0, 0);
-				gModDb.credits[path].deserialize(L);
+				serialReader.process(gModDb.credits[path]);
 			}
 			else {
 				spdlog::error("Lua Error: {}", lua_tostring(L, -1));
@@ -1297,8 +1130,14 @@ void load_mod(std::string const& modid) {
 				std::filesystem::path fspath = std::filesystem::relative(entry.path(), std::format("mods/{}/credits", modid)).generic_string();
 				std::string path = std::format("A{}/{}.credits", fspath.parent_path().generic_string(), fspath.stem().generic_string());
 
+				aurora::SerializerReaderLua reader;
+				reader.L = L;
+
+				aurora::lapi_dump_stack(L);
+				auto str = aurora::lapi_serialize(L);
+
 				Credits credits;
-				credits.deserialize(L);
+				reader.process(credits);
 
 				gModDb.credits[path] = credits;
 			}
@@ -1520,14 +1359,15 @@ void build() {
 		write_to_thumper_cache(aurora::fnv1a(key), stream.mBuffer);
 	}
 
-	for (auto const& [key, table] : gModDb.credits) {
+	for (auto& [key, table] : gModDb.credits) {
 		spdlog::info("`{}`", key);
 
-		aurora::ByteStream stream;
-		stream.write_u32(16);
-		table.serialize(stream);
+		std::uint32_t header = 16;
+		aurora::SerializerWriterBinary writer;
+		writer.serialize(nullptr, header);
+		writer.process(table);
 
-		write_to_thumper_cache(aurora::fnv1a(key), stream.mBuffer);
+		write_to_thumper_cache(aurora::fnv1a(key), writer.mBuffer);
 	}
 
 	for (auto& [key, table] : gModDb.listings) {

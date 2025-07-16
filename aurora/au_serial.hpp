@@ -19,6 +19,8 @@ namespace aurora {
 	};
 
 	struct Serializer {
+		void process(Serializable& aValue) { serialize(nullptr, aValue); }
+
 		virtual void serialize(char const* aField, bool& aValue) = 0;
 		virtual void serialize(char const* aField, float& aValue) = 0;
 		virtual void serialize(char const* aField, std::uint8_t& aValue) = 0;

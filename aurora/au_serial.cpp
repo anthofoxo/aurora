@@ -30,13 +30,7 @@ namespace aurora {
 
 	void SerializerReaderLua::array_begin(char const* aField, std::size_t& aSize) {
 		if (aField) lua_getfield(L, -1, aField);
-
-		aSize = 0;
-		lua_pushnil(L);
-		while (lua_next(L, -2)) {
-			++aSize;
-			lua_pop(L, 1);
-		}
+		aSize = lua_rawlen(L, -1);
 	}
 
 	void SerializerWriterLua::serialize(char const* aField, bool& aValue) {

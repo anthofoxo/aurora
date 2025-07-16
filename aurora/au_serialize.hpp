@@ -10,6 +10,8 @@
 
 namespace aurora {
 	struct ByteStream final {
+		[[deprecated]] ByteStream() = default;
+
 		char const* const kError = "ByteStream out of range";
 
 		std::vector<std::byte> mBuffer;
