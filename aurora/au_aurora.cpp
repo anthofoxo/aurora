@@ -55,6 +55,7 @@
 
 #include "au_serialize.hpp"
 
+#include "au_serial.hpp"
 
 std::unordered_map<std::uint32_t, std::string> gHashtable;
 
@@ -2042,6 +2043,7 @@ namespace aurora {
 	}
 
 #include <array>
+
 
 void main() {
 	logger_init();

@@ -46,7 +46,7 @@ namespace aurora {
 					}
 				}
 			}
-			catch (std::invalid_argument const& e) {}
+			catch (std::invalid_argument const&) {}
 
 			mIsInHashtable = aHashtable.contains(mResultHash);
 		}
