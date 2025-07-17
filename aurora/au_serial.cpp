@@ -61,7 +61,7 @@ namespace aurora {
 
 	void SerializerWriterBinary::serialize(char const* aField, std::string& aValue, bool aSizedString) {
 		if (aSizedString) {
-			std::uint32_t size = aValue.size();
+			std::uint32_t size = static_cast<std::uint32_t>(aValue.size());
 			serialize(nullptr, size);
 			for (auto c : aValue) mBuffer.emplace_back(static_cast<std::byte>(c));
 		}
@@ -73,7 +73,7 @@ namespace aurora {
 
 	
 	void SerializerWriterBinary::array_begin(char const* aField, std::size_t& aSize) {
-		std::uint32_t count = static_cast<std::size_t>(aSize);
+		std::uint32_t count = static_cast<std::uint32_t>(aSize);
 		serialize(nullptr, count);
 	};
 		

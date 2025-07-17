@@ -13,6 +13,7 @@
 #include <misc/cpp/imgui_stdlib.h>
 #include <backends/imgui_impl_glfw.h>
 #include <backends/imgui_impl_opengl3.h>
+#include "IconsFontAwesome6.h"
 
 #include "lua_api.hpp"
 
@@ -38,6 +39,7 @@
 #include <unordered_set>
 #include <vector>
 #include <format>
+#include <array>
 
 #include <minizip/unzip.h>
 
@@ -46,15 +48,12 @@
 
 
 #include "au_window.hpp"
-
 #include "au_util.hpp"
-
 #include "au_hash.hpp"
 #include "au_lua_serialize.hpp"
 #include "gui/au_hasher.hpp"
-
+#include "au_thumper_structs.hpp"
 #include "au_serialize.hpp"
-
 #include "au_serial.hpp"
 
 std::unordered_map<std::uint32_t, std::string> gHashtable;
@@ -430,153 +429,10 @@ struct ObjlibParser final {
 static bool gObjlibParserStaticDataVisible = false;
 static ObjlibParser gObjlibParserStaticData;
 
-struct LevelListing {
-	struct Entry {
-		std::string key;
-		std::uint32_t unknown0;
-		std::string path;
-		std::string unlocks;
-		bool defaultLocked;
-		bool unknown1;
-		bool credits;
-		std::uint32_t colorIdx0;
-		std::uint32_t colorIdx1;
-
-		void deserialize(aurora::ByteStream& stream) {
-			key = stream.read_sstr();
-			unknown0 = stream.read_u32();
-			path = stream.read_sstr();
-			unlocks = stream.read_sstr();
-			defaultLocked = stream.read_bool();
-			unknown1 = stream.read_bool();
-			credits = stream.read_bool();
-			colorIdx0 = stream.read_u32();
-			colorIdx1 = stream.read_u32();
-		}
-
-		void serialize(aurora::ByteStream& stream) {
-			stream.write_sstr(key);
-			stream.write_u32(unknown0);
-			stream.write_sstr(path);
-			stream.write_sstr(unlocks);
-			stream.write_bool(defaultLocked);
-			stream.write_bool(unknown1);
-			stream.write_bool(credits);
-			stream.write_u32(colorIdx0);
-			stream.write_u32(colorIdx1);
-		}
-
-		void deserialize(lua_State* L) {
-			lua_getfield(L, -1, "key"); key = lua_tostring(L, -1); lua_pop(L, 1);
-			lua_getfield(L, -1, "unknown0"); unknown0 = static_cast<std::uint32_t>(lua_tointeger(L, -1)); lua_pop(L, 1);
-			lua_getfield(L, -1, "path"); path = lua_tostring(L, -1); lua_pop(L, 1);
-			lua_getfield(L, -1, "unlocks"); unlocks = lua_tostring(L, -1); lua_pop(L, 1);
-			lua_getfield(L, -1, "defaultLocked"); defaultLocked = lua_toboolean(L, -1); lua_pop(L, 1);
-			lua_getfield(L, -1, "unknown1"); unknown1 = lua_toboolean(L, -1); lua_pop(L, 1);
-			lua_getfield(L, -1, "credits"); credits = lua_toboolean(L, -1); lua_pop(L, 1);
-			lua_getfield(L, -1, "colorIdx0"); colorIdx0 = static_cast<std::uint32_t>(lua_tointeger(L, -1)); lua_pop(L, 1);
-			lua_getfield(L, -1, "colorIdx1"); colorIdx1 = static_cast<std::uint32_t>(lua_tointeger(L, -1)); lua_pop(L, 1);
-		}
-
-		void serialize(lua_State* L) {
-			lua_newtable(L);
-			lua_pushstring(L, key.c_str()); lua_setfield(L, -2, "key");
-			lua_pushinteger(L, unknown0); lua_setfield(L, -2, "unknown0");
-			lua_pushstring(L, path.c_str()); lua_setfield(L, -2, "path");
-			lua_pushstring(L, unlocks.c_str()); lua_setfield(L, -2, "unlocks");
-			lua_pushboolean(L, defaultLocked); lua_setfield(L, -2, "defaultLocked");
-			lua_pushboolean(L, unknown1); lua_setfield(L, -2, "unknown1");
-			lua_pushboolean(L, credits); lua_setfield(L, -2, "credits");
-			lua_pushinteger(L, colorIdx0); lua_setfield(L, -2, "colorIdx0");
-			lua_pushinteger(L, colorIdx1); lua_setfield(L, -2, "colorIdx1");
-		}
-	};
-
-	std::vector<Entry> entries;
-
-	void serialize(aurora::ByteStream& stream) {
-		stream.write_u32(static_cast<std::uint32_t>(entries.size()));
-		
-		for (auto& entry : entries) {
-			entry.serialize(stream);
-		}
-	}
-
-	void deserialize(lua_State* L) {
-		entries.clear();
-
-		lua_pushnil(L);
-		while(lua_next(L, -2)) {
-			Entry e;
-			e.deserialize(L);
-			entries.emplace_back(std::move(e));
-			lua_pop(L, 1);
-		}
-	}
-
-	void deserialize(aurora::ByteStream& stream) {
-		entries.resize(stream.read_u32());
-
-		for (auto& entry : entries) {
-			entry.deserialize(stream);
-		}
-	}
-
-	void serialize(lua_State* L) {
-		lua_newtable(L);
-		for (int i = 0; i < entries.size(); ++i) {
-			entries[i].serialize(L);
-			lua_rawseti(L, -2, i + 1);
-		}
-	}
-};
-
-#include "au_serialize.hpp"
-
-struct Credits : public aurora::Serializable {
-	struct MajorGroupElement : public aurora::Serializable {
-		std::string decoration;
-		std::string text;
-
-		void serialize(aurora::Serializer& a) override {
-			AU_FIELD(a, decoration);
-			AU_FIELD(a, text);
-		}
-	};
-
-	struct MajorGroup : public aurora::Serializable {
-		std::vector<MajorGroupElement> elements;
-
-		void serialize(aurora::Serializer& a) override {
-			AU_FIELD(a, elements);
-		}
-	};
-
-	struct MinorGroup : public aurora::Serializable {
-		std::string banner;
-		std::vector<std::string> thanks;
-
-		void serialize(aurora::Serializer& a) override {
-			AU_FIELD(a, banner);
-			AU_FIELD(a, thanks);
-		}
-	};
-
-	std::vector<MajorGroup> main;
-	std::vector<MinorGroup> tail;
-
-	void serialize(aurora::Serializer& a) override {
-		AU_FIELD(a, main);
-		AU_FIELD(a, tail);
-	}
-};
-
 struct LocalizationEntry {
 	std::uint32_t key;
 	std::string value;
 	std::uint32_t offset;
-
-
 
 	void serialize(lua_State* L) {
 		std::unordered_map<std::uint32_t, std::string> map;
@@ -645,18 +501,19 @@ struct Localization final {
 
 void unpack_levels() {
 	if (auto bytes = aurora::read_file(std::format("cache/{:x}.pc", aurora::fnv1a("Aui/thumper.levels")))) {
-		aurora::ByteStream stream;
-		stream.mBuffer = std::move(*bytes);
+		aurora::SerializerReaderBinary reader;
+		reader.mBuffer = std::move(*bytes);
+		reader.mOffset = 4;
 
-		lua_State* L = luaL_newstate();
-		luaL_openlibs(L);
+		aurora::SerializerWriterLua writer;
+		writer.L = luaL_newstate();
+		luaL_openlibs(writer.L);
 
-		stream.read_u32(); // ignore header // 16
-		LevelListing locs;
-		locs.deserialize(stream);
-		locs.serialize(L);
+		thumper::LevelListing locs;
+		reader.process(locs);
+		writer.process(locs);
 
-		std::string readyToWrite = std::string("return ") + aurora::lapi_serialize(L);
+		std::string readyToWrite = std::string("return ") + aurora::lapi_serialize(writer.L);
 
 		std::string writePath = "mods/base/levels/ui/thumper.lua";
 		std::filesystem::create_directories(std::filesystem::path(writePath).parent_path());
@@ -665,7 +522,7 @@ void unpack_levels() {
 		s.write(readyToWrite.data(), readyToWrite.size());
 		s.close();
 
-		lua_close(L);
+		lua_close(writer.L);
 	}
 }
 
@@ -703,6 +560,7 @@ void unpack_localization() {
 				s.close();
 			}
 
+
 			lua_pop(L, 1);
 		}
 
@@ -733,7 +591,7 @@ void unpack_credits() {
 				aurora::SerializerWriterLua serialLua;
 				serialLua.L = L;
 
-				Credits credits;
+				thumper::Credits credits;
 				serialBinary.process(credits);
 				serialLua.process(credits);
 
@@ -840,11 +698,11 @@ enum struct LocalizationKey : std::uint32_t {
 
 struct ModDb {
 	std::unordered_map<std::string, std::unordered_map<LocalizationKey, std::string>> localization;
-	std::unordered_map<std::string, Credits> credits;
+	std::unordered_map<std::string, thumper::Credits> credits;
 
 	std::unordered_map<std::string, std::string> textures; // maps the texture name to the texture target
 
-	std::unordered_map<std::string, LevelListing> listings;
+	std::unordered_map<std::string, thumper::LevelListing> listings;
 };
 
 ModDb gModDb;
@@ -872,12 +730,17 @@ void process_mod_hooks(std::string const& modid) {
 			std::filesystem::path fspath = std::filesystem::relative(entry.path(), std::format("mods/{}/patches/levels", modid)).generic_string();
 			std::string path = std::format("A{}/{}.levels", fspath.parent_path().generic_string(), fspath.stem().generic_string());
 
-			gModDb.listings[path].serialize(L);
+			aurora::SerializerWriterLua writer;
+			writer.L = L;
+			writer.process(gModDb.listings[path]);
 
 			if (luaL_dofile(L, entry.path().generic_string().c_str()) == LUA_OK) {
 				lua_pushvalue(L, -2);
 				lua_pcall(L, 1, 0, 0);
-				gModDb.listings[path].deserialize(L);
+
+				aurora::SerializerReaderLua reader;
+				reader.L = L;
+				reader.process(gModDb.listings[path]);
 			}
 			else {
 				spdlog::error("Lua Error {}:", lua_tostring(L, -1));
@@ -1136,7 +999,7 @@ void load_mod(std::string const& modid) {
 				aurora::lapi_dump_stack(L);
 				auto str = aurora::lapi_serialize(L);
 
-				Credits credits;
+				thumper::Credits credits;
 				reader.process(credits);
 
 				gModDb.credits[path] = credits;
@@ -1161,15 +1024,18 @@ void load_mod(std::string const& modid) {
 				std::filesystem::path fspath = std::filesystem::relative(entry.path(), std::format("mods/{}/levels", modid)).generic_string();
 				std::string path = std::format("A{}/{}.levels", fspath.parent_path().generic_string(), fspath.stem().generic_string());
 
-				LevelListing credits;
-				credits.deserialize(L);
+				aurora::SerializerReaderLua reader;
+				reader.L = L;
+
+				thumper::LevelListing credits;
+				reader.process(credits);
 
 				gModDb.listings[path] = credits;
 			}
 			else {
 				spdlog::info(lua_tostring(L, -1));
 			}
-			lua_pop(L, 1);
+			
 			lua_close(L);
 		}
 	}
@@ -1373,11 +1239,12 @@ void build() {
 	for (auto& [key, table] : gModDb.listings) {
 		spdlog::info("`{}`", key);
 
-		aurora::ByteStream stream;
-		stream.write_u32(16);
-		table.serialize(stream);
+		aurora::SerializerWriterBinary writer;
+		std::uint32_t header = 16;
+		writer.serialize(nullptr, header);
+		writer.process(table);
 
-		write_to_thumper_cache(aurora::fnv1a(key), stream.mBuffer);
+		write_to_thumper_cache(aurora::fnv1a(key), writer.mBuffer);
 	}
 
 	int counter = 0;
@@ -1421,7 +1288,6 @@ static bool gShouldLaunchThumper = false;
 namespace aurora {
 	bool should_launch_thumper() { return gShouldLaunchThumper; }
 }
-
 
 std::optional<std::string> mPathImHex;
 std::optional<std::string> mPathHxD;
@@ -1611,8 +1477,6 @@ lua_State* aurora_newstate() {
 
 	return L;
 }
-
-
 
 struct PluginEngine {
 	struct Plugin {
@@ -1871,8 +1735,6 @@ enum struct Comp : std::uint32_t {
 	DrawComp = aurora::fnv1a("DrawComp"),
 };
 
-#include "IconsFontAwesome6.h"
-
 namespace aurora {
 	void logger_init() {
 		spdlog::default_logger()->sinks().emplace_back(std::make_shared<spdlog::sinks::basic_file_sink_mt>("aurora.log", true));
@@ -1882,7 +1744,7 @@ namespace aurora {
 		spdlog::flush_on(spdlog::level::critical);
 	}
 
-#include <array>
+
 
 
 void main() {
@@ -2082,7 +1944,7 @@ void main() {
 						issue = "WARN: `base` is not being loaded. This will cause loss of base game content.";
 					}
 
-					if (issue) ImGui::PushStyleColor(ImGuiCol_Text, { 1.0f, fmodf(glfwGetTime(), 1.0f), fmodf(glfwGetTime(), 1.0f), 1.0f });
+					if (issue) ImGui::PushStyleColor(ImGuiCol_Text, { 1.0f, fmodf(static_cast<float>(glfwGetTime()), 1.0f), fmodf(static_cast<float>(glfwGetTime()), 1.0f), 1.0f });
 
 					if (ImGui::TreeNodeEx(item.modid.c_str(), flags)) ImGui::TreePop();
 
@@ -2125,7 +1987,7 @@ void main() {
 						issue = "WARN: `aurora.base` is not loaded directly after `base`. This will cause loss of base aurora content.";
 					}
 
-					if (issue) ImGui::PushStyleColor(ImGuiCol_Text, { 1.0f, fmodf(glfwGetTime(), 1.0f), fmodf(glfwGetTime(), 1.0f), 1.0f });
+					if (issue) ImGui::PushStyleColor(ImGuiCol_Text, { 1.0f, fmodf(static_cast<float>(glfwGetTime()), 1.0f), fmodf(static_cast<float>(glfwGetTime()), 1.0f), 1.0f });
 
 					// A duplicate id may be present for one frame when switching state from inactive -> active
 					ImGui::PushItemFlag(ImGuiItemFlags_AllowDuplicateId, true);

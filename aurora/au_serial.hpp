@@ -32,7 +32,7 @@ namespace aurora {
 		virtual void serialize(char const* aField, std::string& aValue, bool aSizedString = true) = 0;
 		virtual void serialize(char const* aField, Serializable& aValue) = 0;
 
-		template<typename T> void serialize(char const* aField, std::vector<T>& aValue) {
+		template<typename T> inline void serialize(char const* aField, std::vector<T>& aValue) {
 			auto newSize = aValue.size();
 			array_begin(aField, newSize);
 
@@ -62,7 +62,7 @@ namespace aurora {
 
 	struct SerializerReaderLua final : public Serializer {
 		template<typename T>
-		void impl_integer(char const* aField, T& aValue) {
+		inline void impl_integer(char const* aField, T& aValue) {
 			if (aField) lua_getfield(L, -1, aField);
 			aValue = static_cast<T>(lua_tonumber(L, -1));
 			if (aField) lua_pop(L, 1);
@@ -70,18 +70,18 @@ namespace aurora {
 
 		void serialize(char const* aField, bool& aValue) override;
 		void serialize(char const* aField, float& aValue) override;
-		void serialize(char const* aField, std::uint8_t& aValue) override { impl_integer(aField, aValue); };
-		void serialize(char const* aField, std::uint16_t& aValue) override { impl_integer(aField, aValue); };
-		void serialize(char const* aField, std::uint32_t& aValue) override { impl_integer(aField, aValue); };
-		void serialize(char const* aField, std::int8_t& aValue) override { impl_integer(aField, aValue); };
-		void serialize(char const* aField, std::int16_t& aValue) override { impl_integer(aField, aValue); };
-		void serialize(char const* aField, std::int32_t& aValue) override { impl_integer(aField, aValue); };
+		inline void serialize(char const* aField, std::uint8_t& aValue) override { impl_integer(aField, aValue); };
+		inline void serialize(char const* aField, std::uint16_t& aValue) override { impl_integer(aField, aValue); };
+		inline void serialize(char const* aField, std::uint32_t& aValue) override { impl_integer(aField, aValue); };
+		inline void serialize(char const* aField, std::int8_t& aValue) override { impl_integer(aField, aValue); };
+		inline void serialize(char const* aField, std::int16_t& aValue) override { impl_integer(aField, aValue); };
+		inline void serialize(char const* aField, std::int32_t& aValue) override { impl_integer(aField, aValue); };
 		void serialize(char const* aField, std::string& aValue, bool aSizedString = true) override;
 		void serialize(char const* aField, Serializable& aValue) override;
 		void array_begin(char const* aField, std::size_t& aSize) override;
-		void array_iter_prologue(std::size_t i) { lua_rawgeti(L, -1, i + 1); }
-		void array_iter_epilogue(std::size_t aIndex) override { lua_pop(L, 1); }
-		void array_end(char const* aField) override { lua_pop(L, 1); };
+		inline void array_iter_prologue(std::size_t i) { lua_rawgeti(L, -1, i + 1); }
+		inline void array_iter_epilogue(std::size_t aIndex) override { lua_pop(L, 1); }
+		inline void array_end(char const* aField) override { lua_pop(L, 1); };
 
 		lua_State* L = nullptr;
 	};
@@ -89,18 +89,18 @@ namespace aurora {
 	struct SerializerWriterLua final : public Serializer {
 		void serialize(char const* aField, bool& aValue) override;
 		void serialize(char const* aField, float& aValue) override;
-		void serialize(char const* aField, std::uint8_t& aValue) override { impl_integer(aField, static_cast<lua_Integer>(aValue)); };
-		void serialize(char const* aField, std::uint16_t& aValue) override { impl_integer(aField, static_cast<lua_Integer>(aValue)); };
-		void serialize(char const* aField, std::uint32_t& aValue) override { impl_integer(aField, static_cast<lua_Integer>(aValue)); };
-		void serialize(char const* aField, std::int8_t& aValue) override { impl_integer(aField, static_cast<lua_Integer>(aValue)); };
-		void serialize(char const* aField, std::int16_t& aValue) override { impl_integer(aField, static_cast<lua_Integer>(aValue)); };
-		void serialize(char const* aField, std::int32_t& aValue) override { impl_integer(aField, static_cast<lua_Integer>(aValue)); };
+		inline void serialize(char const* aField, std::uint8_t& aValue) override { impl_integer(aField, static_cast<lua_Integer>(aValue)); };
+		inline void serialize(char const* aField, std::uint16_t& aValue) override { impl_integer(aField, static_cast<lua_Integer>(aValue)); };
+		inline void serialize(char const* aField, std::uint32_t& aValue) override { impl_integer(aField, static_cast<lua_Integer>(aValue)); };
+		inline void serialize(char const* aField, std::int8_t& aValue) override { impl_integer(aField, static_cast<lua_Integer>(aValue)); };
+		inline void serialize(char const* aField, std::int16_t& aValue) override { impl_integer(aField, static_cast<lua_Integer>(aValue)); };
+		inline void serialize(char const* aField, std::int32_t& aValue) override { impl_integer(aField, static_cast<lua_Integer>(aValue)); };
 		void serialize(char const* aField, std::string& aValue, bool aSizedString = true) override;
 		void serialize(char const* aField, Serializable& aValue) override;
-		void array_begin(char const* aField, std::size_t& aSize) override { lua_newtable(L); }
-		void array_iter_prologue(std::size_t aIndex) override {};
-		void array_iter_epilogue(std::size_t aIndex) override { lua_rawseti(L, -2, aIndex + 1); }
-		void array_end(char const* aField) override { lua_setfield(L, -2, aField); };
+		inline void array_begin(char const* aField, std::size_t& aSize) override { lua_newtable(L); }
+		inline void array_iter_prologue(std::size_t aIndex) override {};
+		inline void array_iter_epilogue(std::size_t aIndex) override { lua_rawseti(L, -2, aIndex + 1); }
+		inline void array_end(char const* aField) override { if (aField) lua_setfield(L, -2, aField); };
 
 		void impl_integer(char const* aField, lua_Integer aValue);
 		virtual ~SerializerWriterLua() noexcept = default;
