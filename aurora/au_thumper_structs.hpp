@@ -5,7 +5,25 @@
 
 #include "au_serial.hpp"
 
+#include <glm/glm.hpp>
+
 namespace thumper {
+	struct Transform final : public aurora::Serializable {
+		glm::f32vec3 position;
+		glm::f32vec3 rotz;
+		glm::f32vec3 royy;
+		glm::f32vec3 rotz;
+		glm::f32vec3 scale;
+
+		void serialize(aurora::Serializer& a) {
+			AU_FIELD(a, position);
+			AU_FIELD(a, rotz);
+			AU_FIELD(a, royy);
+			AU_FIELD(a, rotz);
+			AU_FIELD(a, scale);
+		}
+	};
+
 	struct LevelListing final : public aurora::Serializable {
 		struct Entry final : public aurora::Serializable {
 			Entry() = default;

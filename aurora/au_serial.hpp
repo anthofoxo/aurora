@@ -7,6 +7,7 @@
 #include <stdexcept>
 
 #include <lua.hpp>
+#include <glm/glm.hpp>
 
 #define AU_FIELD(aSerializer, aField) aSerializer.serialize(#aField, aField)
 
@@ -39,6 +40,22 @@ namespace aurora {
 			if (newSize != aValue.size()) aValue.resize(newSize);
 
 			for (std::size_t i = 0; i < aValue.size(); ++i) {
+				array_iter_prologue(i);
+				serialize(nullptr, aValue[i]);
+				array_iter_epilogue(i);
+			}
+
+			array_end(aField);
+		}
+
+		template<glm::length_t L, typename T, glm::qualifier Q>
+		inline void serialize(char const* aField, glm::vec<L, T, Q>& aValue) {
+			std::size_t newSize = L;
+			array_begin(aField, newSize);
+
+			assert(newSize == L);
+
+			for (glm::length_t i = 0; i < L; ++i) {
 				array_iter_prologue(i);
 				serialize(nullptr, aValue[i]);
 				array_iter_epilogue(i);
