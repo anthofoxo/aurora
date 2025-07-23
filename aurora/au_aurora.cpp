@@ -5,56 +5,55 @@
 #	undef min
 #endif
 
-#include <glad/gl.h>
 #include <GLFW/glfw3.h>
+#include <glad/gl.h>
 #define IMGUI_DEFINE_MATH_OPERATORS
+#include <backends/imgui_impl_glfw.h>
+#include <backends/imgui_impl_opengl3.h>
 #include <imgui.h>
 #include <imgui_internal.h>
 #include <misc/cpp/imgui_stdlib.h>
-#include <backends/imgui_impl_glfw.h>
-#include <backends/imgui_impl_opengl3.h>
 #include "IconsFontAwesome6.h"
 
 #include "lua_api.hpp"
 
-#include <lua.hpp>
 #include <tinyfiledialogs.h>
+#include <lua.hpp>
 
-#include <spdlog/spdlog.h>
 #include <spdlog/sinks/basic_file_sink.h>
+#include <spdlog/spdlog.h>
 
-#include <unordered_map>
-#include <iostream>
 #include <algorithm>
+#include <array>
 #include <cctype>
 #include <cstdlib>
 #include <filesystem>
+#include <format>
 #include <fstream>
 #include <future>
+#include <iostream>
 #include <locale>
 #include <optional>
 #include <span>
 #include <sstream>
 #include <string>
+#include <unordered_map>
 #include <unordered_set>
 #include <vector>
-#include <format>
-#include <array>
 
 #include <minizip/unzip.h>
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
-
-#include "au_window.hpp"
-#include "au_util.hpp"
 #include "au_hash.hpp"
 #include "au_lua_serialize.hpp"
-#include "gui/au_hasher.hpp"
-#include "au_thumper_structs.hpp"
-#include "au_serialize.hpp"
 #include "au_serial.hpp"
+#include "au_serialize.hpp"
+#include "au_thumper_structs.hpp"
+#include "au_util.hpp"
+#include "au_window.hpp"
+#include "gui/au_hasher.hpp"
 
 std::unordered_map<std::uint32_t, std::string> gHashtable;
 
@@ -72,15 +71,12 @@ void write_to_thumper_cache(std::uint32_t hash, std::span<std::byte const> bytes
 	stream.write(reinterpret_cast<char const*>(bytes.data()), bytes.size());
 }
 
-bool cache_file_exists(std::uint32_t value) {
-	return std::filesystem::exists(std::format("cache/{:x}.pc", value));
-}
+bool cache_file_exists(std::uint32_t value) { return std::filesystem::exists(std::format("cache/{:x}.pc", value)); }
 
 struct AuroraParseError : public std::runtime_error {
 	explicit AuroraParseError(std::string const& message) : std::runtime_error(message.c_str()) {}
 	explicit AuroraParseError(char const* message) : std::runtime_error(message) {}
 };
-
 
 std::string hashedStringGui(std::uint32_t hash) {
 	auto it = gHashtable.find(hash);
@@ -163,7 +159,7 @@ struct ObjlibParser final {
 		uint32_t unknown0 = 1;
 		uint32_t hash1;
 		std::string timeUnit = "kTimeBeats";
-		uint32_t hash2;		//editstatecomp
+		uint32_t hash2;  // editstatecomp
 		uint32_t unknown1 = 0;
 		float unknown2;
 		std::string skybox;
@@ -221,8 +217,11 @@ struct ObjlibParser final {
 	void parse(std::string_view aPath) {
 		std::vector<std::byte> buffer;
 
-		if (auto tempBuffer = aurora::read_file(std::format("cache/{}", aPath))) { buffer = tempBuffer.value(); }
-		else if (cache_file_exists(aurora::fnv1a(aPath))) { buffer = *aurora::read_file(std::format("cache/{:x}.pc", aurora::fnv1a(aPath))); }
+		if (auto tempBuffer = aurora::read_file(std::format("cache/{}", aPath))) {
+			buffer = tempBuffer.value();
+		} else if (cache_file_exists(aurora::fnv1a(aPath))) {
+			buffer = *aurora::read_file(std::format("cache/{:x}.pc", aurora::fnv1a(aPath)));
+		}
 
 		if (buffer.size() == 0) throw AuroraParseError("Failed to parse file, no bytes returned");
 
@@ -263,7 +262,6 @@ struct ObjlibParser final {
 					SequinMaster master;
 					master.deserialize(s);
 					mMasters[declaration.name] = std::move(master);
-
 				}
 			}
 		}
@@ -307,18 +305,7 @@ struct ObjlibParser final {
 				ImGui::InputFloat("Footer 8", &ref.footer8);
 				ImGui::InputFloat("Footer 9", &ref.footer9);
 
-
-
-
-
-
-
-
-
-
 				ImGui::Separator();
-
-
 
 				for (auto it = ref.sublevels.begin(); it != ref.sublevels.end();) {
 					bool shouldDelete = false;
@@ -337,7 +324,6 @@ struct ObjlibParser final {
 					}
 
 					if (open) {
-
 						ImGui::InputText("Level", &element.lvlName);
 						ImGui::InputText("Gate", &element.gateName);
 						ImGui::Checkbox("Has Checkpoint", &element.isCheckpoint);
@@ -354,32 +340,27 @@ struct ObjlibParser final {
 
 					if (shouldDelete) {
 						it = ref.sublevels.erase(it);
-					}
-					else {
+					} else {
 						++it;
 					}
 				}
 			}
 			ImGui::End();
 		}
-
-			
 	}
 
 	void gui() {
-
 		ImGui::InputText("Selected File", &mSelectedObject);
 
 		ImGui::Separator();
 
 		ImGui::LabelText("File Type", "%d", mFileType);
-		ImGui::LabelText("Objlib Type", "%x", mObjlibType); // LevelLib
+		ImGui::LabelText("Objlib Type", "%x", mObjlibType);  // LevelLib
 
 		if (ImGui::CollapsingHeader("Global Imports")) {
 			ImGui::PushID("Global Imports");
 			for (std::size_t i = 0; i < mGlobalImports.size(); ++i) {
 				if (ImGui::TreeNode(mGlobalImports[i].path.c_str())) {
-
 					ImGui::LabelText("Unknown", "%d", mGlobalImports[i].unknown);
 
 					ImGui::TreePop();
@@ -415,7 +396,6 @@ struct ObjlibParser final {
 			}
 			ImGui::PopID();
 		}
-
 	}
 
 	std::uint32_t mFileType;
@@ -461,11 +441,9 @@ struct LocalizationEntry {
 		auto it = map.find(key);
 		if (it != map.end()) {
 			lua_pushstring(L, it->second.c_str());
-		}
-		else {
+		} else {
 			lua_pushinteger(L, key);
 		}
-
 
 		lua_pushstring(L, value.c_str());
 		lua_rawset(L, -3);
@@ -526,12 +504,10 @@ void unpack_levels() {
 	}
 }
 
-
 void unpack_localization() {
 	lua_State* L = luaL_newstate();
 
 	if (luaL_dofile(L, "aurora/localization.lua") == LUA_OK) {
-
 		lua_pushnil(L);
 		while (lua_next(L, -2)) {
 			std::size_t size;
@@ -545,7 +521,7 @@ void unpack_localization() {
 				lua_State* L = luaL_newstate();
 				luaL_openlibs(L);
 
-				stream.read_u32(); // ignore header // 16
+				stream.read_u32();  // ignore header // 16
 				Localization locs;
 				locs.deserialize(stream);
 				locs.serialize(L);
@@ -560,10 +536,8 @@ void unpack_localization() {
 				s.close();
 			}
 
-
 			lua_pop(L, 1);
 		}
-
 	}
 	lua_pop(L, 1);
 
@@ -574,7 +548,6 @@ void unpack_credits() {
 	lua_State* L = luaL_newstate();
 
 	if (luaL_dofile(L, "aurora/credits.lua") == LUA_OK) {
-
 		lua_pushnil(L);
 		while (lua_next(L, -2)) {
 			std::size_t size;
@@ -609,7 +582,6 @@ void unpack_credits() {
 
 			lua_pop(L, 1);
 		}
-
 	}
 	lua_pop(L, 1);
 
@@ -621,7 +593,6 @@ void unpack_textures() {
 	lua_State* L = luaL_newstate();
 
 	if (luaL_dofile(L, "aurora/textures.lua") == LUA_OK) {
-
 		lua_pushnil(L);
 		while (lua_next(L, -2)) {
 			std::size_t size;
@@ -638,7 +609,7 @@ void unpack_textures() {
 				aurora::ByteStream stream;
 				stream.mBuffer = std::move(*bytes);
 
-				stream.read_u32(); // skip first u32
+				stream.read_u32();  // skip first u32
 
 				std::string engineDir;
 
@@ -656,7 +627,6 @@ void unpack_textures() {
 
 			lua_pop(L, 1);
 		}
-
 	}
 	lua_pop(L, 1);
 
@@ -664,7 +634,6 @@ void unpack_textures() {
 }
 
 void unpack_gui(bool& visible) {
-
 	if (!visible) return;
 	if (ImGui::Begin("Unpacker", &visible)) {
 		ImGui::TextWrapped("%s", "Make sure the backup files are restored before doing this");
@@ -688,7 +657,6 @@ void unpack_gui(bool& visible) {
 	ImGui::End();
 }
 
-
 enum struct LocalizationKey : std::uint32_t {
 	kPlay = aurora::fnv1a(aurora::Context::kConsteval, "play"),
 	kCancel = aurora::fnv1a(aurora::Context::kConsteval, "cancel"),
@@ -700,7 +668,7 @@ struct ModDb {
 	std::unordered_map<std::string, std::unordered_map<LocalizationKey, std::string>> localization;
 	std::unordered_map<std::string, thumper::Credits> credits;
 
-	std::unordered_map<std::string, std::string> textures; // maps the texture name to the texture target
+	std::unordered_map<std::string, std::string> textures;  // maps the texture name to the texture target
 
 	std::unordered_map<std::string, thumper::LevelListing> listings;
 };
@@ -741,8 +709,7 @@ void process_mod_hooks(std::string const& modid) {
 				aurora::SerializerReaderLua reader;
 				reader.L = L;
 				reader.process(gModDb.listings[path]);
-			}
-			else {
+			} else {
 				spdlog::error("Lua Error {}:", lua_tostring(L, -1));
 			}
 			lua_pop(L, 1);
@@ -774,8 +741,7 @@ void process_mod_hooks(std::string const& modid) {
 				lua_pushvalue(L, -2);
 				lua_pcall(L, 1, 0, 0);
 				serialReader.process(gModDb.credits[path]);
-			}
-			else {
+			} else {
 				spdlog::error("Lua Error: {}", lua_tostring(L, -1));
 			}
 			lua_pop(L, 1);
@@ -783,7 +749,6 @@ void process_mod_hooks(std::string const& modid) {
 		}
 	}
 }
-
 
 struct TCLEPrecompiledLevel {
 	std::string name;
@@ -856,20 +821,18 @@ void load_precompiled_tcle_mods(std::string const& modid) {
 		aurora::ByteStream stream;
 		stream.mBuffer = std::move(value);
 
-		for(int i = 0; i < 6; ++i)
-			stream.read_u32(); // skip file header and unknowns fields
-		
+		for (int i = 0; i < 6; ++i) stream.read_u32();  // skip file header and unknowns fields
 
 		auto importCount = stream.read_u32();
 
 		for (unsigned int i = 0; i < importCount; ++i) {
-			stream.read_u32(); // skip unknown
-			stream.read_sstr(); // skip import path
+			stream.read_u32();   // skip unknown
+			stream.read_sstr();  // skip import path
 		}
 
-		origin = stream.read_sstr(); // read the target write path, at this point we dont need to read any further
+		origin = stream.read_sstr();  // read the target write path, at this point we dont need to read any further
 
-		std::uint32_t hashed = aurora::fnv1a(std::format("A{}", origin)); // this is the .pc file to write to
+		std::uint32_t hashed = aurora::fnv1a(std::format("A{}", origin));  // this is the .pc file to write to
 
 		write_to_thumper_cache(hashed, stream.mBuffer);
 
@@ -907,17 +870,7 @@ void load_precompiled_tcle_mods(std::string const& modid) {
 	auto hashed = aurora::fnv1a(locKey);
 	localization[static_cast<LocalizationKey>(hashed)] = modid;
 
-	gModDb.listings["Aui/thumper.levels"].entries.emplace_back(
-		locKey,
-		0,
-		origin,
-		"",
-		false,
-		false,
-		false,
-		0,
-		10
-	);
+	gModDb.listings["Aui/thumper.levels"].entries.emplace_back(locKey, 0, origin, "", false, false, false, 0, 10);
 }
 
 void load_mod(std::string const& modid) {
@@ -963,8 +916,7 @@ void load_mod(std::string const& modid) {
 						std::size_t size;
 						char const* data = lua_tolstring(L, -1, &size);
 						localizationKey = LocalizationKey(aurora::fnv1a(data, size));
-					}
-					else {
+					} else {
 						localizationKey = LocalizationKey(lua_tointeger(L, -1));
 					}
 
@@ -972,8 +924,7 @@ void load_mod(std::string const& modid) {
 
 					lua_pop(L, 2);
 				}
-			}
-			else {
+			} else {
 				spdlog::error("Lua Error: {}", lua_tostring(L, -1));
 			}
 			lua_pop(L, 1);
@@ -1003,8 +954,7 @@ void load_mod(std::string const& modid) {
 				reader.process(credits);
 
 				gModDb.credits[path] = credits;
-			}
-			else {
+			} else {
 				spdlog::error("Lua Error: {}", lua_tostring(L, -1));
 			}
 			lua_pop(L, 1);
@@ -1031,11 +981,10 @@ void load_mod(std::string const& modid) {
 				reader.process(credits);
 
 				gModDb.listings[path] = credits;
-			}
-			else {
+			} else {
 				spdlog::info(lua_tostring(L, -1));
 			}
-			
+
 			lua_close(L);
 		}
 	}
@@ -1062,8 +1011,6 @@ void load_mod(std::string const& modid) {
 			memcpy(hashinput.data() + hashinput.size() - 4, &extra, 4);
 
 			gModDb.textures[hashinput] = entry.path().generic_string();
-
-
 		}
 	}
 }
@@ -1094,29 +1041,27 @@ void find_mods() {
 	// check if mods exist, if not remove them from the list
 
 	for (auto it = gFoundMods.begin(); it != gFoundMods.end();) {
-		
 		if ((!std::filesystem::exists(std::filesystem::path("mods") / it->modid)) && (!std::filesystem::exists(std::filesystem::path("mods") / (it->modid + ".zip")))) {
 			it = gFoundMods.erase(it);
-		}
-		else {
+		} else {
 			++it;
 		}
 	}
 
 	// read mods directory, if any mods here arent loaded then add them to the list
 	std::unordered_set<std::string> list;
-	for (auto const& modentry : gFoundMods) { list.insert(modentry.modid); }
+	for (auto const& modentry : gFoundMods) {
+		list.insert(modentry.modid);
+	}
 
 	for (const auto& entry : std::filesystem::directory_iterator("mods")) {
 		std::string modid;
 
 		if (entry.is_directory()) {
 			modid = entry.path().filename().generic_string();
-		}
-		else if (entry.path().extension().generic_string() == ".zip") {
+		} else if (entry.path().extension().generic_string() == ".zip") {
 			modid = entry.path().stem().generic_string();
-		}
-		else
+		} else
 			continue;
 
 		if (!list.contains(modid)) {
@@ -1128,7 +1073,7 @@ void find_mods() {
 void save_mod_order_state() {
 	lua_State* L = luaL_newstate();
 	lua_newtable(L);
-	
+
 	int index = 1;
 	for (auto const& [modid, enabled] : gFoundMods) {
 		lua_newtable(L);
@@ -1157,7 +1102,7 @@ void restore_cache_content() {
 }
 
 void build() {
-	restore_cache_content(); // Always revert content BEFORE applying mods, this will catch some small issues when the base mods doesnt cover certain situations
+	restore_cache_content();  // Always revert content BEFORE applying mods, this will catch some small issues when the base mods doesnt cover certain situations
 
 	// Save mod order and enable flags
 	save_mod_order_state();
@@ -1170,21 +1115,21 @@ void build() {
 
 	for (auto const& [modid, enabled] : gFoundMods) {
 		if (!enabled) continue;
-		if (std::filesystem::exists(std::filesystem::path("mods") / (modid + ".zip"))) continue; // is a zip, skip
+		if (std::filesystem::exists(std::filesystem::path("mods") / (modid + ".zip"))) continue;  // is a zip, skip
 		load_mod(modid);
 	}
 
 	for (auto const& [modid, enabled] : gFoundMods) {
 		if (!enabled) continue;
-		if (std::filesystem::exists(std::filesystem::path("mods") / (modid + ".zip"))) continue; // is a zip, skip
+		if (std::filesystem::exists(std::filesystem::path("mods") / (modid + ".zip"))) continue;  // is a zip, skip
 		process_mod_hooks(modid);
 	}
 
 	// process customs, this is ALWAYS done after native mods
 	for (auto const& [modid, enabled] : gFoundMods) {
 		if (!enabled) continue;
-		if (!std::filesystem::exists(std::filesystem::path("mods") / (modid + ".zip"))) continue; // Not a zip/TCLE mod
-		
+		if (!std::filesystem::exists(std::filesystem::path("mods") / (modid + ".zip"))) continue;  // Not a zip/TCLE mod
+
 		load_precompiled_tcle_mods(modid);
 	}
 
@@ -1209,7 +1154,7 @@ void build() {
 
 		aurora::ByteStream stream;
 		stream.write_u32(16);
-		
+
 		stream.write_u32(static_cast<std::uint32_t>(enteries.size()));
 		stream.write_u32(totalBytes);
 
@@ -1250,9 +1195,8 @@ void build() {
 	int counter = 0;
 
 	try {
-
 		for (auto const& [target, source] : gModDb.textures) {
-			//post_build_message("`{}`", source);
+			// post_build_message("`{}`", source);
 
 			++counter;
 
@@ -1269,11 +1213,8 @@ void build() {
 
 				write_to_thumper_cache(key, stream.mBuffer);
 			}
-
-
 		}
-	}
-	catch (std::exception const& e) {
+	} catch (std::exception const& e) {
 		std::string s = e.what();
 	}
 
@@ -1286,8 +1227,8 @@ ImFont* gMonoSpace = nullptr;
 static bool gShouldLaunchThumper = false;
 
 namespace aurora {
-	bool should_launch_thumper() { return gShouldLaunchThumper; }
-}
+bool should_launch_thumper() { return gShouldLaunchThumper; }
+}  // namespace aurora
 
 std::optional<std::string> mPathImHex;
 std::optional<std::string> mPathHxD;
@@ -1321,54 +1262,58 @@ void tools_binary_search(bool& aOpen) {
 		ImGui::SetNextItemShortcut(ImGuiMod_Ctrl | ImGuiKey_F);
 		if (ImGui::InputText("Input", &input, ImGuiInputTextFlags_EnterReturnsTrue)) {
 			if (!input.empty() && !future) {
-				future = std::async(std::launch::async, [](std::string input) {
-					Result result;
-					
-					std::string parsed = aurora::unescape(input);
-					auto parsedSpan = std::as_bytes(std::span(parsed));
-					result.pattern = input;
+				future = std::async(
+				    std::launch::async,
+				    [](std::string input) {
+					    Result result;
 
-					for (auto const& entry : std::filesystem::directory_iterator("cache")) {
-						if (auto const data = aurora::read_file(entry.path())) {
-							auto it = data->begin();
+					    std::string parsed = aurora::unescape(input);
+					    auto parsedSpan = std::as_bytes(std::span(parsed));
+					    result.pattern = input;
 
-							while (true) {
-								it = std::search(it, data->end(), parsedSpan.begin(), parsedSpan.end());
-								if (it == data->end()) break;
+					    for (auto const& entry : std::filesystem::directory_iterator("cache")) {
+						    if (auto const data = aurora::read_file(entry.path())) {
+							    auto it = data->begin();
 
-								result.matches.emplace_back(entry.path().filename().generic_string(), std::distance(data->begin(), it), std::distance(data->begin(), it) + parsedSpan.size());
+							    while (true) {
+								    it = std::search(it, data->end(), parsedSpan.begin(), parsedSpan.end());
+								    if (it == data->end()) break;
 
-								++it;
-							}
-						}
-					}
+								    result.matches.emplace_back(entry.path().filename().generic_string(), std::distance(data->begin(), it),
+								                                std::distance(data->begin(), it) + parsedSpan.size());
 
-					if(std::filesystem::exists("THUMPER_win8.exe.unpacked.exe")){
-						auto const data = aurora::read_file("THUMPER_win8.exe.unpacked.exe");
+								    ++it;
+							    }
+						    }
+					    }
 
-						if (data.has_value()) {
-							auto it = data->begin();
+					    if (std::filesystem::exists("THUMPER_win8.exe.unpacked.exe")) {
+						    auto const data = aurora::read_file("THUMPER_win8.exe.unpacked.exe");
 
-							while (true) {
-								it = std::search(it, data->end(), parsedSpan.begin(), parsedSpan.end());
-								if (it == data->end()) break;
+						    if (data.has_value()) {
+							    auto it = data->begin();
 
-								result.matches.emplace_back("THUMPER_win8.exe.unpacked.exe", std::distance(data->begin(), it), std::distance(data->begin(), it) + parsed.size());
+							    while (true) {
+								    it = std::search(it, data->end(), parsedSpan.begin(), parsedSpan.end());
+								    if (it == data->end()) break;
 
-								++it;
-							}
-						}
-					}
+								    result.matches.emplace_back("THUMPER_win8.exe.unpacked.exe", std::distance(data->begin(), it),
+								                                std::distance(data->begin(), it) + parsed.size());
 
-					return result;
-				}, input);
+								    ++it;
+							    }
+						    }
+					    }
+
+					    return result;
+				    },
+				    input);
 			}
 		}
 
 		if (future) {
 			ImGui::ProgressBar(-1.0f * (float)ImGui::GetTime());
-		}
-		else {
+		} else {
 			ImGui::SetNextItemShortcut(ImGuiMod_Ctrl | ImGuiKey_C);
 			bool copy = ImGui::Button("Copy");
 
@@ -1377,14 +1322,13 @@ void tools_binary_search(bool& aOpen) {
 			ImGui::Text("%zu results for %s", matches.matches.size(), matches.pattern.c_str());
 
 			for (auto const& match : matches.matches) {
-
 				std::string displayValue = match.file;
 
 				try {
 					auto hashValue = std::stoull(match.file.substr(0, match.file.size() - 3), nullptr, 16);
 					displayValue = gHashtable.at(static_cast<uint32_t>(hashValue));
 					displayValue = aurora::escape(displayValue);
-				} catch(std::exception const&) {
+				} catch (std::exception const&) {
 				}
 
 				std::string str = fmt::format("{} @ 0x{:x} -> 0x{:x}", displayValue, match.start, match.end);
@@ -1408,7 +1352,6 @@ void tools_binary_search(bool& aOpen) {
 					ImGui::EndPopup();
 				}
 
-				
 				ImGui::SetItemTooltip("Origin File: %s", match.file.c_str());
 			}
 
@@ -1433,7 +1376,6 @@ void cache_scan(std::unordered_set<std::string>& pcFileStorage) {
 	}
 
 	spdlog::info(fmt::format("{} file(s)", pcFileStorage.size()));
-
 }
 
 std::unordered_set<std::string> pcFileStorage;
@@ -1461,14 +1403,14 @@ lua_State* aurora_newstate() {
 	lua_pushcfunction(L, &aurora_rhash);
 	lua_setfield(L, -2, "rhash");
 
-	lua_pushcfunction(L, [](lua_State* L)-> int {
+	lua_pushcfunction(L, [](lua_State* L) -> int {
 		lua_pushboolean(L, pcFileStorage.contains(luaL_checkstring(L, 1)));
 		return 1;
 	});
 	lua_setfield(L, -2, "cache_hit");
 
-	lua_pushcfunction(L, [](lua_State* L)-> int {
-		lua_pushliteral(L, ""); // Backward compat, will be deprecated and removed
+	lua_pushcfunction(L, [](lua_State* L) -> int {
+		lua_pushliteral(L, "");  // Backward compat, will be deprecated and removed
 		return 1;
 	});
 	lua_setfield(L, -2, "game_directory");
@@ -1521,7 +1463,7 @@ struct PluginEngine {
 			lua_pushnil(L);
 			while (lua_next(L, -2)) {
 				lua_pushvalue(L, -2);
-				char const *key = lua_tostring(L, -1);
+				char const* key = lua_tostring(L, -1);
 
 				if (!plugins.contains(key)) {
 					Plugin& storage = plugins[key];
@@ -1534,7 +1476,6 @@ struct PluginEngine {
 
 				lua_pop(L, 2);
 			}
-
 		}
 		lua_pop(L, 1);
 	}
@@ -1557,7 +1498,7 @@ struct PluginEngine {
 					lua_pushnil(L);
 					while (lua_next(L, -2)) {
 						lua_pushvalue(L, -2);
-						char const *key = lua_tostring(L, -1);
+						char const* key = lua_tostring(L, -1);
 
 						// Get the storage container for the plugin
 						// Allocate it if needed
@@ -1576,7 +1517,6 @@ struct PluginEngine {
 
 						lua_pop(L, 2);
 					}
-
 				}
 				lua_pop(L, 1);
 
@@ -1592,7 +1532,6 @@ struct PluginEngine {
 			if (lua_getglobal(L, "_AuroraImplGlobalStorage") == LUA_TTABLE) {
 				lua_pushnil(L);
 				while (lua_next(L, -2)) {
-
 					lua_getfield(L, -1, "target");
 					char const* targetKey = lua_tostring(L, -1);
 					lua_gettable(L, -5);
@@ -1604,8 +1543,8 @@ struct PluginEngine {
 						lua_pcall(L, 3, 0, 0);
 
 						plugins[targetKey].wantsFocus = true;
-					}
-					else lua_pop(L, 1);
+					} else
+						lua_pop(L, 1);
 
 					lua_pop(L, 2);
 				}
@@ -1622,7 +1561,7 @@ struct PluginEngine {
 			lua_pushnil(L);
 			while (lua_next(L, -2)) {
 				lua_pushvalue(L, -2);
-				char const *key = lua_tostring(L, -1);
+				char const* key = lua_tostring(L, -1);
 
 				// Update impl global, used for plugin messages
 				lua_pushstring(L, key);
@@ -1660,20 +1599,17 @@ struct PluginEngine {
 										ImGui::TextUnformatted(lua_tostring(L, -1));
 										lua_pop(L, 1);
 									}
-								}
-								else lua_pop(L, 1);
+								} else
+									lua_pop(L, 1);
 							}
 							ImGui::End();
 						}
-
-
 					}
 					lua_pop(L, 1);
 				}
 
 				lua_pop(L, 2);
 			}
-
 		}
 		lua_pop(L, 1);
 
@@ -1699,17 +1635,15 @@ struct PluginEngine {
 					if (lua_getfield(L, -2, "OnUnload") == LUA_TFUNCTION) {
 						if (lua_pcall(L, 0, 0, 0) != LUA_OK) {
 							spdlog::error(lua_tostring(L, -1));
-							lua_pop(L, 1); // Pop error value from stack
+							lua_pop(L, 1);  // Pop error value from stack
 						}
-					}
-					else {
+					} else {
 						lua_pop(L, 1);
 					}
 				}
 
 				lua_pop(L, 2);
 			}
-
 		}
 		lua_pop(L, 1);
 
@@ -1736,16 +1670,13 @@ enum struct Comp : std::uint32_t {
 };
 
 namespace aurora {
-	void logger_init() {
-		spdlog::default_logger()->sinks().emplace_back(std::make_shared<spdlog::sinks::basic_file_sink_mt>("aurora.log", true));
-		spdlog::set_level(spdlog::level::trace);
-		spdlog::flush_every(std::chrono::seconds(5));
-		spdlog::flush_on(spdlog::level::err);
-		spdlog::flush_on(spdlog::level::critical);
-	}
-
-
-
+void logger_init() {
+	spdlog::default_logger()->sinks().emplace_back(std::make_shared<spdlog::sinks::basic_file_sink_mt>("aurora.log", true));
+	spdlog::set_level(spdlog::level::trace);
+	spdlog::flush_every(std::chrono::seconds(5));
+	spdlog::flush_on(spdlog::level::err);
+	spdlog::flush_on(spdlog::level::critical);
+}
 
 void main() {
 	logger_init();
@@ -1761,21 +1692,21 @@ void main() {
 	}
 
 	bool toolsBinarySearch = false;
-	
+
 	cache_scan(pcFileStorage);
 
 	aurora::Window window;
-	
+
 	{
 		using stbi_deleter = aurora::DeleterOf<stbi_image_free>;
 		int x, y;
 		std::unique_ptr<stbi_uc, stbi_deleter> pixels = decltype(pixels)(stbi_load("aurora/icon.png", &x, &y, nullptr, 4));
 
 		window = { {
-				.title = "Aurora v0.0.4-a.11",
-				.iconPixels = pixels.get(),
-				.iconWidth = x,
-				.iconHeight = y,
+			.title = "Aurora v0.0.4-a.11",
+			.iconPixels = pixels.get(),
+			.iconWidth = x,
+			.iconHeight = y,
 		} };
 	}
 
@@ -1792,7 +1723,7 @@ void main() {
 
 	ImFontConfig config;
 	config.MergeMode = true;
-	config.GlyphMinAdvanceX = 18.0f; // Use if you want to make the icon monospaced
+	config.GlyphMinAdvanceX = 18.0f;  // Use if you want to make the icon monospaced
 	io.Fonts->AddFontFromFileTTF("aurora/fa-solid-900.ttf", 18.0f, &config);
 
 	gMonoSpace = io.Fonts->AddFontFromFileTTF("aurora/NotoSansMono-Regular.ttf", 18.0f);
@@ -1834,7 +1765,6 @@ void main() {
 			}
 
 			if (ImGui::BeginMenu("Tools")) {
-
 				ImGui::MenuItem("Binary Search", nullptr, &toolsBinarySearch);
 
 				if (ImGui::MenuItem("Restore Cache Backup")) {
@@ -1854,13 +1784,11 @@ void main() {
 		ImGui::EndMainMenuBar();
 
 		unpack_gui(viewUnpackGui);
-		
 
 		static std::string path = "Alevels/demo.objlib";
 
 		if (gObjlibParserStaticDataVisible) {
 			if (ImGui::Begin("Objlib Parser", &gObjlibParserStaticDataVisible)) {
-				
 				static std::string status = "Waiting";
 
 				ImGui::InputText("Path", &path);
@@ -1872,8 +1800,7 @@ void main() {
 						status = "Parsing...";
 						gObjlibParserStaticData.parse(path);
 						status = "OK";
-					}
-					catch (AuroraParseError const& e) {
+					} catch (AuroraParseError const& e) {
 						status = e.what();
 					}
 				}
@@ -1883,23 +1810,20 @@ void main() {
 				ImGui::Separator();
 
 				gObjlibParserStaticData.gui();
-
 			}
 			ImGui::End();
 
 			gObjlibParserStaticData.guiEditors();
 		}
-		
 
 		static std::string selectionContext;
 
-		static std::once_flag flag; std::call_once(flag, ImGui::SetNextWindowFocus);
+		static std::once_flag flag;
+		std::call_once(flag, ImGui::SetNextWindowFocus);
 		ImGui::SetNextWindowPos(ImVec2(io.DisplaySize.x * 0.5f, io.DisplaySize.y * 0.5f), ImGuiCond_Once, ImVec2(0.5f, 0.5f));
 		ImGui::SetNextWindowSize(ImVec2(800, 600), ImGuiCond_Once);
 		if (ImGui::Begin("Launcher", nullptr, ImGuiWindowFlags_MenuBar)) {
-			
 			if (ImGui::BeginMenuBar()) {
-
 				if (ImGui::BeginMenu("File")) {
 					if (ImGui::MenuItem("Enable All")) {
 						for (auto& item : gFoundMods) item.enabled = true;
@@ -1936,7 +1860,9 @@ void main() {
 					if (item.enabled) continue;
 
 					std::underlying_type_t<ImGuiTreeNodeFlags_> flags = ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_SpanAvailWidth;
-					if (selectionContext == item.modid) { flags |= ImGuiTreeNodeFlags_Selected; }
+					if (selectionContext == item.modid) {
+						flags |= ImGuiTreeNodeFlags_Selected;
+					}
 
 					std::optional<char const*> issue = std::nullopt;
 
@@ -1954,7 +1880,9 @@ void main() {
 						ImGui::PopStyleColor(2);
 					}
 
-					if (ImGui::IsItemActivated()) { selectionContext = item.modid; }
+					if (ImGui::IsItemActivated()) {
+						selectionContext = item.modid;
+					}
 
 					if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left) && ImGui::IsItemHovered(ImGuiHoveredFlags_None)) {
 						item.enabled ^= true;
@@ -1970,18 +1898,20 @@ void main() {
 			if (ImGui::BeginChild("Active", { 0.0f, -footerSize }, ImGuiChildFlags_None, ImGuiWindowFlags_AlwaysVerticalScrollbar)) {
 				for (std::size_t n = 0; n < gFoundMods.size(); ++n) {
 					auto& item = gFoundMods[n];
-        			if (!item.enabled) continue;
+					if (!item.enabled) continue;
 
-        			std::underlying_type_t<ImGuiTreeNodeFlags_> flags = ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_SpanAvailWidth;
-        			if (selectionContext == item.modid) { flags |= ImGuiTreeNodeFlags_Selected; }
+					std::underlying_type_t<ImGuiTreeNodeFlags_> flags = ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_SpanAvailWidth;
+					if (selectionContext == item.modid) {
+						flags |= ImGuiTreeNodeFlags_Selected;
+					}
 
-        			std::optional<char const*> issue = std::nullopt;
+					std::optional<char const*> issue = std::nullopt;
 
-        			if (n == 0 && gFoundMods[n].modid != "base") {
-        			    issue = "WARN: `base` is not the first loaded mod in the list. This will cause loss of base game content.";
-        			} else if (gFoundMods[n].modid == "aurora.base" && n != 1) {
-        			    issue = "WARN: `aurora.base` is not loaded directly after `base`. This will cause loss of base aurora content.";
-        			}
+					if (n == 0 && gFoundMods[n].modid != "base") {
+						issue = "WARN: `base` is not the first loaded mod in the list. This will cause loss of base game content.";
+					} else if (gFoundMods[n].modid == "aurora.base" && n != 1) {
+						issue = "WARN: `aurora.base` is not loaded directly after `base`. This will cause loss of base aurora content.";
+					}
 
 					if (issue) ImGui::PushStyleColor(ImGuiCol_Text, { 1.0f, fmodf(static_cast<float>(glfwGetTime()), 1.0f), fmodf(static_cast<float>(glfwGetTime()), 1.0f), 1.0f });
 
@@ -1995,17 +1925,17 @@ void main() {
 						ImGui::PopStyleColor(2);
 					}
 
-					
-
-					//if (n == 1 && gFoundMods[n].modid != "aurora.base") {
+					// if (n == 1 && gFoundMods[n].modid != "aurora.base") {
 					//	auto* window = ImGui::GetCurrentWindow();
 					//	ImGui::GetForegroundDrawList(window)->AddRect(window->Pos, window->Pos + window->Size, IM_COL32(255, 255, 0, 255));
 					//	ImGui::SetItemTooltip("%s", "`aurora.base` is not the second loaded mod in the list. This may cause issues when applying mods.");
-					//}
+					// }
 
 					ImGui::PopItemFlag();
 
-					if (ImGui::IsItemActivated()) { selectionContext = item.modid; }
+					if (ImGui::IsItemActivated()) {
+						selectionContext = item.modid;
+					}
 
 					if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left) && ImGui::IsItemHovered(ImGuiHoveredFlags_None)) {
 						item.enabled ^= true;
@@ -2030,10 +1960,9 @@ void main() {
 			}
 			ImGui::EndChild();
 
-
 			ImGui::Columns(1);
 
-			ImGui::Separator();			
+			ImGui::Separator();
 
 			ImGui::Checkbox("Build Mod Content", &buildModContent);
 
@@ -2104,4 +2033,4 @@ void main() {
 	ImGui_ImplGlfw_Shutdown();
 	ImGui::DestroyContext();
 }
-}
+}  // namespace aurora

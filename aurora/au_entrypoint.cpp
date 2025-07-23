@@ -1,5 +1,5 @@
-#include <exception>
 #include <cstdlib>
+#include <exception>
 #include <iostream>
 
 #include <tinyfiledialogs.h>
@@ -11,5 +11,5 @@
 #endif
 
 namespace aurora {
-	void main();
+void main();
 }

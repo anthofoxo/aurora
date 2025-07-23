@@ -1,0 +1,46 @@
+# .clang-format for Visual Studio C++ style
+
+BasedOnStyle: Google
+IndentWidth: 4
+TabWidth: 4
+UseTab: ForIndentation
+
+# Alignment settings
+AlignAfterOpenBracket: Align
+AlignOperands: true
+AlignTrailingComments: true
+
+# Braces & spacing
+BreakBeforeBraces: Attach
+SpaceBeforeParens: ControlStatements
+SpacesInParentheses: false
+SpaceInEmptyParentheses: false
+SpacesInAngles: false
+SpaceAfterCStyleCast: false
+Cpp11BracedListStyle: false
+NamespaceIndentation: Inner
+IndentPPDirectives: AfterHash
+
+# Includes
+IncludeBlocks: Preserve
+IncludeCategories:
+  - Regex:           '^<.*\.h>'
+    Priority:        1
+    SortPriority:    0
+    CaseSensitive:   false
+  - Regex:           '^".*\.h"'
+    Priority:        2
+    SortPriority:    0
+    CaseSensitive:   false
+SortIncludes: true
+
+# Constructor initializers
+BreakConstructorInitializers: BeforeColon
+
+# Miscellaneous
+ColumnLimit: 180
+DerivePointerAlignment: false
+PointerAlignment: Left
+
+# Comment formatting
+ReflowComments: true
