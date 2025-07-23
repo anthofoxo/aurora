@@ -9,7 +9,7 @@
 #include <lua.hpp>
 #include <glm/glm.hpp>
 
-#define AU_FIELD(aSerializer, aField) aSerializer.serialize(#aField, aField)
+#define AU_FIELD(aSerializer, aField, ...) aSerializer.serialize(#aField, aField __VA_OPT__(,) __VA_ARGS__)
 
 namespace aurora {
 	struct Serializer;
@@ -32,6 +32,22 @@ namespace aurora {
 		virtual void serialize(char const* aField, std::int32_t& aValue) = 0;
 		virtual void serialize(char const* aField, std::string& aValue, bool aSizedString = true) = 0;
 		virtual void serialize(char const* aField, Serializable& aValue) = 0;
+
+		// return true if the optional should be allocated
+		// otherwise return false to assert that the optional is created
+		virtual bool opt_begin() = 0;
+
+		template<typename T> inline void serialize(char const* aField, std::optional<T>& aValue, bool aCondition) {
+			if (aCondition) {
+				if (opt_begin()) aValue = T();
+				else assert(aValue.has_value())
+
+				serialize(aField, *aValue);
+			}
+			else {
+				aValue = std::nullopt;
+			}
+		}
 
 		template<typename T> inline void serialize(char const* aField, std::vector<T>& aValue) {
 			auto newSize = aValue.size();
@@ -66,14 +82,11 @@ namespace aurora {
 
 		template<typename T, std::size_t N>
 		inline void serialize(char const* aField, std::array<T, N>& aValue) {
-
-			//make sure the size is right
 			auto newSize = aValue.size();
     		array_begin(aField, newSize);
 
     		assert(newSize == aValue.size());
 
-			//for each item serialize
     		for (std::size_t i = 0; i < aValue.size(); ++i) {
         		array_iter_prologue(i);
         		serialize(nullptr, aValue[i]);
@@ -118,6 +131,7 @@ namespace aurora {
 		inline void array_iter_prologue(std::size_t i) { lua_rawgeti(L, -1, i + 1); }
 		inline void array_iter_epilogue(std::size_t aIndex) override { lua_pop(L, 1); }
 		inline void array_end(char const* aField) override { lua_pop(L, 1); };
+		inline bool opt_begin() override { return true; }
 
 		lua_State* L = nullptr;
 	};
@@ -137,6 +151,7 @@ namespace aurora {
 		inline void array_iter_prologue(std::size_t aIndex) override {};
 		inline void array_iter_epilogue(std::size_t aIndex) override { lua_rawseti(L, -2, aIndex + 1); }
 		inline void array_end(char const* aField) override { if (aField) lua_setfield(L, -2, aField); };
+		inline bool opt_begin() override { return false; }
 
 		void impl_integer(char const* aField, lua_Integer aValue);
 		virtual ~SerializerWriterLua() noexcept = default;
@@ -164,6 +179,7 @@ namespace aurora {
 		void array_iter_prologue(std::size_t aIndex) override {};
 		void array_iter_epilogue(std::size_t aIndex) override {};
 		void array_end(char const* aField) override {};
+		inline bool opt_begin() override { return false; }
 
 		virtual ~SerializerWriterBinary() noexcept = default;
 		std::vector<std::byte> mBuffer;
@@ -191,6 +207,7 @@ namespace aurora {
 		void array_iter_prologue(std::size_t aIndex) override {};
 		void array_iter_epilogue(std::size_t aIndex) override {};
 		void array_end(char const* aField) override {};
+		inline bool opt_begin() override { return true; }
 
 		virtual ~SerializerReaderBinary() noexcept = default;
 		char const* const kError = "ByteStream out of range";

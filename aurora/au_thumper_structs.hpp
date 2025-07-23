@@ -2,14 +2,26 @@
 
 #include <string>
 #include <vector>
-#include <stdint.h>
+#include <cstdint>
 #include <any>
 
 #include "au_serial.hpp"
+#include "au_hash.hpp"
 
 #include <glm/glm.hpp>
 
 namespace thumper {
+	enum struct DeclarationType : std::uint32_t {
+		kLeaf = aurora::fnv1a("SequinLeaf"),
+		kSamp = aurora::fnv1a("Sample"),
+		kSpn = aurora::fnv1a("EntitySpawner"),
+		kMaster = aurora::fnv1a("SequinMaster"),
+		kDrawer = aurora::fnv1a("SequinDrawer"),
+		kGate = aurora::fnv1a("SequinGate"),
+		kLvl = aurora::fnv1a("SequinLevel"),
+		kPath = aurora::fnv1a("Path"),
+	};
+
 	struct Transform final : public aurora::Serializable {
 		glm::f32vec3 position;
 		glm::f32vec3 rotx;
@@ -121,40 +133,15 @@ namespace thumper {
 	};
 
 	struct LevelObjLib : public aurora::Serializable {
+		static constexpr std::array<std::uint32_t, 4> kHeader = { 33, 19, 15, 4 };
 
-		uint32_t fileType;
-		uint32_t objlibType;
+		std::uint32_t fileType;
+		std::uint32_t objlibType;
 
-		//uint32_t header0;
-		//uint32_t header1;
-		//uint32_t header2;
-		//uint32_t header3;
-		static constexpr std::array<uint32_t, 4> kHeader = { 0, 0, 0, 0 };
-
-
-		/*		NOTE FOR ANTHO
-		This is the code for the DelclarationType from old aurora
-		
-		enum struct DeclarationType : uint32_t {
-			kLeaf = hash("SequinLeaf"),
-			kSamp = hash("Sample"),
-			kSpn = hash("EntitySpawner"),
-			kMaster = hash("SequinMaster"),
-			kDrawer = hash("SequinDrawer"),
-			kGate = hash("SequinGate"),
-			kLvl = hash("SequinLevel"),
-			kPath = hash("Path"),
-		};
-		
-		New aurora will probably implement this differently but here it is if you need it
-    
-		
-		
-		*/
-		
+		std::array<std::uint32_t, 4> header;
 		
 		struct GlobalLibImport : public aurora::Serializable {
-			uint32_t unknown0;
+			std::uint32_t unknown0;
 			std::string library;
 
 			void serialize(aurora::Serializer& a) override {
@@ -164,9 +151,9 @@ namespace thumper {
 		};
 
 		struct ObjectImport : public aurora::Serializable {
-			uint32_t type;
+			std::uint32_t type;
 			std::string name;
-			uint32_t unknown0;
+			std::uint32_t unknown0;
 			std::string library;
 
 			void serialize(aurora::Serializer& a) override {
@@ -178,7 +165,7 @@ namespace thumper {
 		};
 
 		struct ObjectListEntry : public aurora::Serializable {
-			uint32_t objectType;
+			std::uint32_t objectType;
 			std::string objectName;
 
 			void serialize(aurora::Serializer& a) override {
@@ -188,10 +175,7 @@ namespace thumper {
 		};
 
 		struct ObjectDeclaration : public aurora::Serializable {
-
-			size_t _definitionOffset = 0; //offset if needed
-
-			uint32_t declarationType; //in old aurora this was a custom vartype using hashes to decide the type.
+			std::uint32_t declarationType; //in old aurora this was a custom vartype using hashes to decide the type.
 			std::string name;
 
 			void serialize(aurora::Serializer& a) override {
@@ -201,38 +185,31 @@ namespace thumper {
 		};
 
 		struct Path : public aurora::Serializable {
-			
-			//uint32_t header0;
-			//uint32_t header1;
+			static constexpr std::array<std::uint32_t, 2> kHeader = { 41, 4 };
 
-			static constexpr std::array<uint32_t, 2> kHeader = { 0, 0 };
+			std::array<std::uint32_t, 2> header;
 
-			std::array<uint32_t, 2> header = kHeader;
-			uint32_t unknown0;
-			uint32_t hash0; //editstatecomp
+			std::uint32_t unknown0;
+			std::uint32_t hash0; //editstatecomp
 
 			glm::f32vec3 scale0;
-									// these dont work atm because object of abstract class type f32vec3 is not allowed
 			glm::f32vec3 scale1;
 
-			uint32_t unknown6; // Exists if unknown0 is ==1. originally type std optional
+			std::optional<std::uint32_t> unknown6; // Exists if unknown0 is ==1. originally type std optional
 
 			std::string meshName; //lattice_5.mesh
 			bool unknownBool0;
 			std::string pathInterpType; //kPathScaleInterpLinear
-			uint32_t unknown7;
-			uint8_t unknown8;
-			uint8_t unknown9;
+			std::uint32_t unknown7;
+			std::uint8_t unknown8;
+			std::uint8_t unknown9;
 			std::vector<std::string> decorators;
 
 			bool unknownBool1;
 
-			void serialize(aurora::Serializer& a)
-			{
-				for (int i = 0; i < kHeader.size(); i++)
-				{
-					AU_FIELD(a, header[i]);
-				}
+			void serialize(aurora::Serializer& a) {
+				AU_FIELD(a, header);
+				for (std::size_t i = 0; i < header.size(); i++) { assert(header[i] == kHeader[i]); }
 
 				AU_FIELD(a, unknown0);
 				AU_FIELD(a, hash0);
@@ -240,7 +217,7 @@ namespace thumper {
 				AU_FIELD(a, scale0);
 				AU_FIELD(a, scale1);
 
-				AU_FIELD(a, unknown6); //filled only if unknown0 == 1
+				AU_FIELD(a, unknown6, unknown0 == 1);
 				
 				AU_FIELD(a, meshName);
 				AU_FIELD(a, unknownBool0);
@@ -251,14 +228,12 @@ namespace thumper {
 				AU_FIELD(a, decorators);
 
 				AU_FIELD(a, unknownBool1);
-
 			}
-
 		};
 
 		struct TraitSelector : public aurora::Serializable {
-			uint32_t selector;
-			int32_t shareIdx;
+			std::uint32_t selector;
+			std::int32_t shareIdx;
 
 			void serialize(aurora::Serializer& a) override {
 				AU_FIELD(a, selector);
@@ -284,22 +259,22 @@ namespace thumper {
 		struct SequinLeafTrait : public aurora::Serializable {
 			std::string objectName;
 			std::vector<TraitSelector> selectors;
-			uint32_t dataType;
+			std::uint32_t dataType;
 			std::vector<Datapoint> datapoints;
 			std::vector<Datapoint> editorDatapoints;
 
-			uint32_t unknown1;
-			uint32_t unknown2;
-			uint32_t unknown3;
-			uint32_t unknown4;
-			uint32_t unknown5;
+			std::uint32_t unknown1;
+			std::uint32_t unknown2;
+			std::uint32_t unknown3;
+			std::uint32_t unknown4;
+			std::uint32_t unknown5;
 
 			std::string intensity0;
 			std::string intensity1;
 
-			uint8_t unknown6;
-			uint8_t unknown7;
-			uint32_t unknown8;
+			std::uint8_t unknown6;
+			std::uint8_t unknown7;
+			std::uint32_t unknown8;
 
 			float unknown9;
 			float unknown10;
@@ -307,9 +282,9 @@ namespace thumper {
 			float unknown12;
 			float unknown13;
 
-			uint8_t unknown14;
-			uint8_t unknown15;
-			uint8_t unknown16;
+			std::uint8_t unknown14;
+			std::uint8_t unknown15;
+			std::uint8_t unknown16;
 
 			void serialize(aurora::Serializer& a) override {
 				AU_FIELD(a, objectName);
@@ -345,38 +320,28 @@ namespace thumper {
 		};
 
 		struct SequinLeaf : public aurora::Serializable {
+			static constexpr std::array<std::uint32_t, 4> kHeader = { 34, 33, 4, 2 };
 
-			std::string _declaredName; //fill this using the object list
-
-			//uint32_t header0; //0x22
-			//uint32_t header1; //0x21
-			//uint32_t header2; //0x04
-			//uint32_t header3; //0x2
-
-			static constexpr std::array<uint32_t, 4> kHeader = { 34, 33, 4, 2 };
-
-			std::array<uint32_t, 4> header = kHeader;
+			std::array<std::uint32_t, 4> header;
 			float unknownFloat0; //23.88671875 ? from a random leaf in level 6
 			//uint32_t unknown0;
 			//uint32_t hash1;		//not sure if these two are used but easy to re-enable
 			std::string timeUnit;
-			uint32_t EditStateCompHash;
+			std::uint32_t EditStateCompHash;
 
-			uint32_t sequinLeafTraitCount;
+			std::uint32_t sequinLeafTraitCount;
 			std::vector<SequinLeafTrait> SequinLeafTraits;
 
-			uint32_t unknown1;
+			std::uint32_t unknown1;
 			std::vector<glm::u32vec3> unknown2;
-			uint32_t unknown3;
-			uint32_t unknown4;
-			uint32_t unknown5;
+			std::uint32_t unknown3;
+			std::uint32_t unknown4;
+			std::uint32_t unknown5;
 
 			void serialize(aurora::Serializer& a) override {
 
-				for (int i = 0; i < kHeader.size(); i++)
-				{
-					AU_FIELD(a, header[i]);
-				}
+				AU_FIELD(a, header);
+				for (std::size_t i = 0; i < header.size(); i++) { assert(header[i] == kHeader[i]); }
 
 				AU_FIELD(a, unknownFloat0);
 				//AU_FIELD(a, unknown0);
@@ -392,30 +357,22 @@ namespace thumper {
 				AU_FIELD(a, unknown3);
 				AU_FIELD(a, unknown4);
 				AU_FIELD(a, unknown5);
-
 			}
 
 		};
 
 		struct Sample : public aurora::Serializable {
-			//uint32_t header0 = 12;
-			//uint32_t header1 = 4;
+			static constexpr std::array<std::uint32_t, 2> kHeader = { 12, 4 };
 
-			std::array<uint32_t, 2> kHeader = { 12, 4 };
-
-			std::array<uint32_t, 2> header = kHeader;
-			std::string _declaredName;
-			size_t _beginOffset = 0;
-			size_t _endOffset = 0;
-
-			//uint32_t header[2];
-			uint32_t hash0; //EditStateComp, this was original standard optional but I changed it so the serializer likes it
+			std::array<std::uint32_t, 2> header;
+			
+			std::uint32_t hash0; //EditStateComp, this was original standard optional but I changed it so the serializer likes it
 			std::string samplePlayMode;
-			uint32_t unknown0;
+			std::uint32_t unknown0;
 			std::string filepath;
 
 			//In the files, it's either a boolean then an int, or an int then a boolean. The order is unknown.
-			uint8_t unknown1[5];
+			std::uint8_t unknown1[5];
 
 			float volume;
 			float pitch;
@@ -424,13 +381,9 @@ namespace thumper {
 			std::string channelGroup;
 
 			void serialize(aurora::Serializer& a) override {
+				AU_FIELD(a, header);
 
-				AU_FIELD(a, kHeader);
-
-				for (int i = 0; i < kHeader.size(); i++)
-				{
-					AU_FIELD(a, header[i]);
-				}
+				for (std::size_t i = 0; i < kHeader.size(); i++) { assert(kHeader[i] == header[i]); }
 
 				AU_FIELD(a, hash0);
 				AU_FIELD(a, samplePlayMode);
@@ -448,7 +401,6 @@ namespace thumper {
 				AU_FIELD(a, pan);
 				AU_FIELD(a, offset);
 				AU_FIELD(a, channelGroup);
-
 			}
 
 		};
@@ -456,22 +408,22 @@ namespace thumper {
 		struct Trait : public aurora::Serializable {		//for any trait system. Mainly seen in SequinLeaf and SequinLevel but MIGHT be in TraitAnim too.
 			std::string objectName;
 			std::vector<TraitSelector> selectors;
-			uint32_t datatype;
+			std::uint32_t datatype;
 			std::vector<Datapoint> datapoints;
 			std::vector<Datapoint> editorDatapoints;
 
-			uint32_t unknown1;
-			uint32_t unknown2;
-			uint32_t unknown3;
-			uint32_t unknown4;
-			uint32_t unknown5;
+			std::uint32_t unknown1;
+			std::uint32_t unknown2;
+			std::uint32_t unknown3;
+			std::uint32_t unknown4;
+			std::uint32_t unknown5;
 
 			std::string intensity0;
 			std::string intensity1;
 
-			uint8_t unknown6;
-			uint8_t unknown7;
-			uint32_t unknown8;
+			std::uint8_t unknown6;
+			std::uint8_t unknown7;
+			std::uint32_t unknown8;
 
 			float unknown9;
 			float unknown10;
@@ -479,9 +431,9 @@ namespace thumper {
 			float unknown12;
 			float unknown13;
 
-			uint8_t unknown14;
-			uint8_t unknown15;
-			uint8_t unknown16;
+			std::uint8_t unknown14;
+			std::uint8_t unknown15;
+			std::uint8_t unknown16;
 
 			void serialize(aurora::Serializer& a) override {
 				AU_FIELD(a, objectName);
@@ -526,11 +478,10 @@ namespace thumper {
 
 		struct SampleEntry : public aurora::Serializable { //for entry for samples inside a Level file
 			std::string sampleName;
-			uint32_t loopBeats;
-			uint32_t unknown0;
+			std::uint32_t loopBeats;
+			std::uint32_t unknown0;
 
-			void serialize(aurora::Serializer& a) override
-			{
+			void serialize(aurora::Serializer& a) override {
 				AU_FIELD(a, sampleName);
 				AU_FIELD(a, loopBeats);
 				AU_FIELD(a, unknown0);
@@ -538,40 +489,30 @@ namespace thumper {
 		};
 
 		struct EntitySpawner : public aurora::Serializable {
-			
-			uint32_t header0 = 1;
-			uint32_t header1 = 4;
-			uint32_t header2 = 2;
-			//static constexpr std::array<uint32_t, 3> kHeader = { 1, 4, 2 };
+			static constexpr std::array<std::uint32_t, 3> kHeader = { 1, 4, 2 };
 
-			std::string _declaredName;
-			size_t _beginOffset = 0;
-			size_t _endOffset = 0;
+			std::array<std::uint32_t, 3> header;
 
-			uint32_t unknown0; //what is this?
-			uint32_t hash0; //EditStateComp
+			std::uint32_t unknown0; //what is this?
+			std::uint32_t hash0; //EditStateComp
 
 			//WriteXfmComp
-			uint32_t hash1; //XfmComp
-			uint32_t unknown1;
+			std::uint32_t hash1; //XfmComp
+			std::uint32_t unknown1;
 			std::string xfmName;
 			std::string constraint;
 
 			Transform transform;
 
-			uint32_t unknown2;
+			std::uint32_t unknown2;
 			std::string objlibPath;
 			std::string bucketType;
 
-			void serialize(aurora::Serializer& a) override
-			{
-				//AU_FIELD(a, kHeader);
-				//AU_FIELD(a, header);
-				AU_FIELD(a, header0);
-				AU_FIELD(a, header1);
-				AU_FIELD(a, header2);
+			void serialize(aurora::Serializer& a) override {
+				AU_FIELD(a, header);
+				for (std::size_t i = 0; i < kHeader.size(); ++i) { assert(header[i] == kHeader[i]); }
 
-				AU_FIELD(a, header0);
+				AU_FIELD(a, unknown0);
 				AU_FIELD(a, hash0);
 
 				AU_FIELD(a, hash1);
@@ -584,40 +525,26 @@ namespace thumper {
 				AU_FIELD(a, unknown2);
 				AU_FIELD(a, objlibPath);
 				AU_FIELD(a, bucketType);
-
 			}
-
 		};
 
 		struct SequinDrawer : public aurora::Serializable {
+			static constexpr std::array<std::uint32_t, 3> kHeader = { 7, 4, 1 };
+
+			std::array<std::uint32_t, 3> header;
 			
-			//uint32_t header0 = 7;
-			//uint32_t header1 = 4;
-			//uint32_t header2 = 1;
-			static constexpr std::array<uint32_t, 3> kHeader = { 7, 4, 1 };
-
-			std::array<uint32_t, 3> header = kHeader;
-			std::string _declaredName;
-			size_t _beginOffset = 0;
-			size_t _endOffset = 0;
-
-			//uint8_t header[3];
-			uint32_t hash0;
-			uint32_t unknown0;
-			uint8_t unknownBool0;
+			std::uint32_t hash0;
+			std::uint32_t unknown0;
+			std::uint8_t unknownBool0;
 			std::string drawLayers;
 			std::string bucketType;
-			uint32_t unknown1;
+			std::uint32_t unknown1;
 
-			void serialize(aurora::Serializer& a) override
-			{
+			void serialize(aurora::Serializer& a) override {
+				AU_FIELD(a, header);
 
-				for (int i = 0; i < kHeader.size(); i++)
-				{
-					AU_FIELD(a, header[i]);
-				}
+				for (std::size_t i = 0; i < kHeader.size(); i++) { assert(header[i] == kHeader[i]); }
 
-				//AU_FIELD(a, header);
 				AU_FIELD(a, hash0);
 				AU_FIELD(a, unknown0);
 				AU_FIELD(a, unknownBool0);
@@ -661,19 +588,16 @@ namespace thumper {
 
 		struct SequinMaster : public aurora::Serializable {
 
-			static constexpr std::array<uint32_t, 4> kHeader = { 33, 33, 4, 2 };
+			static constexpr std::array<std::uint32_t, 4> kHeader = { 33, 33, 4, 2 };
 
-			std::string _declaredName;
-			size_t _beginOffset = 0;
-			size_t _endOffset = 0;
 
-			std::array<uint32_t, 4> header = kHeader;
-			uint32_t hash0;
-			uint32_t unknown0 = 1;
-			uint32_t hash1;
-			std::string timeUnit = "kTimeBeats";
-			uint32_t hash2;		//editstatecomp
-			uint32_t unknown1 = 0;
+			std::array<std::uint32_t, 4> header;
+			std::uint32_t hash0;
+			std::uint32_t unknown0;
+			std::uint32_t hash1;
+			std::string timeUnit;
+			std::uint32_t hash2;		//editstatecomp
+			std::uint32_t unknown1;
 			float unknown2;
 			std::string skybox;
 			std::string introLvl;
@@ -690,14 +614,11 @@ namespace thumper {
 			float footer8;
 			float footer9;
 			std::string checkpointLvl;
-			std::string pathGameplay = "path.gameplay";
+			std::string pathGameplay;
 
-			void serialize(aurora::Serializer& a) override
-			{
-				for (int i = 0; i < header.size(); i++)
-				{
-					AU_FIELD(a, header[i]);
-				}
+			void serialize(aurora::Serializer& a) override {
+				AU_FIELD(a, header);
+				for (std::size_t i = 0; i < header.size(); i++) { assert(header[i] == kHeader[i]); }
 
 				AU_FIELD(a, hash0);
 				AU_FIELD(a, unknown0);
@@ -750,21 +671,14 @@ namespace thumper {
 
 			};
 
-			//uint32_t header0 = 26;
-			//uint32_t header1 = 4;
-			//uint32_t header2 = 1;
-			static constexpr std::array<uint32_t, 3> kHeader = { 26, 4, 1 };
+			static constexpr std::array<std::uint32_t, 3> kHeader = { 26, 4, 1 };
 
-			std::string _declaredName;
-			size_t _beginOffset = 0;
-			size_t _endOffset = 0;
-
-			std::array<uint32_t, 3> header = kHeader;
-			uint32_t editStateComp;
+			std::array<std::uint32_t, 3> header;
+			std::uint32_t editStateComp;
 			std::string spn;
-			uint32_t unknown0;
-			uint32_t spnParameter;
-			int32_t unknown1; // -1
+			std::uint32_t unknown0;
+			std::uint32_t spnParameter;
+			std::int32_t unknown1; // -1
 
 			std::vector<GateEntry> enteries;
 
@@ -778,9 +692,10 @@ namespace thumper {
 
 			void deserialize(aurora::Serializer& a)
 			{
-				for (int i = 0; i < kHeader.size(); i++)
+				AU_FIELD(a, header);
+				for (std::size_t i = 0; i < kHeader.size(); i++)
 				{
-					AU_FIELD(a, header[i]);
+					assert(header[i] == kHeader[i]);
 				}
 
 				AU_FIELD(a, editStateComp);
@@ -804,37 +719,35 @@ namespace thumper {
 		};
 
 		struct SequinLevel : public aurora::Serializable {
-			std::string _declaredName; //fill this using the object list
+			static constexpr std::array<uint32_t, 4> kHeader = { 0, 0, 0, 0 }; // TODO: Fill this in
 
-			static constexpr std::array<uint32_t, 4> kHeader = { 0, 0, 0, 0 };
-
-			std::array<uint32_t, 4> header = kHeader;
-			uint32_t hash0;
-			uint32_t unknown0;
-			uint32_t hash1;
+			std::array<uint32_t, 4> header;
+			std::uint32_t hash0;
+			std::uint32_t unknown0;
+			std::uint32_t hash1;
 			std::string timeUnit;
-			uint32_t unknown1;
-			uint32_t unknownInt0;
-			uint32_t editStateCompHash;
+			std::uint32_t unknown1;
+			std::uint32_t unknownInt0;
+			std::uint32_t editStateCompHash;
 			std::vector<Trait> traits;
-			uint32_t unknown2;
+			std::uint32_t unknown2;
 			std::string phaseMoveType;
-			uint32_t unknown3;
+			std::uint32_t unknown3;
 
 			//there is a rare case where the size of the array ISN'T first.
 			//only way we know about this is via this continuation byte.
-			uint8_t unknown5;
+			std::uint8_t unknown5;
 
 			std::vector<LvlLeafSequin> leafSequin;
 			
 			std::vector<SampleEntry> sampNames;
 
-			uint8_t unknownBool0;
+			std::uint8_t unknownBool0;
 
 			std::string flowRef;
 			std::vector<TraitSelector> traitSelectors;
 			std::string kNumTraitType;	//available options are		kNumTraitInterps	kNumTraitTypes
-			uint8_t unknownBool6;
+			std::uint8_t unknownBool6;
 			std::string tutorialType; // See: is_known_tutorial_type
 
 			float footer1;
@@ -843,9 +756,11 @@ namespace thumper {
 
 			void serialize(aurora::Serializer& a) override 
 			{
+				AU_FIELD(a, header);
+
 				for (int i = 0; i < kHeader.size(); i++)
 				{
-					AU_FIELD(a, header[i]);
+					assert(header[i] == kHeader[i]);
 				}
 
 				AU_FIELD(a, hash0);
