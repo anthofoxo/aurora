@@ -1970,22 +1970,18 @@ void main() {
 			if (ImGui::BeginChild("Active", { 0.0f, -footerSize }, ImGuiChildFlags_None, ImGuiWindowFlags_AlwaysVerticalScrollbar)) {
 				for (std::size_t n = 0; n < gFoundMods.size(); ++n) {
 					auto& item = gFoundMods[n];
-					if (!item.enabled) continue;
+        			if (!item.enabled) continue;
 
-					std::underlying_type_t<ImGuiTreeNodeFlags_> flags = ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_SpanAvailWidth;
-					if (selectionContext == item.modid) { flags |= ImGuiTreeNodeFlags_Selected; }
+        			std::underlying_type_t<ImGuiTreeNodeFlags_> flags = ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_SpanAvailWidth;
+        			if (selectionContext == item.modid) { flags |= ImGuiTreeNodeFlags_Selected; }
 
-					std::optional<char const*> issue = std::nullopt;
+        			std::optional<char const*> issue = std::nullopt;
 
-					if (n == 0 && gFoundMods[n].modid != "base") {
-						issue = "WARN: `base` is not the first loaded mod in the list. This will cause loss of base game content.";
-					}
-					else if (n != 0 && gFoundMods[n].modid == "base") {
-						issue = "WARN: `base` is not the first loaded mod in the list. This will cause loss of base game content.";
-					}
-					else if (item.modid == "aurora.base" && n != 1) {
-						issue = "WARN: `aurora.base` is not loaded directly after `base`. This will cause loss of base aurora content.";
-					}
+        			if (n == 0 && gFoundMods[n].modid != "base") {
+        			    issue = "WARN: `base` is not the first loaded mod in the list. This will cause loss of base game content.";
+        			} else if (gFoundMods[n].modid == "aurora.base" && n != 1) {
+        			    issue = "WARN: `aurora.base` is not loaded directly after `base`. This will cause loss of base aurora content.";
+        			}
 
 					if (issue) ImGui::PushStyleColor(ImGuiCol_Text, { 1.0f, fmodf(static_cast<float>(glfwGetTime()), 1.0f), fmodf(static_cast<float>(glfwGetTime()), 1.0f), 1.0f });
 

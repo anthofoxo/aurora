@@ -64,6 +64,25 @@ namespace aurora {
 			array_end(aField);
 		}
 
+		template<typename T, std::size_t N>
+		inline void serialize(char const* aField, std::array<T, N>& aValue) {
+
+			//make sure the size is right
+			auto newSize = aValue.size();
+    		array_begin(aField, newSize);
+
+    		assert(newSize == aValue.size());
+
+			//for each item serialize
+    		for (std::size_t i = 0; i < aValue.size(); ++i) {
+        		array_iter_prologue(i);
+        		serialize(nullptr, aValue[i]);
+        		array_iter_epilogue(i);
+    		}
+
+    		array_end(aField);
+		}
+
 		constexpr Serializer() noexcept = default;
 		virtual ~Serializer() = default;
 		Serializer(Serializer const&) = delete;
