@@ -5,8 +5,8 @@
 #	undef min
 #endif
 
-#include <GLFW/glfw3.h>
 #include <glad/gl.h>
+#include <GLFW/glfw3.h>
 #define IMGUI_DEFINE_MATH_OPERATORS
 #include <backends/imgui_impl_glfw.h>
 #include <backends/imgui_impl_opengl3.h>
@@ -866,9 +866,15 @@ void load_precompiled_tcle_mods(std::string const& modid) {
 	std::string locKey = std::format("custom.{}", modid);
 	std::transform(locKey.begin(), locKey.end(), locKey.begin(), [](char c) { return std::tolower(c); });
 
-	auto& localization = gModDb.localization["Aui/strings.en.loc"];
-	auto hashed = aurora::fnv1a(locKey);
-	localization[static_cast<LocalizationKey>(hashed)] = modid;
+	// *only for tcle mods*
+	// Iterate over all translation tables and insert the text into all tables
+	// Fixes customs from having their name as `SYM` on non english localization
+	for (auto& [key, localizationTable] : gModDb.localization) {
+		auto hashed = aurora::fnv1a(locKey);
+		localizationTable[static_cast<LocalizationKey>(hashed)] = modid;
+	}
+
+	
 
 	gModDb.listings["Aui/thumper.levels"].entries.emplace_back(locKey, 0, origin, "", false, false, false, 0, 10);
 }

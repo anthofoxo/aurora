@@ -4,8 +4,8 @@
 
 #include <Windows.h>  // Prevent APIENTRY redefinition
 
-#include <GLFW/glfw3.h>
 #include <glad/gl.h>
+#include <GLFW/glfw3.h>
 #include <spdlog/spdlog.h>
 
 #define STB_IMAGE_RESIZE_IMPLEMENTATION
