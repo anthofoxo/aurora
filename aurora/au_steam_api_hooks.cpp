@@ -10,6 +10,7 @@ HMODULE gSteamModule = nullptr;
 
 #include "au_steam_api.h"
 
+#include <cstdio>
 #include <cstdlib>
 #include <iostream>
 

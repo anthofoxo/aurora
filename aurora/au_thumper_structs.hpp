@@ -10,6 +10,16 @@
 
 #include <glm/glm.hpp>
 
+/* SAVEFILE STRUCTS
+
+./savedata/steamuserid/
+-- steam_autocloud.vdf
+
+
+
+
+*/
+
 namespace thumper {
 enum struct DeclarationType : std::uint32_t {
 	kLeaf = aurora::fnv1a("SequinLeaf"),
@@ -20,6 +30,68 @@ enum struct DeclarationType : std::uint32_t {
 	kGate = aurora::fnv1a("SequinGate"),
 	kLvl = aurora::fnv1a("SequinLevel"),
 	kPath = aurora::fnv1a("Path"),
+};
+
+struct RankEntry {
+	std::string rank;
+	std::int32_t unknown;  // -1
+
+	void serialize(aurora::Serializer& a) {
+		AU_FIELD(a, rank);
+		AU_FIELD(a, unknown);
+	}
+};
+
+struct LevelRecord {
+	std::string key;
+	std::string levelPlayRank;
+	std::uint32_t playScore;
+	std::string levelPlayRank2;  // the rank again
+	bool unknown1;        // always true
+	std::uint32_t timestamp;
+	std::uint32_t unknown2;  // always 0
+	std::uint32_t playplusScore;
+	std::string levelPlayPlusRank;
+	std::string levelPlayPlusRank2;
+	std::uint32_t unknown3;  // always -1
+	std::vector<RankEntry> playRankEnteries;
+	std::int32_t unknown4;  // always -1
+	std::vector<RankEntry> playPlusRankEnteries;
+
+	void serialize(aurora::Serializer& a) {
+		AU_FIELD(a, key);
+		AU_FIELD(a, levelPlayRank);
+		AU_FIELD(a, playScore);
+		AU_FIELD(a, levelPlayRank2);
+		AU_FIELD(a, unknown1);
+		AU_FIELD(a, timestamp);
+		AU_FIELD(a, unknown2);
+		AU_FIELD(a, playplusScore);
+		AU_FIELD(a, levelPlayPlusRank);
+		AU_FIELD(a, levelPlayPlusRank2);
+		AU_FIELD(a, unknown3);
+		AU_FIELD(a, playRankEnteries);
+		AU_FIELD(a, unknown4);
+		AU_FIELD(a, playPlusRankEnteries);
+	}
+};
+
+struct LevelInfoTable {
+	std::uint32_t header;
+	std::uint32_t bytecount;
+	std::uint32_t timestamp;
+	std::uint32_t unknown;
+	std::vector<LevelRecord> levels;
+	std::vector<std::uint8_t> footer;
+
+	void serialize(aurora::Serializer& a) {
+		AU_FIELD(a, header);
+		AU_FIELD(a, bytecount);
+		AU_FIELD(a, timestamp);
+		AU_FIELD(a, unknown);
+		AU_FIELD(a, levels);
+		for (auto byte : footer) { a.serialize(nullptr, byte); } // Special handling, do not read/write the size u32 bytes
+	}
 };
 
 struct Transform final : public aurora::Serializable {
