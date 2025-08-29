@@ -1060,18 +1060,20 @@ void find_mods() {
 		list.insert(modentry.modid);
 	}
 
-	for (const auto& entry : std::filesystem::directory_iterator("mods")) {
-		std::string modid;
+	if (std::filesystem::exists("mods")) {
+		for (const auto& entry : std::filesystem::directory_iterator("mods")) {
+			std::string modid;
 
-		if (entry.is_directory()) {
-			modid = entry.path().filename().generic_string();
-		} else if (entry.path().extension().generic_string() == ".zip") {
-			modid = entry.path().stem().generic_string();
-		} else
-			continue;
+			if (entry.is_directory()) {
+				modid = entry.path().filename().generic_string();
+			} else if (entry.path().extension().generic_string() == ".zip") {
+				modid = entry.path().stem().generic_string();
+			} else
+				continue;
 
-		if (!list.contains(modid)) {
-			gFoundMods.emplace_back(modid, false);
+			if (!list.contains(modid)) {
+				gFoundMods.emplace_back(modid, false);
+			}
 		}
 	}
 }

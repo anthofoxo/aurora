@@ -32,7 +32,7 @@ enum struct DeclarationType : std::uint32_t {
 	kPath = aurora::fnv1a("Path"),
 };
 
-struct RankEntry {
+struct RankEntry : public aurora::Serializable {
 	std::string rank;
 	std::int32_t unknown;  // -1
 
@@ -42,7 +42,7 @@ struct RankEntry {
 	}
 };
 
-struct LevelRecord {
+struct LevelRecord : public aurora::Serializable {
 	std::string key;
 	std::string levelPlayRank;
 	std::uint32_t playScore;
@@ -76,7 +76,7 @@ struct LevelRecord {
 	}
 };
 
-struct LevelInfoTable {
+struct LevelInfoTable : public aurora::Serializable {
 	std::uint32_t header;
 	std::uint32_t bytecount;
 	std::uint32_t timestamp;
