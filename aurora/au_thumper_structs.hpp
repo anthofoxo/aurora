@@ -53,7 +53,7 @@ struct LevelRecord : public aurora::Serializable {
 	std::uint32_t playplusScore;
 	std::string levelPlayPlusRank;
 	std::string levelPlayPlusRank2;
-	std::uint32_t unknown3;  // always -1
+	std::int32_t unknown3;  // always -1
 	std::vector<RankEntry> playRankEnteries;
 	std::int32_t unknown4;  // always -1
 	std::vector<RankEntry> playPlusRankEnteries;
@@ -82,7 +82,6 @@ struct LevelInfoTable : public aurora::Serializable {
 	std::uint32_t timestamp;
 	std::uint32_t unknown;
 	std::vector<LevelRecord> levels;
-	std::vector<std::uint8_t> footer;
 
 	void serialize(aurora::Serializer& a) {
 		AU_FIELD(a, header);
@@ -90,7 +89,6 @@ struct LevelInfoTable : public aurora::Serializable {
 		AU_FIELD(a, timestamp);
 		AU_FIELD(a, unknown);
 		AU_FIELD(a, levels);
-		for (auto byte : footer) { a.serialize(nullptr, byte); } // Special handling, do not read/write the size u32 bytes
 	}
 };
 
