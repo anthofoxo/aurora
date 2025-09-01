@@ -2039,6 +2039,8 @@ void main() {
 
 								if (found) continue;
 
+								// Instead of pulling a default score value, this should be fetched from the offline
+								// score table
 								thumper::LevelRecord record;
 								record.key = entry.key;
 								record.levelPlayRank = "RANK_NONE";
@@ -2075,7 +2077,12 @@ void main() {
 								}
 							}
 
-						
+
+							// grab level scores and save them offline
+							// overwrite old score if game sccore is greater than old score
+							for (auto& level : levelInfoTable.levels) {
+
+							}
 
 							// theres a byte count that must be maintained, write it once
 							// check the byte value, update the struct and write one more time
