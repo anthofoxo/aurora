@@ -1862,10 +1862,19 @@ void main() {
 
 			float footerSize = ImGui::GetStyle().ItemSpacing.y + ImGui::GetFrameHeightWithSpacing();
 
+			static ImGuiTextFilter filter;
+			filter.Draw();
 			ImGui::SeparatorText("Inactive");
+			
 			if (ImGui::BeginChild("Inactive", { 0.0f, -footerSize }, ImGuiChildFlags_None, ImGuiWindowFlags_AlwaysVerticalScrollbar)) {
 				for (auto& item : gFoundMods) {
 					if (item.enabled) continue;
+
+					if (filter.IsActive()) {
+						if (!filter.PassFilter(item.modid.c_str(), item.modid.c_str() + item.modid.size())) continue;
+					}
+
+					
 
 					std::underlying_type_t<ImGuiTreeNodeFlags_> flags = ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_SpanAvailWidth;
 					if (selectionContext == item.modid) {
