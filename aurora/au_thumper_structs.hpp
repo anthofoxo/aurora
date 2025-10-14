@@ -48,8 +48,7 @@ struct LevelRecord : public aurora::Serializable {
 	std::uint32_t playScore;
 	std::string levelPlayRank2;  // the rank again
 	bool unknown1;        // always true
-	std::uint32_t timestamp;
-	std::uint32_t unknown2;  // always 0
+	::time_t timestamp;
 	std::uint32_t playplusScore;
 	std::string levelPlayPlusRank;
 	std::string levelPlayPlusRank2;
@@ -65,7 +64,6 @@ struct LevelRecord : public aurora::Serializable {
 		AU_FIELD(a, levelPlayRank2);
 		AU_FIELD(a, unknown1);
 		AU_FIELD(a, timestamp);
-		AU_FIELD(a, unknown2);
 		AU_FIELD(a, playplusScore);
 		AU_FIELD(a, levelPlayPlusRank);
 		AU_FIELD(a, levelPlayPlusRank2);
@@ -79,15 +77,18 @@ struct LevelRecord : public aurora::Serializable {
 struct LevelInfoTable : public aurora::Serializable {
 	std::uint32_t header;
 	std::uint32_t bytecount;
-	std::uint32_t timestamp;
-	std::uint32_t unknown;
+	::time_t timestamp;
 	std::vector<LevelRecord> levels;
+
+	void update_timestamp() {
+		timestamp = ::time(nullptr);
+		gmtime(&timestamp);
+	}
 
 	void serialize(aurora::Serializer& a) {
 		AU_FIELD(a, header);
 		AU_FIELD(a, bytecount);
 		AU_FIELD(a, timestamp);
-		AU_FIELD(a, unknown);
 		AU_FIELD(a, levels);
 	}
 };

@@ -1751,7 +1751,6 @@ void main() {
 
 	bool buildModContent = true;
 	bool viewUnpackGui = false;
-	bool unlockPlayPlus = true;
 
 	while (!glfwWindowShouldClose(window.handle())) {
 		glfwPollEvents();
@@ -1972,156 +1971,185 @@ void main() {
 			ImGui::Columns(1);
 
 			ImGui::Separator();
+			static bool unlockPlayPlusAndPractice = true;
 
 			ImGui::Checkbox("Build Mod Content", &buildModContent);
-			ImGui::Checkbox("Unlock All Play+", &unlockPlayPlus);
+			ImGui::SameLine();
+			ImGui::Checkbox("Unlock Play+ and Practice for Unfinished Levels", &unlockPlayPlusAndPractice);
 
 			ImGui::SameLine();
 
 			if (ImGui::Button("Launch Thumper")) {
 				if (buildModContent) {
 					build();
-				}
 
-				// NOTE: may be able to ignore index and just write the same data for data_0 and data_1
-				if (unlockPlayPlus) {
-					for (auto &entry : std::filesystem::directory_iterator("savedata")) {
+					// NOTE: may be able to ignore index and just write the same data for data_0 and data_1
+					{
+						for (auto& entry : std::filesystem::directory_iterator("savedata")) {
+							// adjust savedata to always use data_0
+							if (auto data = aurora::read_file(entry.path() / "data.index")) {
+								aurora::SerializerReaderBinary reader;
+								reader.mBuffer = std::move(data.value());
 
-						// adjust savedata to always use data_0
-						if (auto data = aurora::read_file(entry.path() / "data.index")) {
-							aurora::SerializerReaderBinary reader;
-							reader.mBuffer = std::move(data.value());
+								struct DataIndexFile : aurora::Serializable {
+									std::uint32_t field0;
+									std::uint32_t field1;
+									std::uint32_t index;
 
-							struct DataIndexFile : aurora::Serializable {
-								std::uint32_t field0;
-								std::uint32_t field1;
-								std::uint32_t index;
+									void serialize(aurora::Serializer& a) {
+										AU_FIELD(a, field0);
+										AU_FIELD(a, field1);
+										AU_FIELD(a, index);
+									}
+								};
 
-								void serialize(aurora::Serializer& a) {
-									AU_FIELD(a, field0);
-									AU_FIELD(a, field1);
-									AU_FIELD(a, index);
+								// serialize the file
+								DataIndexFile file;
+								file.serialize(reader);
+
+								file.index = 0;  // always read from data_0.sav
+
+								aurora::SerializerWriterBinary writer;
+								file.serialize(writer);
+
+								std::ofstream stream(entry.path() / "data.index", std::ios::binary);
+								stream.write(reinterpret_cast<char const*>(writer.mBuffer.data()), writer.mBuffer.size());
+							}
+
+							// open and edit data_0.sav
+							if (auto data = aurora::read_file(entry.path() / "data_0.sav")) {
+								aurora::SerializerReaderBinary reader;
+								reader.mBuffer = std::move(data.value());
+
+								thumper::LevelInfoTable levelInfoTable;
+								levelInfoTable.serialize(reader);
+								levelInfoTable.update_timestamp();
+
+								// the mod db is finalized at this point, we may reference the structures
+								// Make sure all loaded levels have an entry into this table
+								// ONLY IF it isnt already in the table
+								for (auto& entry : gModDb.listings["Aui/thumper.levels"].entries) {
+									bool found = false;
+									for (auto& checked : levelInfoTable.levels) {
+										if (checked.key == entry.key) {
+											found = true;
+											break;
+										}
+									}
+
+									if (found) continue;
+
+									// Instead of pulling a default score value, this should be fetched from the offline
+									// score table
+									thumper::LevelRecord record;
+									record.key = entry.key;
+									record.levelPlayRank = "RANK_NONE";
+									record.playScore = 0;
+									record.levelPlayRank2 = "RANK_NONE";
+									record.unknown1 = true;
+									record.timestamp = levelInfoTable.timestamp;  // use the timestamp of the savefile
+									record.playplusScore = 0;
+									record.levelPlayPlusRank = "RANK_NONE";
+									record.levelPlayPlusRank2 = "RANK_NONE";
+									record.unknown3 = -1;
+									// record.playRankEnteries.emplace_back("RANK_NONE", -1);
+									record.unknown4 = -1;
+									// record.playRankEnteries.emplace_back("RANK_NONE", -1);
+									//  we should be able to leave rank enteries empty
+
+									levelInfoTable.levels.push_back(record);
 								}
-							};
 
-							// serialize the file
-							DataIndexFile file;
-							file.serialize(reader);
+								// the leftover bytes in the reader MUST be appended to the output
 
-							file.index = 0; // always read from data_0.sav
+								// Apply rank_c to all unranked levels
+								// This will unlock play+ and practice for the level without
+								// touching score values, default score value of 0
+								// will simply not render the ui element
 
-							aurora::SerializerWriterBinary writer;
-							file.serialize(writer);
-
-							std::ofstream stream(entry.path() / "data.index", std::ios::binary);
-							stream.write(reinterpret_cast<char const*>(writer.mBuffer.data()), writer.mBuffer.size());
-						}
-
-						// open and edit data_0.sav
-						if (auto data = aurora::read_file(entry.path() / "data_0.sav")) {
-							aurora::SerializerReaderBinary reader;
-							reader.mBuffer = std::move(data.value());
-
-							thumper::LevelInfoTable levelInfoTable;
-							levelInfoTable.serialize(reader);
-
-							// the mod db is finalized at this point, we may reference the structures
-							// Make sure all loaded levels have an entry into this table
-							// ONLY IF it isnt already in the table
-							for (auto& entry : gModDb.listings["Aui/thumper.levels"].entries) {
-								bool found = false;
-								for (auto& checked : levelInfoTable.levels) {
-									if (checked.key == entry.key) {
-										found = true;
-										break;
+								// this means all levels in your save data will be affected
+								// next we need to look at the level listing and add those entries to this table
+								if (unlockPlayPlusAndPractice) {
+									for (auto& level : levelInfoTable.levels) {
+										if (level.levelPlayRank == "RANK_NONE") {
+											level.levelPlayRank = "RANK_C";
+											level.levelPlayRank2 = "RANK_C";
+										}
+									}
+								} else {
+									for (auto& level : levelInfoTable.levels) {
+										if (level.playScore == 0) {
+											level.levelPlayRank = "RANK_NONE";
+											level.levelPlayRank2 = "RANK_NONE";
+										}
 									}
 								}
 
-								if (found) continue;
+// grab level scores and save them offline
+// overwrite old score if game sccore is greater than old score
+#if 0
+							{
+								thumper::LevelInfoTable auroraSave;
 
-								// Instead of pulling a default score value, this should be fetched from the offline
-								// score table
-								thumper::LevelRecord record;
-								record.key = entry.key;
-								record.levelPlayRank = "RANK_NONE";
-								record.playScore = 0;
-								record.levelPlayRank2 = "RANK_NONE";
-								record.unknown1 = true;
-								record.timestamp = 0; // Can ignore timestamps
-								record.unknown2 = 0;
-								record.playplusScore = 0;
-								record.levelPlayPlusRank = "RANK_NONE";
-								record.levelPlayPlusRank2 = "RANK_NONE";
-								record.unknown3 = -1;
-								//record.playRankEnteries.emplace_back("RANK_NONE", -1);
-								record.unknown4 = -1;
-								//record.playRankEnteries.emplace_back("RANK_NONE", -1);
-								// we should be able to leave rank enteries empty
+								if (auto data = aurora::read_file("aurora_save_data.sav")) {
+									aurora::SerializerReaderBinary reader;
+									reader.mBuffer = std::move(data.value());
+									auroraSave.serialize(reader);
+								}
 
-								levelInfoTable.levels.push_back(record);
-							}
+								// use highest saved score
 
-							// the leftover bytes in the reader MUST be appended to the output
+								for (auto& level : levelInfoTable.levels) {
 
-							// Apply rank_c to all unranked levels
-							// This will unlock play+ and practice for the level without
-							// touching score values, default score value of 0
-							// will simply not render the ui element
+								}
 
-							// this means all levels in your save data will be affected
-							// next we need to look at the level listing and add those entries to this table
-							for (auto& level : levelInfoTable.levels) {
-								if (level.levelPlayRank == "RANK_NONE") {
-									level.levelPlayRank = "RANK_C";
-									level.levelPlayRank2 = "RANK_C";
+								// save changes to savedata
+
+								aurora::SerializerWriterBinary writer;
+								auroraSave.serialize(writer);
+
+								{
+									std::ofstream stream("aurora_save_data.sav", std::ios::binary);
+									stream.write(reinterpret_cast<char const*>(writer.mBuffer.data()), writer.mBuffer.size());
 								}
 							}
+#endif
 
+								// theres a byte count that must be maintained, write it once
+								// check the byte value, update the struct and write one more time
+								// assert that the byte count matches
 
-							// grab level scores and save them offline
-							// overwrite old score if game sccore is greater than old score
-							for (auto& level : levelInfoTable.levels) {
+								aurora::SerializerWriterBinary writer;
+								levelInfoTable.serialize(writer);
 
+								// write the file footer
+								for (auto i = reader.mOffset; i < reader.mBuffer.size(); ++i) {
+									auto datapoint = static_cast<std::uint8_t>(reader.mBuffer[i]);
+									writer.serialize(nullptr, datapoint);
+								}
+
+								// Update the byte count in the struct
+								levelInfoTable.bytecount = writer.mBuffer.size();
+
+								writer.mBuffer.clear();  // clear the buffer and rewrite the struct
+
+								levelInfoTable.serialize(writer);
+
+								// write the file footer
+								for (auto i = reader.mOffset; i < reader.mBuffer.size(); ++i) {
+									auto datapoint = static_cast<std::uint8_t>(reader.mBuffer[i]);
+									writer.serialize(nullptr, datapoint);
+								}
+
+								assert(levelInfoTable.bytecount == writer.mBuffer.size());
+
+								{
+									std::ofstream stream(entry.path() / "data_0.sav", std::ios::binary);
+									stream.write(reinterpret_cast<char const*>(writer.mBuffer.data()), writer.mBuffer.size());
+								}
 							}
-
-							// theres a byte count that must be maintained, write it once
-							// check the byte value, update the struct and write one more time
-							// assert that the byte count matches
-
-							aurora::SerializerWriterBinary writer;
-							levelInfoTable.serialize(writer);
-
-							// write the file footer
-							for (auto i = reader.mOffset; i < reader.mBuffer.size(); ++i) {
-								auto datapoint = static_cast<std::uint8_t>(reader.mBuffer[i]);
-								writer.serialize(nullptr, datapoint);
-							}
-
-							// Update the byte count in the struct
-							levelInfoTable.bytecount = writer.mBuffer.size();
-
-							writer.mBuffer.clear(); // clear the buffer and rewrite the struct
-
-							levelInfoTable.serialize(writer);
-
-							// write the file footer
-							for (auto i = reader.mOffset; i < reader.mBuffer.size(); ++i) {
-								auto datapoint = static_cast<std::uint8_t>(reader.mBuffer[i]);
-								writer.serialize(nullptr, datapoint);
-							}
-
-							assert(levelInfoTable.bytecount == writer.mBuffer.size());
-
-							std::ofstream stream(entry.path() / "data_0.sav", std::ios::binary);
-							stream.write(reinterpret_cast<char const*>(writer.mBuffer.data()), writer.mBuffer.size());
 						}
-
 					}
-				}
-
-				// read the user save data and unlock the playplus content
-				if (unlockPlayPlus) {
-				
 				}
 
 				glfwSetWindowShouldClose(window.handle(), true);

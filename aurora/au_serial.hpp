@@ -5,6 +5,7 @@
 #include <stdexcept>
 #include <string>
 #include <vector>
+#include <ctime>
 
 #include <glm/glm.hpp>
 #include <lua.hpp>
@@ -30,6 +31,8 @@ struct Serializer {
 	virtual void serialize(char const* aField, std::int8_t& aValue) = 0;
 	virtual void serialize(char const* aField, std::int16_t& aValue) = 0;
 	virtual void serialize(char const* aField, std::int32_t& aValue) = 0;
+	static_assert(sizeof(time_t) == sizeof(std::uint64_t));
+	virtual void serialize(char const* aField, ::time_t& aValue) = 0;
 	virtual void serialize(char const* aField, std::string& aValue, bool aSizedString = true) = 0;
 	virtual void serialize(char const* aField, Serializable& aValue) = 0;
 
@@ -129,6 +132,7 @@ struct SerializerReaderLua final : public Serializer {
 	inline void serialize(char const* aField, std::int8_t& aValue) override { impl_integer(aField, aValue); };
 	inline void serialize(char const* aField, std::int16_t& aValue) override { impl_integer(aField, aValue); };
 	inline void serialize(char const* aField, std::int32_t& aValue) override { impl_integer(aField, aValue); };
+	inline void serialize(char const* aField, ::time_t& aValue) override { throw std::runtime_error("Operation not supported"); };
 	void serialize(char const* aField, std::string& aValue, bool aSizedString = true) override;
 	void serialize(char const* aField, Serializable& aValue) override;
 	void array_begin(char const* aField, std::size_t& aSize) override;
@@ -149,6 +153,7 @@ struct SerializerWriterLua final : public Serializer {
 	inline void serialize(char const* aField, std::int8_t& aValue) override { impl_integer(aField, static_cast<lua_Integer>(aValue)); };
 	inline void serialize(char const* aField, std::int16_t& aValue) override { impl_integer(aField, static_cast<lua_Integer>(aValue)); };
 	inline void serialize(char const* aField, std::int32_t& aValue) override { impl_integer(aField, static_cast<lua_Integer>(aValue)); };
+	inline void serialize(char const* aField, ::time_t& aValue) override { throw std::runtime_error("Operation not supported"); };
 	void serialize(char const* aField, std::string& aValue, bool aSizedString = true) override;
 	void serialize(char const* aField, Serializable& aValue) override;
 	inline void array_begin(char const* aField, std::size_t& aSize) override { lua_newtable(L); }
@@ -179,6 +184,7 @@ struct SerializerWriterBinary final : public Serializer {
 	void serialize(char const* aField, std::int8_t& aValue) override { write_gen(aValue); };
 	void serialize(char const* aField, std::int16_t& aValue) override { write_gen(aValue); };
 	void serialize(char const* aField, std::int32_t& aValue) override { write_gen(aValue); };
+	void serialize(char const* aField, ::time_t& aValue) override { write_gen(aValue); };
 	void serialize(char const* aField, std::string& aValue, bool aSizedString = true) override;
 	void serialize(char const* aField, Serializable& aValue) override { aValue.serialize(*this); };
 	void array_begin(char const* aField, std::size_t& aSize) override;
@@ -209,6 +215,7 @@ struct SerializerReaderBinary final : public Serializer {
 	void serialize(char const* aField, std::int32_t& aValue) override { read_gen(aValue); };
 	void serialize(char const* aField, std::string& aValue, bool aSizedString = true) override;
 	void serialize(char const* aField, Serializable& aValue) override { aValue.serialize(*this); };
+	void serialize(char const* aField, ::time_t& aValue) override { read_gen(aValue); };
 	void array_begin(char const* aField, std::size_t& aSize) override;
 	void array_iter_prologue(std::size_t aIndex) override {};
 	void array_iter_epilogue(std::size_t aIndex) override {};
