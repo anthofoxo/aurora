@@ -760,18 +760,18 @@ struct TCLEPrecompiledLevel {
 	std::unordered_map<std::string, std::vector<std::byte>> files;
 };
 
-void load_precompiled_tcle_mods(std::string const& modid) {
+bool load_precompiled_tcle_mods(std::string const& modid) {
 	spdlog::info("Loading TCLE Precompiled `{}`", modid);
 
 	std::string path = std::format("mods/{}.zip", modid);
 
 	unzFile file = unzOpen(path.c_str());
-	if (!file) return;
+	if (!file) return false;
 
 	unz_global_info global_info;
 	if (unzGetGlobalInfo(file, &global_info) != UNZ_OK) {
 		unzClose(file);
-		return;
+		return false;
 	}
 
 	TCLEPrecompiledLevel level;
@@ -804,12 +804,20 @@ void load_precompiled_tcle_mods(std::string const& modid) {
 
 	// Level content is loaded into memory, start scanning file contents to figure out where to store data
 
+	bool hasTclFile = false;
+
 	// Step 1. scan the .tcl file and find out some stuff
 	for (auto const& [key, value] : level.files) {
 		if (!key.ends_with(".TCL")) continue;
 
 		spdlog::info("Found .tcl: {}", key);
+		hasTclFile = true;
 		break;
+	}
+
+	// this .zip isnt an aurora level, early return to remove it from the mod list
+	if (!hasTclFile) {
+		return false;
 	}
 
 	std::string origin;
@@ -874,9 +882,9 @@ void load_precompiled_tcle_mods(std::string const& modid) {
 		localizationTable[static_cast<LocalizationKey>(hashed)] = modid;
 	}
 
-	
-
 	gModDb.listings["Aui/thumper.levels"].entries.emplace_back(locKey, 0, origin, "", false, false, false, 0, 10);
+
+	return true;
 }
 
 void load_mod(std::string const& modid) {
@@ -1134,11 +1142,25 @@ void build() {
 	}
 
 	// process customs, this is ALWAYS done after native mods
-	for (auto const& [modid, enabled] : gFoundMods) {
-		if (!enabled) continue;
-		if (!std::filesystem::exists(std::filesystem::path("mods") / (modid + ".zip"))) continue;  // Not a zip/TCLE mod
+	for (auto it = gFoundMods.begin(); it != gFoundMods.end();) {
+		auto const& [modid, enabled] = *it;
 
-		load_precompiled_tcle_mods(modid);
+		bool skip = false;
+
+		if (!enabled) {
+			++it;
+			continue;
+		}
+		if (!std::filesystem::exists(std::filesystem::path("mods") / (modid + ".zip"))) {
+			++it;
+			continue;  // Not a zip/TCLE mod
+		}
+
+		if (!load_precompiled_tcle_mods(modid)) {
+			it = gFoundMods.erase(it);
+		} else {
+			++it;
+		}
 	}
 
 	spdlog::info("Building assets");
@@ -1686,6 +1708,136 @@ void logger_init() {
 	spdlog::flush_on(spdlog::level::critical);
 }
 
+
+struct ExampleDualListBox {
+	ImVector<ImGuiID> Items[2];                // ID is index into ExampleName[]
+	ImGuiSelectionBasicStorage Selections[2];  // Store ExampleItemId into selection
+
+	void MoveAll(int src, int dst) {
+		IM_ASSERT((src == 0 && dst == 1) || (src == 1 && dst == 0));
+		for (ImGuiID item_id : Items[src]) Items[dst].push_back(item_id);
+		Items[src].clear();
+		SortItems(dst);
+		Selections[src].Swap(Selections[dst]);
+		Selections[src].Clear();
+	}
+	void MoveSelected(int src, int dst) {
+		for (int src_n = 0; src_n < Items[src].Size; src_n++) {
+			ImGuiID item_id = Items[src][src_n];
+			if (!Selections[src].Contains(item_id)) continue;
+			Items[src].erase(&Items[src][src_n]);  // FIXME-OPT: Could be implemented more optimally (rebuild src items and swap)
+			Items[dst].push_back(item_id);
+			src_n--;
+		}
+		if (dst == 0) SortItems(dst); // Only keep unloaded mods sorted
+		Selections[src].Swap(Selections[dst]);
+		Selections[src].Clear();
+	}
+	void ApplySelectionRequests(ImGuiMultiSelectIO* ms_io, int side) {
+		// In this example we store item id in selection (instead of item index)
+		Selections[side].UserData = Items[side].Data;
+		Selections[side].AdapterIndexToStorageId = [](ImGuiSelectionBasicStorage* self, int idx) {
+			ImGuiID* items = (ImGuiID*)self->UserData;
+			return items[idx];
+		};
+		Selections[side].ApplyRequests(ms_io);
+	}
+	static int IMGUI_CDECL CompareItemsByValue(const void* lhs, const void* rhs) {
+		const int* a = (const int*)lhs;
+		const int* b = (const int*)rhs;
+		return (*a - *b);
+	}
+	void SortItems(int n) { qsort(Items[n].Data, (size_t)Items[n].Size, sizeof(Items[n][0]), CompareItemsByValue); }
+	void Show() {
+		if (ImGui::BeginTable("split", 3, ImGuiTableFlags_None)) {
+			ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthStretch);  // Left side
+			ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed);    // Buttons
+			ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthStretch);  // Right side
+			ImGui::TableNextRow();
+
+			int request_move_selected = -1;
+			int request_move_all = -1;
+			float child_height_0 = 0.0f;
+			for (int side = 0; side < 2; side++) {
+				// FIXME-MULTISELECT: Dual List Box: Add context menus
+				// FIXME-NAV: Using ImGuiWindowFlags_NavFlattened exhibit many issues.
+				ImVector<ImGuiID>& items = Items[side];
+				ImGuiSelectionBasicStorage& selection = Selections[side];
+
+				ImGui::TableSetColumnIndex((side == 0) ? 0 : 2);
+				ImGui::Text("%s (%d)", (side == 0) ? "Available" : "Enabled", items.Size);
+
+				// Submit scrolling range to avoid glitches on moving/deletion
+				const float items_height = ImGui::GetTextLineHeightWithSpacing();
+				ImGui::SetNextWindowContentSize(ImVec2(0.0f, items.Size * items_height));
+
+				bool child_visible;
+				if (side == 0) {
+					// Left child is resizable
+					ImGui::SetNextWindowSizeConstraints(ImVec2(0.0f, ImGui::GetFrameHeightWithSpacing() * 4), ImVec2(FLT_MAX, FLT_MAX));
+					child_visible = ImGui::BeginChild("0", ImVec2(-FLT_MIN, ImGui::GetFontSize() * 20), ImGuiChildFlags_FrameStyle | ImGuiChildFlags_ResizeY);
+					child_height_0 = ImGui::GetWindowSize().y;
+				} else {
+					// Right child use same height as left one
+					child_visible = ImGui::BeginChild("1", ImVec2(-FLT_MIN, child_height_0), ImGuiChildFlags_FrameStyle);
+				}
+				if (child_visible) {
+					ImGuiMultiSelectFlags flags = ImGuiMultiSelectFlags_None;
+					ImGuiMultiSelectIO* ms_io = ImGui::BeginMultiSelect(flags, selection.Size, items.Size);
+					ApplySelectionRequests(ms_io, side);
+
+					for (int item_n = 0; item_n < items.Size; item_n++) {
+						ImGuiID item_id = items[item_n];
+						bool item_is_selected = selection.Contains(item_id);
+						ImGui::SetNextItemSelectionUserData(item_n);
+						ImGui::Selectable(gFoundMods[item_id].modid.c_str(), item_is_selected, ImGuiSelectableFlags_AllowDoubleClick);
+						if (ImGui::IsItemFocused()) {
+							// FIXME-MULTISELECT: Dual List Box: Transfer focus
+							if (ImGui::IsKeyPressed(ImGuiKey_Enter) || ImGui::IsKeyPressed(ImGuiKey_KeypadEnter)) request_move_selected = side;
+							if (ImGui::IsMouseDoubleClicked(0))  // FIXME-MULTISELECT: Double-click on multi-selection?
+								request_move_selected = side;
+						}
+					}
+
+					ms_io = ImGui::EndMultiSelect();
+					ApplySelectionRequests(ms_io, side);
+				}
+				ImGui::EndChild();
+			}
+
+			// Buttons columns
+			ImGui::TableSetColumnIndex(1);
+			ImGui::NewLine();
+			// ImVec2 button_sz = { ImGui::CalcTextSize(">>").x + ImGui::GetStyle().FramePadding.x * 2.0f, ImGui::GetFrameHeight() + padding.y * 2.0f };
+			ImVec2 button_sz = { ImGui::GetFrameHeight(), ImGui::GetFrameHeight() };
+
+			// (Using BeginDisabled()/EndDisabled() works but feels distracting given how it is currently visualized)
+			if (ImGui::Button(">>", button_sz)) request_move_all = 0;
+			if (ImGui::Button(">", button_sz)) request_move_selected = 0;
+			if (ImGui::Button("<", button_sz)) request_move_selected = 1;
+			if (ImGui::Button("<<", button_sz)) request_move_all = 1;
+
+			// Process requests
+			if (request_move_all != -1) MoveAll(request_move_all, request_move_all ^ 1);
+			if (request_move_selected != -1) MoveSelected(request_move_selected, request_move_selected ^ 1);
+
+			// FIXME-MULTISELECT: Support action from outside
+			ImGui::NewLine();
+
+			ImGui::BeginDisabled(true);
+
+			if (ImGui::ArrowButton("MoveUp", ImGuiDir_Up)) {
+			}
+			if (ImGui::ArrowButton("MoveDown", ImGuiDir_Down)) {
+			}
+
+			ImGui::EndDisabled();
+	
+			ImGui::EndTable();
+		}
+	}
+};
+
 void main() {
 	logger_init();
 
@@ -1749,6 +1901,17 @@ void main() {
 
 	find_mods();
 
+	// Auto enable base and aurora.base
+	for (auto& item : gFoundMods) {
+		if (item.modid == "base") {
+			item.enabled = true;
+		}
+			
+		else if (item.modid == "aurora.base") {
+			item.enabled = true;
+		}
+	}
+
 	bool buildModContent = true;
 	bool viewUnpackGui = false;
 
@@ -1792,6 +1955,27 @@ void main() {
 		ImGui::EndMainMenuBar();
 
 		unpack_gui(viewUnpackGui);
+
+		{
+			static ExampleDualListBox dlb;
+			if (dlb.Items[0].Size == 0 && dlb.Items[1].Size == 0) {
+
+				for (int item_id = 0; item_id < gFoundMods.size(); item_id++) {
+					if (gFoundMods[item_id].enabled) {
+						dlb.Items[1].push_back((ImGuiID)item_id);
+					}
+					else {
+						dlb.Items[0].push_back((ImGuiID)item_id);
+					}
+				}
+
+				dlb.SortItems(0);
+			}
+				
+
+			// Show
+			dlb.Show();
+		}
 
 		static std::string path = "Alevels/demo.objlib";
 
