@@ -1712,6 +1712,7 @@ void logger_init() {
 struct ExampleDualListBox {
 	ImVector<ImGuiID> Items[2];                // ID is index into ExampleName[]
 	ImGuiSelectionBasicStorage Selections[2];  // Store ExampleItemId into selection
+	ImGuiTextFilter filter;
 
 	void MoveAll(int src, int dst) {
 		IM_ASSERT((src == 0 && dst == 1) || (src == 1 && dst == 0));
@@ -1748,12 +1749,17 @@ struct ExampleDualListBox {
 		return (*a - *b);
 	}
 	void SortItems(int n) { qsort(Items[n].Data, (size_t)Items[n].Size, sizeof(Items[n][0]), CompareItemsByValue); }
-	void Show() {
+	void Show(std::string& selectionContext) {
+		if (filter.Draw()) {
+			Selections[0].Clear();
+		}
+
 		if (ImGui::BeginTable("split", 3, ImGuiTableFlags_None)) {
 			ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthStretch);  // Left side
 			ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed);    // Buttons
 			ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthStretch);  // Right side
 			ImGui::TableNextRow();
+
 
 			int request_move_selected = -1;
 			int request_move_all = -1;
@@ -1782,15 +1788,27 @@ struct ExampleDualListBox {
 					child_visible = ImGui::BeginChild("1", ImVec2(-FLT_MIN, child_height_0), ImGuiChildFlags_FrameStyle);
 				}
 				if (child_visible) {
-					ImGuiMultiSelectFlags flags = ImGuiMultiSelectFlags_None;
+					ImGuiMultiSelectFlags flags = ImGuiMultiSelectFlags_BoxSelect1d;
 					ImGuiMultiSelectIO* ms_io = ImGui::BeginMultiSelect(flags, selection.Size, items.Size);
 					ApplySelectionRequests(ms_io, side);
 
 					for (int item_n = 0; item_n < items.Size; item_n++) {
+
 						ImGuiID item_id = items[item_n];
+
+						if (side == 0) {
+							if (filter.IsActive()) {
+								if (!filter.PassFilter(gFoundMods[item_id].modid.c_str(), gFoundMods[item_id].modid.c_str() + gFoundMods[item_id].modid.size())) continue;
+							}
+						}
+						
 						bool item_is_selected = selection.Contains(item_id);
 						ImGui::SetNextItemSelectionUserData(item_n);
-						ImGui::Selectable(gFoundMods[item_id].modid.c_str(), item_is_selected, ImGuiSelectableFlags_AllowDoubleClick);
+
+						if (ImGui::Selectable(gFoundMods[item_id].modid.c_str(), item_is_selected, ImGuiSelectableFlags_AllowDoubleClick)) {
+							selectionContext = gFoundMods[item_id].modid;
+						}
+
 						if (ImGui::IsItemFocused()) {
 							// FIXME-MULTISELECT: Dual List Box: Transfer focus
 							if (ImGui::IsKeyPressed(ImGuiKey_Enter) || ImGui::IsKeyPressed(ImGuiKey_KeypadEnter)) request_move_selected = side;
@@ -1824,11 +1842,35 @@ struct ExampleDualListBox {
 			// FIXME-MULTISELECT: Support action from outside
 			ImGui::NewLine();
 
-			ImGui::BeginDisabled(true);
+			ImGui::BeginDisabled(Items[1].size() < 2 && Selections[1].Size > 0);
 
 			if (ImGui::ArrowButton("MoveUp", ImGuiDir_Up)) {
+				ImVector<ImGuiID>& items = Items[1];
+				ImGuiSelectionBasicStorage& selection = Selections[1];
+
+				for (int i = 1; i < items.Size; i++) {
+					ImGuiID current = items[i];
+					ImGuiID prev = items[i - 1];
+					if (selection.Contains(current) && !selection.Contains(prev)) {
+						// swap current with previous
+						items[i] = prev;
+						items[i - 1] = current;
+					}
+				}
 			}
 			if (ImGui::ArrowButton("MoveDown", ImGuiDir_Down)) {
+				ImVector<ImGuiID>& items = Items[1];
+				ImGuiSelectionBasicStorage& selection = Selections[1];
+
+				for (int i = items.Size - 2; i >= 0; i--) {
+					ImGuiID current = items[i];
+					ImGuiID next = items[i + 1];
+					if (selection.Contains(current) && !selection.Contains(next)) {
+						// swap current with next
+						items[i] = next;
+						items[i + 1] = current;
+					}
+				}
 			}
 
 			ImGui::EndDisabled();
@@ -1956,7 +1998,13 @@ void main() {
 
 		unpack_gui(viewUnpackGui);
 
-		{
+		static std::string selectionContext;
+
+		static std::once_flag flag;
+		std::call_once(flag, ImGui::SetNextWindowFocus);
+		ImGui::SetNextWindowSize(ImVec2(800, 600), ImGuiCond_Once);
+		ImGui::SetNextWindowPos(ImVec2(io.DisplaySize.x * 0.5f, io.DisplaySize.y * 0.5f), ImGuiCond_Once, ImVec2(0.5f, 0.5f));
+		if (ImGui::Begin("Launcher", nullptr, ImGuiWindowFlags_MenuBar)) {
 			static ExampleDualListBox dlb;
 			if (dlb.Items[0].Size == 0 && dlb.Items[1].Size == 0) {
 
@@ -1971,50 +2019,7 @@ void main() {
 
 				dlb.SortItems(0);
 			}
-				
 
-			// Show
-			dlb.Show();
-		}
-
-		static std::string path = "Alevels/demo.objlib";
-
-		if (gObjlibParserStaticDataVisible) {
-			if (ImGui::Begin("Objlib Parser", &gObjlibParserStaticDataVisible)) {
-				static std::string status = "Waiting";
-
-				ImGui::InputText("Path", &path);
-
-				ImGui::SameLine();
-
-				if (ImGui::Button("Parse")) {
-					try {
-						status = "Parsing...";
-						gObjlibParserStaticData.parse(path);
-						status = "OK";
-					} catch (AuroraParseError const& e) {
-						status = e.what();
-					}
-				}
-
-				ImGui::Text("%s", status.c_str());
-
-				ImGui::Separator();
-
-				gObjlibParserStaticData.gui();
-			}
-			ImGui::End();
-
-			gObjlibParserStaticData.guiEditors();
-		}
-
-		static std::string selectionContext;
-
-		static std::once_flag flag;
-		std::call_once(flag, ImGui::SetNextWindowFocus);
-		ImGui::SetNextWindowPos(ImVec2(io.DisplaySize.x * 0.5f, io.DisplaySize.y * 0.5f), ImGuiCond_Once, ImVec2(0.5f, 0.5f));
-		ImGui::SetNextWindowSize(ImVec2(800, 600), ImGuiCond_Once);
-		if (ImGui::Begin("Launcher", nullptr, ImGuiWindowFlags_MenuBar)) {
 			if (ImGui::BeginMenuBar()) {
 				if (ImGui::BeginMenu("File")) {
 					if (ImGui::MenuItem("Enable All")) {
@@ -2034,6 +2039,21 @@ void main() {
 					if (ImGui::MenuItemEx("Rescan Mods Directory", ICON_FA_ROTATE)) {
 						save_mod_order_state();
 						find_mods();
+
+						dlb.Items[0].clear();
+						dlb.Items[1].clear();
+						dlb.Selections[0].Clear();
+						dlb.Selections[1].Clear();
+
+						for (int item_id = 0; item_id < gFoundMods.size(); item_id++) {
+							if (gFoundMods[item_id].enabled) {
+								dlb.Items[1].push_back((ImGuiID)item_id);
+							} else {
+								dlb.Items[0].push_back((ImGuiID)item_id);
+							}
+						}
+
+						dlb.SortItems(0);
 					}
 
 					ImGui::EndMenu();
@@ -2041,138 +2061,31 @@ void main() {
 
 				ImGui::EndMenuBar();
 			}
+				
 
-			ImGui::Columns(2);
+			// Show
+			dlb.Show(selectionContext);
 
-			float footerSize = ImGui::GetStyle().ItemSpacing.y + ImGui::GetFrameHeightWithSpacing();
-
-			static ImGuiTextFilter filter;
-			filter.Draw();
-			ImGui::SeparatorText("Inactive");
-			
-			if (ImGui::BeginChild("Inactive", { 0.0f, -footerSize }, ImGuiChildFlags_None, ImGuiWindowFlags_AlwaysVerticalScrollbar)) {
-				for (auto& item : gFoundMods) {
-					if (item.enabled) continue;
-
-					if (filter.IsActive()) {
-						if (!filter.PassFilter(item.modid.c_str(), item.modid.c_str() + item.modid.size())) continue;
-					}
-
-					
-
-					std::underlying_type_t<ImGuiTreeNodeFlags_> flags = ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_SpanAvailWidth;
-					if (selectionContext == item.modid) {
-						flags |= ImGuiTreeNodeFlags_Selected;
-					}
-
-					std::optional<char const*> issue = std::nullopt;
-
-					if (item.modid == "base") {
-						issue = "WARN: `base` is not being loaded. This will cause loss of base game content.";
-					}
-
-					if (issue) ImGui::PushStyleColor(ImGuiCol_Text, { 1.0f, fmodf(static_cast<float>(glfwGetTime()), 1.0f), fmodf(static_cast<float>(glfwGetTime()), 1.0f), 1.0f });
-
-					if (ImGui::TreeNodeEx(item.modid.c_str(), flags)) ImGui::TreePop();
-
-					if (issue) {
-						ImGui::PushStyleColor(ImGuiCol_Text, { 1.0f, 0.0f, 0.0f, 1.0f });
-						ImGui::SetItemTooltip("%s", *issue);
-						ImGui::PopStyleColor(2);
-					}
-
-					if (ImGui::IsItemActivated()) {
-						selectionContext = item.modid;
-					}
-
-					if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left) && ImGui::IsItemHovered(ImGuiHoveredFlags_None)) {
-						item.enabled ^= true;
-					}
-				}
-			}
-
-			ImGui::EndChild();
-
-			ImGui::NextColumn();
-
-			ImGui::SeparatorText("Active");
-			if (ImGui::BeginChild("Active", { 0.0f, -footerSize }, ImGuiChildFlags_None, ImGuiWindowFlags_AlwaysVerticalScrollbar)) {
-				for (std::size_t n = 0; n < gFoundMods.size(); ++n) {
-					auto& item = gFoundMods[n];
-					if (!item.enabled) continue;
-
-					std::underlying_type_t<ImGuiTreeNodeFlags_> flags = ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_SpanAvailWidth;
-					if (selectionContext == item.modid) {
-						flags |= ImGuiTreeNodeFlags_Selected;
-					}
-
-					std::optional<char const*> issue = std::nullopt;
-
-					if (n == 0 && gFoundMods[n].modid != "base") {
-						issue = "WARN: `base` is not the first loaded mod in the list. This will cause loss of base game content.";
-					} else if (gFoundMods[n].modid == "aurora.base" && n != 1) {
-						issue = "WARN: `aurora.base` is not loaded directly after `base`. This will cause loss of base aurora content.";
-					}
-
-					if (issue) ImGui::PushStyleColor(ImGuiCol_Text, { 1.0f, fmodf(static_cast<float>(glfwGetTime()), 1.0f), fmodf(static_cast<float>(glfwGetTime()), 1.0f), 1.0f });
-
-					// A duplicate id may be present for one frame when switching state from inactive -> active
-					ImGui::PushItemFlag(ImGuiItemFlags_AllowDuplicateId, true);
-					if (ImGui::TreeNodeEx(item.modid.c_str(), flags)) ImGui::TreePop();
-
-					if (issue) {
-						ImGui::PushStyleColor(ImGuiCol_Text, { 1.0f, 0.0f, 0.0f, 1.0f });
-						ImGui::SetItemTooltip("%s", *issue);
-						ImGui::PopStyleColor(2);
-					}
-
-					// if (n == 1 && gFoundMods[n].modid != "aurora.base") {
-					//	auto* window = ImGui::GetCurrentWindow();
-					//	ImGui::GetForegroundDrawList(window)->AddRect(window->Pos, window->Pos + window->Size, IM_COL32(255, 255, 0, 255));
-					//	ImGui::SetItemTooltip("%s", "`aurora.base` is not the second loaded mod in the list. This may cause issues when applying mods.");
-					// }
-
-					ImGui::PopItemFlag();
-
-					if (ImGui::IsItemActivated()) {
-						selectionContext = item.modid;
-					}
-
-					if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left) && ImGui::IsItemHovered(ImGuiHoveredFlags_None)) {
-						item.enabled ^= true;
-					}
-
-					if (ImGui::BeginDragDropSource()) {
-						ImGui::SetDragDropPayload("modid_reorder", &n, sizeof(std::size_t));
-						ImGui::TextUnformatted(item.modid.c_str());
-						ImGui::EndDragDropSource();
-					}
-
-					if (ImGui::BeginDragDropTarget()) {
-						if (ImGuiPayload const* payload = ImGui::AcceptDragDropPayload("modid_reorder")) {
-							IM_ASSERT(payload->DataSize == sizeof(std::size_t));
-							std::size_t const sourceIdx = *reinterpret_cast<std::size_t const*>(payload->Data);
-							std::swap(gFoundMods[sourceIdx], gFoundMods[n]);
-						}
-
-						ImGui::EndDragDropTarget();
-					}
-				}
-			}
-			ImGui::EndChild();
-
-			ImGui::Columns(1);
-
-			ImGui::Separator();
 			static bool unlockPlayPlusAndPractice = true;
-
-			ImGui::Checkbox("Build Mod Content", &buildModContent);
-			ImGui::SameLine();
+			ImGui::Checkbox("Enable Mod Content", &buildModContent);
 			ImGui::Checkbox("Unlock Play+ and Practice for Unfinished Levels", &unlockPlayPlusAndPractice);
-
-			ImGui::SameLine();
-
 			if (ImGui::Button("Launch Thumper")) {
+				{
+					// look at our enabled and disabled lists and rebuild our list
+					std::vector<ModEntry> newModEntries;
+					
+					for (int i = 0; i < dlb.Items[1].size(); ++i) {
+						newModEntries.push_back(ModEntry{ gFoundMods[dlb.Items[1][i]].modid, true });
+					}
+
+					for (int i = 0; i < dlb.Items[0].size(); ++i) {
+						newModEntries.push_back(ModEntry{ gFoundMods[dlb.Items[0][i]].modid, false });
+					}
+
+					// Use updated list
+					gFoundMods = std::move(newModEntries);
+				}
+
 				if (buildModContent) {
 					build();
 
@@ -2350,6 +2263,41 @@ void main() {
 			}
 		}
 		ImGui::End();
+
+		static std::string path = "Alevels/demo.objlib";
+
+		if (gObjlibParserStaticDataVisible) {
+			if (ImGui::Begin("Objlib Parser", &gObjlibParserStaticDataVisible)) {
+				static std::string status = "Waiting";
+
+				ImGui::InputText("Path", &path);
+
+				ImGui::SameLine();
+
+				if (ImGui::Button("Parse")) {
+					try {
+						status = "Parsing...";
+						gObjlibParserStaticData.parse(path);
+						status = "OK";
+					} catch (AuroraParseError const& e) {
+						status = e.what();
+					}
+				}
+
+				ImGui::Text("%s", status.c_str());
+
+				ImGui::Separator();
+
+				gObjlibParserStaticData.gui();
+			}
+			ImGui::End();
+
+			gObjlibParserStaticData.guiEditors();
+		}
+
+		
+
+
 
 		if (ImGui::Begin("Mod Details")) {
 			if (!selectionContext.empty()) {
