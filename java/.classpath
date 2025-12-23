@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="src" path="src"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER">
+		<attributes>
+			<attribute name="module" value="true"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="aurora_lib/imgui-app-1.90.0.jar" sourcepath="aurora_lib/imgui-app-1.90.0-sources.jar"/>
+	<classpathentry kind="lib" path="aurora_lib/imgui-binding-1.90.0.jar" sourcepath="aurora_lib/imgui-binding-1.90.0-sources.jar"/>
+	<classpathentry kind="lib" path="aurora_lib/imgui-lwjgl3-1.90.0.jar" sourcepath="aurora_lib/imgui-lwjgl3-1.90.0-sources.jar"/>
+	<classpathentry kind="lib" path="aurora_lib/jackson-annotations-3.0-rc5.jar" sourcepath="aurora_lib/jackson-annotations-3.0-rc5-sources.jar"/>
+	<classpathentry kind="lib" path="aurora_lib/jackson-core-3.0.3.jar" sourcepath="aurora_lib/jackson-core-3.0.3-sources.jar"/>
+	<classpathentry kind="lib" path="aurora_lib/jackson-databind-3.0.3.jar" sourcepath="aurora_lib/jackson-databind-3.0.3-sources.jar"/>
+	<classpathentry kind="lib" path="aurora_lib/jackson-dataformat-yaml-3.0.3.jar" sourcepath="aurora_lib/jackson-dataformat-yaml-3.0.3-sources.jar"/>
+	<classpathentry kind="lib" path="aurora_lib/joml-1.10.8.jar" sourcepath="aurora_lib/joml-1.10.8-sources.jar"/>
+	<classpathentry kind="lib" path="aurora_lib/lwjgl.jar" sourcepath="aurora_lib/lwjgl-sources.jar"/>
+	<classpathentry kind="lib" path="aurora_lib/lwjgl-glfw.jar" sourcepath="aurora_lib/lwjgl-glfw-sources.jar"/>
+	<classpathentry kind="lib" path="aurora_lib/lwjgl-glfw-natives-linux.jar"/>
+	<classpathentry kind="lib" path="aurora_lib/lwjgl-glfw-natives-windows.jar"/>
+	<classpathentry kind="lib" path="aurora_lib/lwjgl-natives-linux.jar"/>
+	<classpathentry kind="lib" path="aurora_lib/lwjgl-natives-windows.jar"/>
+	<classpathentry kind="lib" path="aurora_lib/lwjgl-openal.jar" sourcepath="aurora_lib/lwjgl-openal-sources.jar"/>
+	<classpathentry kind="lib" path="aurora_lib/lwjgl-openal-natives-linux.jar"/>
+	<classpathentry kind="lib" path="aurora_lib/lwjgl-openal-natives-windows.jar"/>
+	<classpathentry kind="lib" path="aurora_lib/lwjgl-opengl.jar" sourcepath="aurora_lib/lwjgl-opengl-sources.jar"/>
+	<classpathentry kind="lib" path="aurora_lib/lwjgl-opengl-natives-linux.jar"/>
+	<classpathentry kind="lib" path="aurora_lib/lwjgl-opengl-natives-windows.jar"/>
+	<classpathentry kind="lib" path="aurora_lib/lwjgl-stb.jar" sourcepath="aurora_lib/lwjgl-stb-sources.jar"/>
+	<classpathentry kind="lib" path="aurora_lib/lwjgl-stb-natives-linux.jar"/>
+	<classpathentry kind="lib" path="aurora_lib/lwjgl-stb-natives-windows.jar"/>
+	<classpathentry kind="lib" path="aurora_lib/snakeyaml-2.5.jar" sourcepath="aurora_lib/snakeyaml-2.5-sources.jar"/>
+	<classpathentry kind="lib" path="aurora_lib/snakeyaml-engine-2.10.jar" sourcepath="aurora_lib/snakeyaml-engine-2.10-sources.jar"/>
+	<classpathentry kind="lib" path="aurora_res"/>
+	<classpathentry kind="output" path="aurora_bin"/>
+</classpath>
