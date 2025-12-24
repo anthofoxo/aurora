@@ -11,19 +11,44 @@ import imgui.ImGui;
 import imgui.app.Application;
 import imgui.type.ImBoolean;
 import xyz.anthofoxo.aurora.gui.Hasher;
+import xyz.anthofoxo.aurora.gui.LocalizationEditor;
+import xyz.anthofoxo.aurora.tml.TMLLevel;
 
 public class Aurora {
-	public static boolean standalone;
+	public static boolean integrated;
+	public static boolean shouldLaunchThumper = false;
 	public static String home = "C:/Program Files (x86)/Steam/steamapps/common/Thumper";
 
 	private ImBoolean demo = new ImBoolean();
 	private Hasher hasher = new Hasher();
+	private LocalizationEditor locEditor;
 
+	public Aurora() {
+		try {
+			locEditor = new LocalizationEditor();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		try {
+			TMLLevel.test();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	
 	public void update(Application app) {
 		if (ImGui.beginMainMenuBar()) {
 
 			if (ImGui.beginMenu("File")) {
 
+				if(ImGui.menuItem("Launch Thumper")) {
+					shouldLaunchThumper = true;
+					glfwSetWindowShouldClose(app.getHandle(), true);
+				}
+				
 				if (ImGui.menuItem("Quit")) {
 					glfwSetWindowShouldClose(app.getHandle(), true);
 				}
@@ -55,7 +80,7 @@ public class Aurora {
 		}
 
 		if (ImGui.begin("Aurora Information")) {
-			if (standalone) {
+			if (!integrated) {
 				ImGui.text("Aurora is running in standalone mode. Some features wil be disabled");
 			} else {
 				ImGui.text("Aurora is running in integrated mode. All features are enabled");
@@ -77,5 +102,6 @@ public class Aurora {
 		ImGui.end();
 
 		hasher.draw();
+		locEditor.draw();
 	}
 }

@@ -1,8 +1,12 @@
 package xyz.anthofoxo.aurora.struct;
 
 import java.lang.reflect.Modifier;
+import java.lang.reflect.ParameterizedType;
 import java.util.ArrayList;
 import java.util.List;
+
+import tools.jackson.databind.node.ArrayNode;
+import xyz.anthofoxo.aurora.Hash;
 
 public class AuroraWriter {
 	private ArrayList<Byte> bytes = new ArrayList<>();
@@ -13,6 +17,40 @@ public class AuroraWriter {
 
 	public void i8(byte value) {
 		bytes.add(value);
+	}
+
+	@Deprecated
+	private static byte[] stringToByteArray(String hex) {
+		int len = hex.length();
+		byte[] bytes = new byte[len / 2];
+
+		for (int i = 0; i < len; i += 2) {
+			bytes[i / 2] = (byte) Integer.parseInt(hex.substring(i, i + 2), 16);
+		}
+
+		return bytes;
+	}
+
+	@Deprecated
+	public void i8arrReverse(String v) {
+		var bytes = stringToByteArray(v);
+		for (int i = bytes.length - 1; i >= 0; --i) i8(bytes[i]);
+	}
+
+	@Deprecated
+	public void i8arr(String v) {
+		i8arr(stringToByteArray(v));
+	}
+
+	@Deprecated
+	public void vec3(ArrayNode jsonNode) {
+		f32(jsonNode.get(0).asFloat());
+		f32(jsonNode.get(1).asFloat());
+		f32(jsonNode.get(2).asFloat());
+	}
+
+	public void hash(String v) {
+		i32(Hash.fnv1a(v));
 	}
 
 	public void i32(int v) {
@@ -39,6 +77,11 @@ public class AuroraWriter {
 		for (var value : values) i32(value);
 	}
 
+	public void strlist(List<String> values) {
+		i32(values.size());
+		for (var element : values) str(element);
+	}
+
 	public <T extends ThumperStruct> void objlist(List<T> values) {
 		i32(values.size());
 		for (var element : values) obj(element);
@@ -59,8 +102,27 @@ public class AuroraWriter {
 				else if (byte[].class.equals(type)) i8arr(byte[].class.cast(field.get(value)));
 				else if (int[].class.equals(type)) i32arr(int[].class.cast(field.get(value)));
 				else if (ThumperStruct.class.isAssignableFrom(type)) obj(ThumperStruct.class.cast(field.get(value)));
-				else if (List.class.isAssignableFrom(type))
-					objlist((List<? extends ThumperStruct>) List.class.cast(field.get(value)));
+				else if (List.class.isAssignableFrom(type)) {
+					var list = field.get(value);
+					var genericType = field.getGenericType();
+
+					if (genericType instanceof ParameterizedType pt) {
+						var arg = pt.getActualTypeArguments()[0];
+
+						if (String.class.equals(arg)) {
+							strlist((List<String>) list);
+						} else if (arg instanceof Class<?> c && ThumperStruct.class.isAssignableFrom(c)) {
+
+							objlist((List<? extends ThumperStruct>) list);
+						} else {
+							throw new IllegalStateException("Failed to parse");
+						}
+					} else {
+						throw new IllegalStateException("Failed to parse");
+					}
+				} else {
+					throw new IllegalStateException("Failed to parse");
+				}
 			} catch (IllegalArgumentException | IllegalAccessException e) {
 				e.printStackTrace();
 			}
@@ -76,5 +138,10 @@ public class AuroraWriter {
 
 	public void removei8(int index) {
 		bytes.remove(index);
+	}
+
+	public void cstr(String value) {
+		i8arr(value.getBytes());
+		i8((byte) 0);
 	}
 }

@@ -6,73 +6,91 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import tools.jackson.core.JacksonException;
 import tools.jackson.core.json.JsonReadFeature;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.ArrayNode;
+import xyz.anthofoxo.aurora.Hash;
 import xyz.anthofoxo.aurora.Util;
+import xyz.anthofoxo.aurora.struct.AuroraReader;
+import xyz.anthofoxo.aurora.struct.AuroraWriter;
+import xyz.anthofoxo.aurora.struct.LevelListingFile;
+import xyz.anthofoxo.aurora.struct.LocalizationFile;
 import xyz.anthofoxo.aurora.struct.PrecompiledBin;
+import xyz.anthofoxo.aurora.struct.Sample;
+import xyz.anthofoxo.aurora.struct.SectionFile;
+import xyz.anthofoxo.aurora.struct.SequinMaster;
+import xyz.anthofoxo.aurora.struct.ThumperStruct;
+import xyz.anthofoxo.aurora.struct.comp.AnimComp;
+import xyz.anthofoxo.aurora.struct.comp.EditStateComp;
 
 public class TMLLevel {
-	public static void writeAnimComp(TMLWriter f) {
+	public static void writeAnimComp(AuroraWriter f) {
 		f.hash("AnimComp");
 		f.i32(1);
 		f.f32(0);
 		f.str("kTimeBeats");
 	}
 
-	public static void writeMaster(TMLWriter f, JsonNode obj) {
-		f.i32(33);
-		f.i32(33);
-		f.i32(4);
-		f.i32(2);
+	public static SequinMaster toSequinMaster(JsonNode obj) {
+		SequinMaster master = new SequinMaster();
+		master.header = SequinMaster.HEADER.clone();
 
-		writeAnimComp(f);
+		// @formatter:off
+		master.comps = Arrays.asList(
+				new AnimComp(),
+				new EditStateComp()
+			);
+		// @formatter:on
 
-		f.hash("EditStateComp");
-		f.i32(0);
-		f.f32(300.0f);
-		f.str(obj.get("skybox_name").asString());
-		f.str(obj.get("intro_lvl_name").asString());
+		master.unknown4 = 0;
+		master.unknown5 = 300.0f;
+		master.skybox = obj.get("skybox_name").asString();
+		master.introLevel = obj.get("intro_lvl_name").asString();
+		master.levels = new ArrayList<>();
 
-		// lvl/.gate groupings
-		int isolated = 0;
-		for (var grouping : obj.get("groupings")) {
-			if (asBool(grouping.get("isolate")) == asBool(obj.get("isolate_tracks"))) isolated++;
-		}
+		final var tmlMasterIsolate = asBool(obj.get("isolate_tracks"));
 
-		f.i32(isolated);
 		for (var grouping : obj.get("groupings")) {
 			// If track isolation is enabled, only add the isolated tracks to the level.
 			// If it's off, isolate_tracks will be False, and so will all instances
 			// grouping["isolate"]
-			if (asBool(grouping.get("isolate")) == asBool(obj.get("isolate_tracks"))) {
-				f.str(grouping.get("lvl_name").asString());
-				f.str(grouping.get("gate_name").asString());
-				f.bool(asBool(grouping.get("checkpoint")));
-				f.str(grouping.get("checkpoint_leader_lvl_name").asString());
-				f.str(grouping.get("rest_lvl_name").asString());
-				f.i8arr("01000100000001");
-				f.bool(asBool(grouping.get("play_plus")));
+			if (asBool(grouping.get("isolate")) == tmlMasterIsolate) {
+				var entry = new SequinMaster.Entry();
+				entry.lvlName = grouping.get("lvl_name").asString();
+				entry.gateName = grouping.get("gate_name").asString();
+				entry.hasCheckpoint = asBool(grouping.get("checkpoint"));
+				entry.checkpointLeaderLvlName = grouping.get("checkpoint_leader_lvl_name").asString();
+				entry.restLvlName = grouping.get("rest_lvl_name").asString();
+				entry.unknownBool0 = true;
+				entry.unknownBool1 = false;
+				entry.unknown0 = 1;
+				entry.unknownBool2 = true;
+				entry.playPlus = asBool(grouping.get("play_plus"));
+				master.levels.add(entry);
 			}
 		}
 
-		f.bool(false);
-		f.bool(true);
-		f.i32(3);
-		f.i32(50);
-		f.i32(8);
-		f.i32(1);
-		f.f32(0.6F);
-		f.f32(0.5F);
-		f.f32(0.5F);
-		f.str(obj.get("checkpoint_lvl_name").asString());
-		f.str("path.gameplay");
+		master.footer1 = false;
+		master.footer2 = true;
+		master.footer3 = 3;
+		master.footer4 = 50;
+		master.footer5 = 8;
+		master.footer6 = 1;
+		master.footer7 = 0.6f;
+		master.footer8 = 0.5f;
+		master.footer9 = 0.5f;
+		master.checkpointLvl = obj.get("checkpoint_lvl_name").asString();
+		master.pathGameplay = "path.gameplay";
+
+		return master;
 	}
 
 	private static boolean isNullOrEmpty(String str) {
@@ -81,7 +99,7 @@ public class TMLLevel {
 		return false;
 	}
 
-	private static void writeParamPathU(TMLWriter f, JsonNode param_path, JsonNode param_path_hash) {
+	private static void writeParamPathU(AuroraWriter f, JsonNode param_path, JsonNode param_path_hash) {
 		String pp = null;
 		String pph = null;
 
@@ -91,7 +109,7 @@ public class TMLLevel {
 		writeParamPath(f, pp, pph);
 	}
 
-	private static void writeParamPath(TMLWriter f, String param_path, String param_path_hash) {
+	private static void writeParamPath(AuroraWriter f, String param_path, String param_path_hash) {
 		f.i32(1);
 		String param;
 		String param_name;
@@ -122,14 +140,14 @@ public class TMLLevel {
 		f.i32(Integer.parseInt(param_idx));
 	}
 
-	private static void Write_Lvl_Header(TMLWriter f) {
+	private static void Write_Lvl_Header(AuroraWriter f) {
 		f.i32(51);
 		f.i32(33);
 		f.i32(4);
 		f.i32(2);
 	}
 
-	private static void Write_Approach_Anim_Comp(TMLWriter f, JsonNode obj) {
+	private static void Write_Approach_Anim_Comp(AuroraWriter f, JsonNode obj) {
 		f.hash("ApproachAnimComp");
 		f.i32(1);
 		f.f32(0);
@@ -145,7 +163,7 @@ public class TMLLevel {
 
 	private static Set<String> boolIns = new HashSet<>();
 
-	private static void Write_Data_Point_Value(TMLWriter f, String val, String trait_type) {
+	private static void Write_Data_Point_Value(AuroraWriter f, String val, String trait_type) {
 		if (trait_type.equals("kTraitInt")) f.i32(Integer.parseInt(val));
 		else if (trait_type.equals("kTraitBool") || trait_type.equals("kTraitAction")) {
 			boolIns.add(val);
@@ -167,7 +185,7 @@ public class TMLLevel {
 		}
 	}
 
-	private static void Write_Sequencer_Object_v3(TMLWriter f, JsonNode _obj, int beat_cnt) {
+	private static void Write_Sequencer_Object_v3(AuroraWriter f, JsonNode _obj, int beat_cnt) {
 		/// header of object
 		f.str(_obj.get("obj_name").asString());
 		writeParamPathU(f, _obj.get("param_path"), _obj.get("param_path_hash"));
@@ -227,7 +245,7 @@ public class TMLLevel {
 		return Boolean.parseBoolean(s);
 	}
 
-	private static void Write_Sequencer_Objects(TMLWriter f, JsonNode obj) {
+	private static void Write_Sequencer_Objects(AuroraWriter f, JsonNode obj) {
 
 		int beat_cnt = 0;
 		if (obj.has("beat_cnt")) beat_cnt = obj.get("beat_cnt").asInt();
@@ -280,7 +298,7 @@ public class TMLLevel {
 		}
 	}
 
-	private static void Write_Leaf(TMLWriter f, JsonNode obj) {
+	private static void Write_Leaf(AuroraWriter f, JsonNode obj) {
 		///header
 		// honestly don't know what these values do
 		f.i32(34);
@@ -305,7 +323,7 @@ public class TMLLevel {
 		f.i32(0);
 	}
 
-	private static void Write_Lvl_Comp(TMLWriter f, JsonNode obj) {
+	private static void Write_Lvl_Comp(AuroraWriter f, JsonNode obj) {
 		f.hash("EditStateComp");
 		Write_Sequencer_Objects(f, obj);
 
@@ -348,7 +366,7 @@ public class TMLLevel {
 		}
 	}
 
-	private static void Write_Lvl_Footer(TMLWriter f, JsonNode obj) {
+	private static void Write_Lvl_Footer(AuroraWriter f, JsonNode obj) {
 		f.bool(false);
 		f.f32(obj.get("volume").asFloat());
 		f.i32(0);
@@ -359,13 +377,13 @@ public class TMLLevel {
 		f.vec3((ArrayNode) obj.get("start_angle_fracs"));
 	}
 
-	public static void Write_Xfm_Header(TMLWriter f) {
+	public static void Write_Xfm_Header(AuroraWriter f) {
 		f.i32(4);
 		f.i32(4);
 		f.i32(1);
 	}
 
-	private static void Write_Xfm_Comp(TMLWriter f, JsonNode obj) {
+	private static void Write_Xfm_Comp(AuroraWriter f, JsonNode obj) {
 		f.hash("XfmComp");
 		f.i32(1);
 		f.str(obj.get("xfm_name").asString());
@@ -377,7 +395,7 @@ public class TMLLevel {
 		f.vec3((ArrayNode) obj.get("scale"));
 	}
 
-	public static void writeSpn(TMLWriter f, JsonNode obj) {
+	public static void writeSpn(AuroraWriter f, JsonNode obj) {
 		f.i32(1);
 		f.i32(4);
 		f.i32(2);
@@ -394,26 +412,23 @@ public class TMLLevel {
 		f.str(obj.get("bucket").asString());
 	}
 
-	public static void Write_Samp(TMLWriter f, JsonNode obj) {
-		///header
-		f.i32(12);
-		f.i32(4);
-		f.i32(1);
-
-		///comp
-		f.hash("EditStateComp");
-		f.str(obj.get("mode").asString());
-		f.i32(0);
-		f.str(obj.get("path").asString());
-		f.i8arr("0000000000");
-		f.f32(obj.get("volume").asFloat());
-		f.f32(obj.get("pitch").asFloat());
-		f.f32(obj.get("pan").asFloat());
-		f.f32(obj.get("offset").asFloat());
-		f.str(obj.get("channel_group").asString());
+	public static Sample toSample(JsonNode obj) {
+		Sample sample = new Sample();
+		sample.header = Sample.HEADER;
+		sample.comps = Arrays.asList(new EditStateComp());
+		sample.mode = obj.get("mode").asString();
+		sample.unknown0 = 0;
+		sample.path = obj.get("path").asString();
+		sample.unknown1 = new byte[] { 0, 0, 0, 0, 0 };
+		sample.volume = obj.get("volume").asFloat();
+		sample.pitch = obj.get("pitch").asFloat();
+		sample.pan = obj.get("pan").asFloat();
+		sample.offset = obj.get("offset").asFloat();
+		sample.channelGroup = obj.get("channel_group").asString();
+		return sample;
 	}
 
-	public static void writeGate(TMLWriter f, JsonNode obj) {
+	public static void writeGate(AuroraWriter f, JsonNode obj) {
 		f.i32(26);
 		f.i32(4);
 		f.i32(1);
@@ -476,21 +491,29 @@ public class TMLLevel {
 
 	private static List<String> file_special = Arrays.asList(".spn", ".samp");
 
-	public static void test() throws IOException {
+	private static class GeneratedAssets {
+		public HashMap<String, byte[]> pcFiles = new HashMap<>();
+		public String levelName;
+		public byte[] objlib;
+		public byte[] sec;
+		public String localizationKey;
+		public String localizationValue;
+	}
 
-		int loadedLevelIndex = 0;
-		JsonMapper mapper = JsonMapper.builder().configure(JsonReadFeature.ALLOW_SINGLE_QUOTES, true).build();
+	static JsonMapper mapper = JsonMapper.builder().configure(JsonReadFeature.ALLOW_SINGLE_QUOTES, true).build();
 
+	public static GeneratedAssets build_level(Path levelPath) throws JacksonException, IOException {
+		var files = Files.walk(levelPath).collect(Collectors.toList());
+
+		// Static storage
+		GeneratedAssets assets = new GeneratedAssets();
 		JsonNode level_config = null;
 		List<JsonNode> objs = new ArrayList<>();
-
 		objs.add(mapper.readTree(Util.getResourceBytes("leaf_pyramid_outro.txt")));
 
-		var files = Files.walk(Path.of("C:\\Users\\antho\\Downloads\\Thumper.Mod.Loader.2.0\\levels\\Trial of 0 Gates"))
-				.collect(Collectors.toList());
-
+		// Iterate over all files, put them into either the pc file list or make a
+		// jsonobject
 		for (var path : files) {
-
 			if (file_types.contains(getPathExtensionWithDot(path))) {
 				// read file and store JSON in dynamic object
 				var new_objs = mapper.readTree(path);
@@ -509,18 +532,23 @@ public class TMLLevel {
 				}
 			} else if (getPathExtensionWithDot(path).equals(".tcl")) {
 				level_config = mapper.readTree(path);
+			} else if (getPathExtensionWithDot(path).equals(".pc")) {
+				assets.pcFiles.put(path.getFileName().toString(), Files.readAllBytes(path));
 			}
 		}
 
-		TMLWriter writer = new TMLWriter();
+		if (level_config == null) {
+			throw new IllegalStateException("TCLE 2.x Levels are not supported, Covert them to 3.x");
+		}
+
+		assets.levelName = level_config.get("level_name").asString();
+
+		AuroraWriter writer = new AuroraWriter();
 		writer.i8arr(PrecompiledBin.getHeaderBin());
-		writer.str(String.format("levels/custom/level%s.objlib", 1));
-		// Write_String(f,
-		// $"levels/custom/level{LoadedLevels.IndexOf(Level)+1}.objlib");
+		writer.str(String.format("levels/custom/%s.objlib", level_config.get("level_name").asString()));
 		writer.i8arr(PrecompiledBin.getObjList1Bin());
 
 		writer.i32(63 + objs.size());
-
 		writer.i8arr(PrecompiledBin.getObjList2Bin());
 
 		for (var obj : objs) {
@@ -530,7 +558,7 @@ public class TMLLevel {
 					writer.str(obj.get("obj_name").asString());
 				} else {
 					writer.hash(obj.get("obj_type").asString());
-					writer.str(String.format("levels/custom/level%d.xfm", loadedLevelIndex + 1));
+					writer.str(String.format("levels/custom/%s.xfm", assets.levelName));
 				}
 			}
 		}
@@ -538,17 +566,19 @@ public class TMLLevel {
 		writer.i8arr(Util.getResourceBytes("obj_def_customlevel.objlib"));
 
 		for (var obj : objs) {
-			if (obj.get("obj_type").asString().equals("SequinLeaf")) Write_Leaf(writer, obj);
-			else if (obj.get("obj_type").asString().equals("SequinLevel")) {
+			final String objType = obj.get("obj_type").asString();
+
+			if (objType.equals("SequinLeaf")) Write_Leaf(writer, obj);
+			else if (objType.equals("SequinLevel")) {
 				Write_Lvl_Header(writer);
 				Write_Approach_Anim_Comp(writer, obj);
 				Write_Lvl_Comp(writer, obj);
 				Write_Lvl_Footer(writer, obj);
-			} else if (obj.get("obj_type").asString().equals("SequinGate")) writeGate(writer, obj);
-			else if (obj.get("obj_type").asString().equals("SequinMaster")) writeMaster(writer, obj);
-			else if (obj.get("obj_type").asString().equals("EntitySpawner")) writeSpn(writer, obj);
-			else if (obj.get("obj_type").asString().equals("Sample")) Write_Samp(writer, obj);
-			else if (obj.get("obj_type").asString().equals("Xfmer")) {
+			} else if (objType.equals("SequinGate")) writeGate(writer, obj);
+			else if (objType.equals("SequinMaster")) writer.obj(toSequinMaster(obj));
+			else if (objType.equals("EntitySpawner")) writeSpn(writer, obj);
+			else if (objType.equals("Sample")) writer.obj(toSample(obj));
+			else if (objType.equals("Xfmer")) {
 				Write_Xfm_Header(writer);
 				Write_Xfm_Comp(writer, obj);
 			}
@@ -558,9 +588,152 @@ public class TMLLevel {
 		writer.f32(level_config.get("bpm").asFloat());
 		writer.i8arr(Util.getResourceBytes("footer_2.objlib"));
 
-		Files.write(Path.of("C:\\Program Files (x86)\\Steam\\steamapps\\common\\Thumper\\cache\\73bb8d2d.pc"),
-				writer.toBytes());
+		AuroraWriter sec = new AuroraWriter();
 
-		System.out.println(boolIns);
+		sec.obj(SectionFile.fromTML(level_config));
+
+		assets.objlib = writer.getBytes();
+		assets.sec = sec.getBytes();
+		assets.localizationKey = String.format("custom.%s", level_config.get("level_name").asString());
+		assets.localizationValue = level_config.get("level_name").asString();
+		return assets;
+	}
+
+	public static void test() throws IOException {
+		// Find all customs listed
+		List<Path> customs;
+
+		try (var stream = Files.list(Path.of("aurora_mods"))) {
+			customs = stream.collect(Collectors.toList());
+		}
+
+		List<GeneratedAssets> assets = new ArrayList<>();
+
+		for (Path path : customs) {
+			if (path.getFileName().toString().endsWith(".zip")) continue; // Ignore zips
+			if (Files.isRegularFile(path)) continue; // Sinular files arent supported yet
+
+			boolean hasTcl = false;
+			boolean hasObjlib = false;
+			boolean hasTcl2 = false;
+
+			try (var stream = Files.list(path)) {
+				List<Path> files = stream.collect(Collectors.toList());
+
+				for (var file : files) {
+					String fname = file.getFileName().toString().toLowerCase();
+
+					if (fname.endsWith(".tcl")) hasTcl = true;
+					if (fname.endsWith(".objlib")) hasObjlib = true;
+					if (fname.startsWith("config_") && fname.endsWith(".txt")) hasTcl2 = true;
+				}
+			}
+
+			if (hasTcl2) {
+				System.err
+						.println(path.getFileName() + " is a TCL2 level, these are not supported, update to TCLE 3.x");
+				continue;
+			}
+
+			if (hasTcl && hasObjlib) {
+				System.err.println(path.getFileName() + " is a TCLE Compiled Level, these are not supported yet");
+				continue;
+			}
+
+			if (!hasTcl) continue; // Not supported
+			if (hasObjlib) continue; // Not supported
+
+			assets.add(build_level(path));
+		}
+
+		// write out the level files
+		for (var asset : assets) {
+			// write objlib
+			int target = Hash.fnv1a(String.format("Alevels/custom/%s.objlib", asset.levelName));
+			Files.write(Path.of("C:\\Program Files (x86)\\Steam\\steamapps\\common\\Thumper\\cache\\"
+					+ Integer.toHexString(target) + ".pc"), asset.objlib);
+
+			// write sec
+			target = Hash.fnv1a(String.format("Alevels/custom/%s.sec", asset.levelName));
+			Files.write(Path.of("C:\\Program Files (x86)\\Steam\\steamapps\\common\\Thumper\\cache\\"
+					+ Integer.toHexString(target) + ".pc"), asset.sec);
+
+			// write pc files
+			for (var pc : asset.pcFiles.entrySet()) {
+				Files.write(
+						Path.of("C:\\Program Files (x86)\\Steam\\steamapps\\common\\Thumper\\cache\\" + pc.getKey()),
+						pc.getValue());
+			}
+		}
+
+		// Create level listing
+		LevelListingFile listings = new LevelListingFile();
+		listings.enteries = new ArrayList<>();
+
+		for (int i = 0; i < assets.size(); ++i) {
+			var asset = assets.get(i);
+			var entry = new LevelListingFile.Entry();
+			entry.key = asset.localizationKey;
+			entry.unknown0 = 0;
+			entry.path = String.format("levels/custom/%s.objlib", asset.levelName);
+			entry.unlocks = "";
+			entry.defaultLocked = false;
+			entry.unknown1 = false;
+			entry.triggersCredits = false;
+			entry.colorIndex0 = i;
+			entry.colorIndex1 = i + (assets.size() + 1);
+			listings.enteries.add(entry);
+		}
+
+		{
+			var entry = new LevelListingFile.Entry();
+			entry.key = "level3";
+			entry.unknown0 = 0;
+			entry.path = "levels/level3/level_3a.objlib";
+			entry.unlocks = "";
+			entry.defaultLocked = false;
+			entry.unknown1 = false;
+			entry.triggersCredits = false;
+			entry.colorIndex0 = assets.size();
+			entry.colorIndex1 = assets.size() + (assets.size() + 1);
+			listings.enteries.add(entry);
+		}
+
+		{
+			AuroraWriter out = new AuroraWriter();
+			out.obj(listings);
+			Files.write(
+					Path.of(String.format("C:\\Program Files (x86)\\Steam\\steamapps\\common\\Thumper\\cache\\%s.pc",
+							Integer.toHexString(Hash.fnv1a("Aui/thumper.levels")))),
+					out.getBytes());
+		}
+
+		{
+			String path = String.format("C:\\Program Files (x86)\\Steam\\steamapps\\common\\Thumper\\cache\\%s.pc",
+					Integer.toHexString(Hash.fnv1a("Aui/strings.en.loc")));
+
+			AuroraReader in = new AuroraReader(Files.readAllBytes(Path.of(path)));
+
+			LocalizationFile locs = new LocalizationFile();
+			locs.read(in);
+
+			for (var asset : assets) {
+				int idx = locs.indexOfKey(Hash.fnv1a(asset.localizationKey));
+				var entry = new LocalizationFile.Entry(asset.localizationValue, Hash.fnv1a(asset.localizationKey));
+				if (idx == -1) {
+					locs.enteries.add(entry);
+				} else {
+					locs.enteries.set(idx, entry);
+				}
+
+			}
+
+			locs.enteries.get(locs.indexOfKey(Hash.fnv1a("level3"))).value = "FUCK YOU LEVEL 3";
+
+			AuroraWriter out = new AuroraWriter();
+			locs.write(out);
+
+			Files.write(Path.of(path), out.getBytes());
+		}
 	}
 }

@@ -33,7 +33,7 @@ public class Hasher {
 
 			if (ImGui.inputText("Input", input)) compute();
 			ImGui.labelText("Output", output);
-
+			
 			if (collision) {
 				ImGui.text("Hash found");
 			}

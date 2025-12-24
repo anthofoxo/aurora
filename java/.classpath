@@ -32,5 +32,6 @@
 	<classpathentry kind="lib" path="aurora_lib/snakeyaml-2.5.jar" sourcepath="aurora_lib/snakeyaml-2.5-sources.jar"/>
 	<classpathentry kind="lib" path="aurora_lib/snakeyaml-engine-2.10.jar" sourcepath="aurora_lib/snakeyaml-engine-2.10-sources.jar"/>
 	<classpathentry kind="lib" path="aurora_res"/>
+	<classpathentry kind="lib" path="aurora_mods"/>
 	<classpathentry kind="output" path="aurora_bin"/>
 </classpath>

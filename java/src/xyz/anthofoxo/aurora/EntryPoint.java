@@ -118,13 +118,13 @@ public final class EntryPoint extends Application {
 		aurora.update(this);
 	}
 
-	public static boolean auroraMain(boolean standalone) {
-		Aurora.standalone = standalone;
+	public static boolean auroraMain(boolean integrated) {
+		Aurora.integrated = integrated;
 		Application.launch(new EntryPoint());
-		return false;
+		return Aurora.shouldLaunchThumper;
 	}
 
 	public static void main(String[] args) {
-		auroraMain(true);
+		auroraMain(false);
 	}
 }
