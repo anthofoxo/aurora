@@ -3,7 +3,6 @@ package xyz.anthofoxo.aurora.struct;
 import java.util.Arrays;
 import java.util.List;
 
-import xyz.anthofoxo.aurora.Hash;
 import xyz.anthofoxo.aurora.struct.comp.XfmComp;
 
 public final class PrecompiledBin {

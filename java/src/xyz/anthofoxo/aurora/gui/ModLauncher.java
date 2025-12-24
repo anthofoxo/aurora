@@ -1,21 +1,16 @@
 package xyz.anthofoxo.aurora.gui;
 
-import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Properties;
 import java.util.stream.Collectors;
-
-import org.lwjgl.util.tinyfd.TinyFileDialogs;
 
 import imgui.ImGui;
 import imgui.type.ImBoolean;
 import xyz.anthofoxo.aurora.Aurora;
-import xyz.anthofoxo.aurora.Util;
+import xyz.anthofoxo.aurora.UserConfig;
 import xyz.anthofoxo.aurora.tml.TCLFile;
 import xyz.anthofoxo.aurora.tml.TMLBuilder;
 
@@ -24,35 +19,14 @@ public class ModLauncher {
 		public TCLFile tcl;
 		public Path path;
 		public ImBoolean enabled = new ImBoolean(true);
-		public int[] speedModifier = new int[] { 100 };
+		public int[] speedModifier = new int[] { 10 };
 	}
 
-	private Properties p = new Properties();
 	private List<LevelEntry> customs = new ArrayList<>();
 	private LevelEntry selected = null;
 	private ImBoolean buildMods = new ImBoolean(true);
 
 	public ModLauncher() {
-
-		try (var resource = Util.getResource("config.properties")) {
-			if (resource != null) p.load(resource);
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-
-		if (!p.containsKey("thumperexe")) {
-			String returned = TinyFileDialogs.tinyfd_openFileDialog("Select Thumper Executable", "THUMPER_win8.exe",
-					null, null, false);
-
-			p.put("thumperexe", returned);
-		}
-
-		try {
-			p.store(new FileOutputStream(new File("aurora_res/config.properties")), "Aurora config");
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-
 		reloadList();
 	}
 
@@ -136,15 +110,16 @@ public class ModLauncher {
 				ImGui.textUnformatted("Author: " + selected.tcl.author);
 				ImGui.textWrapped(selected.tcl.description);
 
-				ImGui.sliderInt("Speed Modifier", selected.speedModifier, 20, 400);
+				ImGui.sliderInt("Speed Modifier", selected.speedModifier, 1, 50, "%d0%%");
+
 			}
 
 			ImGui.columns(1);
 			ImGui.separator();
 
-			String thumperexe = p.getProperty("thumperexe");
+			String thumperpath = UserConfig.thumperPath();
 
-			if (thumperexe == null) {
+			if (thumperpath == null) {
 				ImGui.textUnformatted("Thumper Directory is not specified, levels will not be built");
 			}
 
@@ -163,14 +138,14 @@ public class ModLauncher {
 
 					if (restoreBackup) {
 						try {
-							TMLBuilder.restoreBackups(Path.of(thumperexe).getParent().toString());
+							TMLBuilder.restoreBackups(Path.of(thumperpath).toString());
 						} catch (IOException e) {
 							// TODO Auto-generated catch block
 							e.printStackTrace();
 						}
-					} else if (thumperexe != null) {
+					} else if (thumperpath != null) {
 						try {
-							TMLBuilder.buildLevels(customs, Path.of(thumperexe).getParent().toString());
+							TMLBuilder.buildLevels(customs, Path.of(thumperpath).toString());
 						} catch (IOException e) {
 							e.printStackTrace();
 						}

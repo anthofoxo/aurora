@@ -571,7 +571,7 @@ public class TMLBuilder {
 		}
 
 		writer.i8arr(Util.getResourceBytes("footer_1.objlib"));
-		writer.f32(guiLevelEntry.tcl.bpm * ((float) guiLevelEntry.speedModifier[0] / 100.0f));
+		writer.f32(guiLevelEntry.tcl.bpm * speedMod);
 		writer.i8arr(Util.getResourceBytes("footer_2.objlib"));
 
 		AuroraWriter sec = new AuroraWriter();
@@ -599,7 +599,7 @@ public class TMLBuilder {
 	private static void writefileBackedup(String path, byte[] bytes) throws IOException {
 
 		// No backup exists, make one
-		if (!Files.exists(Path.of(path + ".bak"))) {
+		if (Files.exists(Path.of(path)) && !Files.exists(Path.of(path + ".bak"))) {
 			Files.copy(Path.of(path), Path.of(path + ".bak"));
 		}
 
@@ -612,7 +612,7 @@ public class TMLBuilder {
 		for (var entry : levels) {
 			if (!entry.enabled.get()) continue;
 
-			assets.add(build_level(entry, (float) entry.speedModifier[0] / 100.0f));
+			assets.add(build_level(entry, (float) entry.speedModifier[0] / 10.0f));
 		}
 
 		// write out the level files

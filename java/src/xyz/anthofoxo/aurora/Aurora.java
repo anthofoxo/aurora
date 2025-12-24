@@ -3,9 +3,6 @@ package xyz.anthofoxo.aurora;
 import static org.lwjgl.glfw.GLFW.glfwSetWindowShouldClose;
 
 import java.io.IOException;
-import java.nio.file.DirectoryStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
 
 import imgui.ImGui;
 import imgui.app.Application;
@@ -17,7 +14,6 @@ import xyz.anthofoxo.aurora.gui.ModLauncher;
 public class Aurora {
 	public static boolean integrated;
 	public static boolean shouldLaunchThumper = false;
-	public static String home = "C:/Program Files (x86)/Steam/steamapps/common/Thumper";
 	public static boolean requestClose = false;
 
 	private ImBoolean demo = new ImBoolean();
@@ -83,19 +79,6 @@ public class Aurora {
 			} else {
 				ImGui.text("Aurora is running in integrated mode. All features are enabled");
 			}
-		}
-		ImGui.end();
-
-		if (ImGui.begin("Debug")) {
-
-			try (DirectoryStream<Path> stream = Files.newDirectoryStream(Path.of(home))) {
-				for (Path entry : stream) {
-					ImGui.text(entry.getFileName().toString());
-				}
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-
 		}
 		ImGui.end();
 
