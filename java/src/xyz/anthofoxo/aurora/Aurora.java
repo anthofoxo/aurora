@@ -12,43 +12,41 @@ import imgui.app.Application;
 import imgui.type.ImBoolean;
 import xyz.anthofoxo.aurora.gui.Hasher;
 import xyz.anthofoxo.aurora.gui.LocalizationEditor;
-import xyz.anthofoxo.aurora.tml.TMLLevel;
+import xyz.anthofoxo.aurora.gui.ModLauncher;
 
 public class Aurora {
 	public static boolean integrated;
 	public static boolean shouldLaunchThumper = false;
 	public static String home = "C:/Program Files (x86)/Steam/steamapps/common/Thumper";
+	public static boolean requestClose = false;
 
 	private ImBoolean demo = new ImBoolean();
 	private Hasher hasher = new Hasher();
 	private LocalizationEditor locEditor;
+	private ModLauncher modLauncher = new ModLauncher();
 
 	public Aurora() {
 		try {
 			locEditor = new LocalizationEditor();
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		
-		try {
-			TMLLevel.test();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
-	
+
 	public void update(Application app) {
+		if (requestClose) {
+			glfwSetWindowShouldClose(app.getHandle(), true);
+		}
+
 		if (ImGui.beginMainMenuBar()) {
 
 			if (ImGui.beginMenu("File")) {
 
-				if(ImGui.menuItem("Launch Thumper")) {
+				if (ImGui.menuItem("Launch Thumper")) {
 					shouldLaunchThumper = true;
-					glfwSetWindowShouldClose(app.getHandle(), true);
+					requestClose = true;
 				}
-				
+
 				if (ImGui.menuItem("Quit")) {
 					glfwSetWindowShouldClose(app.getHandle(), true);
 				}
@@ -87,8 +85,6 @@ public class Aurora {
 			}
 		}
 		ImGui.end();
-		
-		
 
 		if (ImGui.begin("Debug")) {
 
@@ -103,6 +99,7 @@ public class Aurora {
 		}
 		ImGui.end();
 
+		modLauncher.draw();
 		hasher.draw();
 		locEditor.draw();
 	}

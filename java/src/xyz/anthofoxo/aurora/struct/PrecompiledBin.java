@@ -1,6 +1,10 @@
 package xyz.anthofoxo.aurora.struct;
 
 import java.util.Arrays;
+import java.util.List;
+
+import xyz.anthofoxo.aurora.Hash;
+import xyz.anthofoxo.aurora.struct.comp.XfmComp;
 
 public final class PrecompiledBin {
 	private PrecompiledBin() {
@@ -39,6 +43,16 @@ public final class PrecompiledBin {
 		return out.getBytes();
 	}
 
+	public static byte[] getObjDeclaration3() {
+		Xfmer xfmer = new Xfmer();
+		xfmer.header = Xfmer.header();
+		xfmer.comps = List.of(new XfmComp("", "kConstraintParent", Transform.identity()));
+
+		AuroraWriter out = new AuroraWriter();
+		out.obj(xfmer);
+		return out.getBytes();
+	}
+
 	/**
 	 * Generates the binary content of obj_list_2.objlib previously used by TML
 	 * There *MUST* be 63 declarations and they *CANNOT* be moved or removed When
@@ -51,7 +65,7 @@ public final class PrecompiledBin {
 		out.objlist(Arrays.asList(
 				new ObjectDeclaration(DeclarationType.Mesh,          "web_points.mesh"),
 				new ObjectDeclaration(DeclarationType.SequinDrawer,  "sequin.drawer"),
-				new ObjectDeclaration(DeclarationType.Xfmer,         "levels/Level9/level_9a.xfm"),
+				new ObjectDeclaration(DeclarationType.Xfmer,         "levels/Level9/level_9a.xfm"), // getObjDeclaration3
 				new ObjectDeclaration(DeclarationType.TraitAnim,     "gamma_modulation.anim"),
 				new ObjectDeclaration(DeclarationType.Mat,           "skybox_src.mat"),
 				new ObjectDeclaration(DeclarationType.Mat,           "skybox_subtract.mat"),

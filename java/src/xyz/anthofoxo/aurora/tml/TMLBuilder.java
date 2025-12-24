@@ -4,6 +4,7 @@ import java.awt.Color;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -17,6 +18,7 @@ import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.ArrayNode;
 import xyz.anthofoxo.aurora.Hash;
 import xyz.anthofoxo.aurora.Util;
+import xyz.anthofoxo.aurora.gui.ModLauncher.LevelEntry;
 import xyz.anthofoxo.aurora.struct.AuroraReader;
 import xyz.anthofoxo.aurora.struct.AuroraWriter;
 import xyz.anthofoxo.aurora.struct.EntitySpawner;
@@ -33,7 +35,7 @@ import xyz.anthofoxo.aurora.struct.comp.AnimComp;
 import xyz.anthofoxo.aurora.struct.comp.EditStateComp;
 import xyz.anthofoxo.aurora.struct.comp.XfmComp;
 
-public class TMLLevel {
+public class TMLBuilder {
 	public static SequinMaster toSequinMaster(JsonNode obj) {
 		SequinMaster master = new SequinMaster();
 		master.header = SequinMaster.HEADER.clone();
@@ -483,30 +485,31 @@ public class TMLLevel {
 		public String localizationValue;
 	}
 
-	static JsonMapper mapper = JsonMapper.builder().configure(JsonReadFeature.ALLOW_SINGLE_QUOTES, true).build();
+	public static final JsonMapper TML_MAPPER = JsonMapper.builder()
+			.configure(JsonReadFeature.ALLOW_SINGLE_QUOTES, true).build();
 
-	public static GeneratedAssets build_level(Path levelPath) throws JacksonException, IOException {
-		var files = Files.walk(levelPath).collect(Collectors.toList());
+	public static GeneratedAssets build_level(LevelEntry guiLevelEntry, float speedMod)
+			throws JacksonException, IOException {
+		var files = Files.walk(guiLevelEntry.path).collect(Collectors.toList());
 
 		// Static storage
 		GeneratedAssets assets = new GeneratedAssets();
-		JsonNode level_config = null;
 		List<JsonNode> objs = new ArrayList<>();
-		objs.add(mapper.readTree(Util.getResourceBytes("leaf_pyramid_outro.txt")));
+		objs.add(TML_MAPPER.readTree(Util.getResourceBytes("leaf_pyramid_outro.txt")));
 
 		// Iterate over all files, put them into either the pc file list or make a
 		// jsonobject
 		for (var path : files) {
 			if (file_types.contains(getPathExtensionWithDot(path))) {
 				// read file and store JSON in dynamic object
-				var new_objs = mapper.readTree(path);
+				var new_objs = TML_MAPPER.readTree(path);
 				objs.add(new_objs);
 
 			}
 			// these file types require different processing to get the data
 			else if (file_special.contains(getPathExtensionWithDot(path))) {
 
-				var new_objs = mapper.readTree(path);
+				var new_objs = TML_MAPPER.readTree(path);
 
 				// spn_ and samp_ files contain multiple entries, inside the "multi":[] list
 				for (var _v : new_objs.get("items")) {
@@ -514,21 +517,17 @@ public class TMLLevel {
 
 				}
 			} else if (getPathExtensionWithDot(path).equals(".tcl")) {
-				level_config = mapper.readTree(path);
+				continue;
 			} else if (getPathExtensionWithDot(path).equals(".pc")) {
 				assets.pcFiles.put(path.getFileName().toString(), Files.readAllBytes(path));
 			}
 		}
 
-		if (level_config == null) {
-			throw new IllegalStateException("TCLE 2.x Levels are not supported, Covert them to 3.x");
-		}
-
-		assets.levelName = level_config.get("level_name").asString();
+		assets.levelName = guiLevelEntry.tcl.levelName;
 
 		AuroraWriter writer = new AuroraWriter();
 		writer.i8arr(PrecompiledBin.getHeaderBin());
-		writer.str(String.format("levels/custom/%s.objlib", level_config.get("level_name").asString()));
+		writer.str(String.format("levels/custom/%s.objlib", guiLevelEntry.tcl.levelName));
 		writer.i8arr(PrecompiledBin.getObjList1Bin());
 
 		writer.i32(63 + objs.size());
@@ -559,8 +558,11 @@ public class TMLLevel {
 			} else if (objType.equals("SequinGate")) writeGate(writer, obj);
 			else if (objType.equals("SequinMaster")) writer.obj(toSequinMaster(obj));
 			else if (objType.equals("EntitySpawner")) writer.obj(toEntiySpawner(obj));
-			else if (objType.equals("Sample")) writer.obj(toSample(obj));
-			else if (objType.equals("Xfmer")) {
+			else if (objType.equals("Sample")) {
+				var sample = toSample(obj);
+				sample.pitch *= speedMod;
+				writer.obj(sample);
+			} else if (objType.equals("Xfmer")) {
 				Xfmer xfm = new Xfmer();
 				xfm.header = Xfmer.header();
 				xfm.comps = List.of(toXfmComp(obj));
@@ -569,84 +571,63 @@ public class TMLLevel {
 		}
 
 		writer.i8arr(Util.getResourceBytes("footer_1.objlib"));
-		writer.f32(level_config.get("bpm").asFloat());
+		writer.f32(guiLevelEntry.tcl.bpm * ((float) guiLevelEntry.speedModifier[0] / 100.0f));
 		writer.i8arr(Util.getResourceBytes("footer_2.objlib"));
 
 		AuroraWriter sec = new AuroraWriter();
 
-		sec.obj(SectionFile.fromTML(level_config));
+		sec.obj(SectionFile.fromTML(guiLevelEntry.tcl));
 
 		assets.objlib = writer.getBytes();
 		assets.sec = sec.getBytes();
-		assets.localizationKey = String.format("custom.%s", level_config.get("level_name").asString());
-		assets.localizationValue = level_config.get("level_name").asString();
+		assets.localizationKey = String.format("custom.%s", guiLevelEntry.tcl.levelName);
+		assets.localizationValue = guiLevelEntry.tcl.levelName;
+
+		if (speedMod != 1.0f) {
+			assets.localizationValue += String.format(" (%d%%)", (int) (speedMod * 100.0f));
+		}
+
 		return assets;
 	}
 
-	public static void test() throws IOException {
-		// Find all customs listed
-		List<Path> customs;
+	/**
+	 * Invokes Files.write on the given path but before doing so ensures a backup of
+	 * the file is made
+	 * 
+	 * @throws IOException
+	 */
+	private static void writefileBackedup(String path, byte[] bytes) throws IOException {
 
-		try (var stream = Files.list(Path.of("aurora_mods"))) {
-			customs = stream.collect(Collectors.toList());
+		// No backup exists, make one
+		if (!Files.exists(Path.of(path + ".bak"))) {
+			Files.copy(Path.of(path), Path.of(path + ".bak"));
 		}
 
+		Files.write(Path.of(path), bytes);
+	}
+
+	public static void buildLevels(List<LevelEntry> levels, String thumperdir) throws IOException {
 		List<GeneratedAssets> assets = new ArrayList<>();
 
-		for (Path path : customs) {
-			if (path.getFileName().toString().endsWith(".zip")) continue; // Ignore zips
-			if (Files.isRegularFile(path)) continue; // Sinular files arent supported yet
+		for (var entry : levels) {
+			if (!entry.enabled.get()) continue;
 
-			boolean hasTcl = false;
-			boolean hasObjlib = false;
-			boolean hasTcl2 = false;
-
-			try (var stream = Files.list(path)) {
-				List<Path> files = stream.collect(Collectors.toList());
-
-				for (var file : files) {
-					String fname = file.getFileName().toString().toLowerCase();
-
-					if (fname.endsWith(".tcl")) hasTcl = true;
-					if (fname.endsWith(".objlib")) hasObjlib = true;
-					if (fname.startsWith("config_") && fname.endsWith(".txt")) hasTcl2 = true;
-				}
-			}
-
-			if (hasTcl2) {
-				System.err
-						.println(path.getFileName() + " is a TCL2 level, these are not supported, update to TCLE 3.x");
-				continue;
-			}
-
-			if (hasTcl && hasObjlib) {
-				System.err.println(path.getFileName() + " is a TCLE Compiled Level, these are not supported yet");
-				continue;
-			}
-
-			if (!hasTcl) continue; // Not supported
-			if (hasObjlib) continue; // Not supported
-
-			assets.add(build_level(path));
+			assets.add(build_level(entry, (float) entry.speedModifier[0] / 100.0f));
 		}
 
 		// write out the level files
 		for (var asset : assets) {
 			// write objlib
 			int target = Hash.fnv1a(String.format("Alevels/custom/%s.objlib", asset.levelName));
-			Files.write(Path.of("C:\\Program Files (x86)\\Steam\\steamapps\\common\\Thumper\\cache\\"
-					+ Integer.toHexString(target) + ".pc"), asset.objlib);
+			writefileBackedup(thumperdir + "/cache/" + Integer.toHexString(target) + ".pc", asset.objlib);
 
 			// write sec
 			target = Hash.fnv1a(String.format("Alevels/custom/%s.sec", asset.levelName));
-			Files.write(Path.of("C:\\Program Files (x86)\\Steam\\steamapps\\common\\Thumper\\cache\\"
-					+ Integer.toHexString(target) + ".pc"), asset.sec);
+			writefileBackedup(thumperdir + "/cache/" + Integer.toHexString(target) + ".pc", asset.sec);
 
 			// write pc files
 			for (var pc : asset.pcFiles.entrySet()) {
-				Files.write(
-						Path.of("C:\\Program Files (x86)\\Steam\\steamapps\\common\\Thumper\\cache\\" + pc.getKey()),
-						pc.getValue());
+				writefileBackedup(thumperdir + "/cache/" + pc.getKey(), pc.getValue());
 			}
 		}
 
@@ -686,15 +667,37 @@ public class TMLLevel {
 		{
 			AuroraWriter out = new AuroraWriter();
 			out.obj(listings);
-			Files.write(
-					Path.of(String.format("C:\\Program Files (x86)\\Steam\\steamapps\\common\\Thumper\\cache\\%s.pc",
-							Integer.toHexString(Hash.fnv1a("Aui/thumper.levels")))),
+			writefileBackedup(
+					String.format(thumperdir + "/cache/%s.pc", Integer.toHexString(Hash.fnv1a("Aui/thumper.levels"))),
 					out.getBytes());
 		}
 
-		{
-			String path = String.format("C:\\Program Files (x86)\\Steam\\steamapps\\common\\Thumper\\cache\\%s.pc",
-					Integer.toHexString(Hash.fnv1a("Aui/strings.en.loc")));
+		// @formatter:off
+		List<String> localizations = List.of(
+				"Aui/strings.da.loc",
+				"Aui/strings.de.loc",
+				"Aui/strings.en.loc",
+				"Aui/strings.es-la.loc",
+				"Aui/strings.fi.loc",
+				"Aui/strings.fr-ca.loc",
+				"Aui/strings.fr.loc",
+				"Aui/strings.it.loc",
+				"Aui/strings.ja.loc",
+				"Aui/strings.ko.loc",
+				"Aui/strings.nl.loc",
+				"Aui/strings.no.loc",
+				"Aui/strings.pl.loc",
+				"Aui/strings.pt-br.loc",
+				"Aui/strings.ru.loc",
+				"Aui/strings.sv.loc",
+				"Aui/strings.tr.loc",
+				"Aui/strings.zh-s.loc",
+				"Aui/strings.zh-t.loc"
+			);
+		// @formatter:on
+
+		for (String loc : localizations) {
+			String path = String.format(thumperdir + "/cache/%s.pc", Integer.toHexString(Hash.fnv1a(loc)));
 
 			AuroraReader in = new AuroraReader(Files.readAllBytes(Path.of(path)));
 
@@ -712,12 +715,22 @@ public class TMLLevel {
 
 			}
 
-			locs.enteries.get(locs.indexOfKey(Hash.fnv1a("level3"))).value = "FUCK YOU LEVEL 3";
-
 			AuroraWriter out = new AuroraWriter();
 			locs.write(out);
 
-			Files.write(Path.of(path), out.getBytes());
+			writefileBackedup(path, out.getBytes());
+		}
+	}
+
+	public static void restoreBackups(String thumperdir) throws IOException {
+		try (var stream = Files.list(Path.of(thumperdir + "/cache/"))) {
+			for (Path path : stream.collect(Collectors.toList())) {
+				if (path.getFileName().toString().endsWith(".bak")) continue;
+
+				if (Files.exists(Path.of(path.toString() + ".bak"))) {
+					Files.copy(Path.of(path.toString() + ".bak"), path, StandardCopyOption.REPLACE_EXISTING);
+				}
+			}
 		}
 	}
 }
