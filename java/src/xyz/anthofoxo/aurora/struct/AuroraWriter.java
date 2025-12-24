@@ -5,7 +5,7 @@ import java.lang.reflect.ParameterizedType;
 import java.util.ArrayList;
 import java.util.List;
 
-import tools.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.JsonNode;
 import xyz.anthofoxo.aurora.Hash;
 
 public class AuroraWriter {
@@ -43,7 +43,7 @@ public class AuroraWriter {
 	}
 
 	@Deprecated
-	public void vec3(ArrayNode jsonNode) {
+	public void vec3(JsonNode jsonNode) {
 		f32(jsonNode.get(0).asFloat());
 		f32(jsonNode.get(1).asFloat());
 		f32(jsonNode.get(2).asFloat());

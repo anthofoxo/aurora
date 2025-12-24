@@ -87,6 +87,8 @@ public class Aurora {
 			}
 		}
 		ImGui.end();
+		
+		
 
 		if (ImGui.begin("Debug")) {
 

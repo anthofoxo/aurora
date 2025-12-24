@@ -7,9 +7,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 import tools.jackson.core.JacksonException;
@@ -21,30 +19,27 @@ import xyz.anthofoxo.aurora.Hash;
 import xyz.anthofoxo.aurora.Util;
 import xyz.anthofoxo.aurora.struct.AuroraReader;
 import xyz.anthofoxo.aurora.struct.AuroraWriter;
+import xyz.anthofoxo.aurora.struct.EntitySpawner;
 import xyz.anthofoxo.aurora.struct.LevelListingFile;
 import xyz.anthofoxo.aurora.struct.LocalizationFile;
 import xyz.anthofoxo.aurora.struct.PrecompiledBin;
 import xyz.anthofoxo.aurora.struct.Sample;
 import xyz.anthofoxo.aurora.struct.SectionFile;
 import xyz.anthofoxo.aurora.struct.SequinMaster;
-import xyz.anthofoxo.aurora.struct.ThumperStruct;
+import xyz.anthofoxo.aurora.struct.Transform;
+import xyz.anthofoxo.aurora.struct.Vec3f;
+import xyz.anthofoxo.aurora.struct.Xfmer;
 import xyz.anthofoxo.aurora.struct.comp.AnimComp;
 import xyz.anthofoxo.aurora.struct.comp.EditStateComp;
+import xyz.anthofoxo.aurora.struct.comp.XfmComp;
 
 public class TMLLevel {
-	public static void writeAnimComp(AuroraWriter f) {
-		f.hash("AnimComp");
-		f.i32(1);
-		f.f32(0);
-		f.str("kTimeBeats");
-	}
-
 	public static SequinMaster toSequinMaster(JsonNode obj) {
 		SequinMaster master = new SequinMaster();
 		master.header = SequinMaster.HEADER.clone();
 
 		// @formatter:off
-		master.comps = Arrays.asList(
+		master.comps = List.of(
 				new AnimComp(),
 				new EditStateComp()
 			);
@@ -161,12 +156,9 @@ public class TMLLevel {
 			"kTraitCue", "kTraitEvent", "kTraitSym", "kTraitList", "kTraitTraitPath", "kTraitQuat", "kTraitChildLib",
 			"kTraitComponent", "kNumTraitTypes");
 
-	private static Set<String> boolIns = new HashSet<>();
-
 	private static void Write_Data_Point_Value(AuroraWriter f, String val, String trait_type) {
 		if (trait_type.equals("kTraitInt")) f.i32(Integer.parseInt(val));
 		else if (trait_type.equals("kTraitBool") || trait_type.equals("kTraitAction")) {
-			boolIns.add(val);
 			f.bool(toBoolean(val));
 		} else if (trait_type.equals("kTraitFloat")) f.f32(Float.parseFloat(val));
 		else if (trait_type.equals("kTraitColor")) {
@@ -304,13 +296,14 @@ public class TMLLevel {
 		f.i32(34);
 		f.i32(33);
 		f.i32(4);
-		f.i32(2);
 
-		///Anim_Comp
-		writeAnimComp(f);
+		// @formatter:off
+		f.objlist(List.of(
+				new AnimComp(),
+				new EditStateComp())
+			);
+		// @formatter:on
 
-		///comp
-		f.hash("EditStateComp");
 		Write_Sequencer_Objects(f, obj);
 
 		///footer
@@ -324,7 +317,7 @@ public class TMLLevel {
 	}
 
 	private static void Write_Lvl_Comp(AuroraWriter f, JsonNode obj) {
-		f.hash("EditStateComp");
+		f.obj(new EditStateComp());
 		Write_Sequencer_Objects(f, obj);
 
 		// .leaf sequence
@@ -347,12 +340,10 @@ public class TMLLevel {
 			}
 			f.str("kStepGameplay");
 			f.i32(last_beat_cnt);
-			f.vec3((ArrayNode) leaf.get("pos"));
-			f.vec3((ArrayNode) leaf.get("rot_x"));
-			f.vec3((ArrayNode) leaf.get("rot_y"));
-			f.vec3((ArrayNode) leaf.get("rot_z"));
-			f.vec3((ArrayNode) leaf.get("scale"));
-			f.i8arr("0000");
+
+			f.obj(toTransform(leaf));
+			f.i8((byte) 0);
+			f.i8((byte) 0);
 			last_beat_cnt = leaf.get("beat_cnt").asInt();
 		}
 
@@ -364,9 +355,9 @@ public class TMLLevel {
 			f.i32(loop.get("beats_per_loop").asInt());
 			f.i32(0);
 		}
-	}
 
-	private static void Write_Lvl_Footer(AuroraWriter f, JsonNode obj) {
+		// FOOTER //
+
 		f.bool(false);
 		f.f32(obj.get("volume").asFloat());
 		f.i32(0);
@@ -374,47 +365,40 @@ public class TMLLevel {
 		f.str("kNumTraitTypes");
 		f.bool(asBool(obj.get("input_allowed")));
 		f.str(obj.get("tutorial_type").asString());
-		f.vec3((ArrayNode) obj.get("start_angle_fracs"));
+		f.obj(toVec3f(obj.get("start_angle_fracs")));
 	}
 
-	public static void Write_Xfm_Header(AuroraWriter f) {
-		f.i32(4);
-		f.i32(4);
-		f.i32(1);
+	private static Vec3f toVec3f(JsonNode obj) {
+		return new Vec3f(obj.get(0).asFloat(), obj.get(1).asFloat(), obj.get(2).asFloat());
 	}
 
-	private static void Write_Xfm_Comp(AuroraWriter f, JsonNode obj) {
-		f.hash("XfmComp");
-		f.i32(1);
-		f.str(obj.get("xfm_name").asString());
-		f.str(obj.get("constraint").asString());
-		f.vec3((ArrayNode) obj.get("pos"));
-		f.vec3((ArrayNode) obj.get("rot_x"));
-		f.vec3((ArrayNode) obj.get("rot_y"));
-		f.vec3((ArrayNode) obj.get("rot_z"));
-		f.vec3((ArrayNode) obj.get("scale"));
+	private static Transform toTransform(JsonNode obj) {
+		Transform t = new Transform();
+		t.pos = toVec3f(obj.get("pos"));
+		t.rotx = toVec3f(obj.get("rot_x"));
+		t.roty = toVec3f(obj.get("rot_y"));
+		t.rotz = toVec3f(obj.get("rot_z"));
+		t.scale = toVec3f(obj.get("scale"));
+		return t;
 	}
 
-	public static void writeSpn(AuroraWriter f, JsonNode obj) {
-		f.i32(1);
-		f.i32(4);
-		f.i32(2);
+	private static XfmComp toXfmComp(JsonNode obj) {
+		return new XfmComp(obj.get("xfm_name").asString(), obj.get("constraint").asString(), toTransform(obj));
+	}
 
-		///comp
-		f.hash("EditStateComp");
-
-		/// xfm comp
-		Write_Xfm_Comp(f, obj);
-
-		///footer
-		f.i32(0);
-		f.str(obj.get("objlib_path").asString());
-		f.str(obj.get("bucket").asString());
+	public static EntitySpawner toEntiySpawner(JsonNode obj) {
+		EntitySpawner spn = new EntitySpawner();
+		spn.header = EntitySpawner.header();
+		spn.comps = List.of(new EditStateComp(), toXfmComp(obj));
+		spn.unknown = 0;
+		spn.objlibPath = obj.get("objlib_path").asString();
+		spn.bucket = obj.get("bucket").asString();
+		return spn;
 	}
 
 	public static Sample toSample(JsonNode obj) {
 		Sample sample = new Sample();
-		sample.header = Sample.HEADER;
+		sample.header = Sample.header();
 		sample.comps = Arrays.asList(new EditStateComp());
 		sample.mode = obj.get("mode").asString();
 		sample.unknown0 = 0;
@@ -431,9 +415,8 @@ public class TMLLevel {
 	public static void writeGate(AuroraWriter f, JsonNode obj) {
 		f.i32(26);
 		f.i32(4);
-		f.i32(1);
 
-		f.hash("EditStateComp");
+		f.objlist(List.of(new EditStateComp()));
 		f.str(obj.get("spn_name").asString());
 		writeParamPathU(f, obj.get("param_path"), obj.get("param_path_hash"));
 
@@ -573,14 +556,15 @@ public class TMLLevel {
 				Write_Lvl_Header(writer);
 				Write_Approach_Anim_Comp(writer, obj);
 				Write_Lvl_Comp(writer, obj);
-				Write_Lvl_Footer(writer, obj);
 			} else if (objType.equals("SequinGate")) writeGate(writer, obj);
 			else if (objType.equals("SequinMaster")) writer.obj(toSequinMaster(obj));
-			else if (objType.equals("EntitySpawner")) writeSpn(writer, obj);
+			else if (objType.equals("EntitySpawner")) writer.obj(toEntiySpawner(obj));
 			else if (objType.equals("Sample")) writer.obj(toSample(obj));
 			else if (objType.equals("Xfmer")) {
-				Write_Xfm_Header(writer);
-				Write_Xfm_Comp(writer, obj);
+				Xfmer xfm = new Xfmer();
+				xfm.header = Xfmer.header();
+				xfm.comps = List.of(toXfmComp(obj));
+				writer.obj(xfm);
 			}
 		}
 
