@@ -30,6 +30,11 @@ If you are on linux this will be harder since you must target windows when build
 ## Tooling
 You'll want a Java IDE to write and maintain Aurora code. I personally recommend [Eclipse](https://eclipseide.org/). It's simply what I'm familiar with. Eclipse may be installed anywhere.
 
+### Setting up Eclipse
+If you're using eclipse you can simply create a new project and point it to the `java` directory of the repo.
+* DO NOT CREATE `module-info`. Aurora isn't written with module support yet
+* Double check your project classpath. Make sure you are using `JDK25`
+
 ## Building the DLL
 Building the DLL is only required if you want to make edits to the C++ code. Otherwise its easier to use the provided .dll file in the root.
 
