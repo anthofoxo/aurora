@@ -8,23 +8,27 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import imgui.ImGui;
+import imgui.ImGuiTextFilter;
+import imgui.flag.ImGuiWindowFlags;
 import imgui.type.ImBoolean;
 import xyz.anthofoxo.aurora.Aurora;
+import xyz.anthofoxo.aurora.Hash;
 import xyz.anthofoxo.aurora.UserConfig;
-import xyz.anthofoxo.aurora.tml.TCLFile;
+import xyz.anthofoxo.aurora.struct.AuroraReader;
+import xyz.anthofoxo.aurora.struct.AuroraWriter;
+import xyz.anthofoxo.aurora.struct.LevelListingFile;
+import xyz.anthofoxo.aurora.target.Target;
+import xyz.anthofoxo.aurora.target.Tcle3;
+import xyz.anthofoxo.aurora.target.TcleArtifact;
 import xyz.anthofoxo.aurora.tml.TMLBuilder;
 
 public class ModLauncher {
-	public static class LevelEntry {
-		public TCLFile tcl;
-		public Path path;
-		public ImBoolean enabled = new ImBoolean(true);
-		public int[] speedModifier = new int[] { 10 };
-	}
 
-	private List<LevelEntry> customs = new ArrayList<>();
-	private LevelEntry selected = null;
+	private List<Target> customs = new ArrayList<>();
+	private Target selected = null;
 	private ImBoolean buildMods = new ImBoolean(true);
+	private ImGuiTextFilter filter = new ImGuiTextFilter();
+	private ImBoolean autoUnlockLevels = new ImBoolean(true);
 
 	public ModLauncher() {
 		reloadList();
@@ -36,46 +40,19 @@ public class ModLauncher {
 
 		try (var stream = Files.list(Path.of("aurora_mods"))) {
 			for (Path path : stream.collect(Collectors.toList())) {
-				if (path.getFileName().toString().endsWith(".zip")) continue; // Ignore zips
-				if (Files.isRegularFile(path)) continue; // Singular files aren't supported yet
-
-				boolean hasTcl = false;
-				boolean hasObjlib = false;
-				boolean hasTcl2 = false;
-
-				TCLFile tcl = null;
-
-				try (var substream = Files.list(path)) {
-					for (var file : substream.collect(Collectors.toList())) {
-						String fname = file.getFileName().toString().toLowerCase();
-
-						if (fname.endsWith(".tcl")) {
-							hasTcl = true;
-							tcl = TCLFile.parse(TMLBuilder.TML_MAPPER.readTree(file));
-						}
-						if (fname.endsWith(".objlib")) hasObjlib = true;
-						if (fname.startsWith("config_") && fname.endsWith(".txt")) hasTcl2 = true;
-					}
-				}
-
-				if (hasTcl2) {
-					System.err.println(
-							path.getFileName() + " is a TCL2 level, these are not supported, update to TCLE 3.x");
+				try {
+					customs.add(new Tcle3(path));
 					continue;
+				} catch (Exception e) {
 				}
 
-				if (hasTcl && hasObjlib) {
-					System.err.println(path.getFileName() + " is a TCLE Compiled Level, these are not supported yet");
+				try {
+					customs.add(new TcleArtifact(path));
 					continue;
+				} catch (Exception e) {
 				}
 
-				if (!hasTcl) continue; // Not supported
-				if (hasObjlib) continue; // Not supported
-
-				LevelEntry entry = new LevelEntry();
-				entry.path = path;
-				entry.tcl = tcl;
-				customs.add(entry);
+				System.out.println("Failed to add target " + path);
 			}
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -84,37 +61,80 @@ public class ModLauncher {
 	}
 
 	public void draw() {
-		if (ImGui.begin("Launcher")) {
-			if (ImGui.button("Reload")) reloadList();
+		if (ImGui.begin("Launcher", ImGuiWindowFlags.MenuBar)) {
+			if (ImGui.beginMenuBar()) {
+				if (ImGui.beginMenu("Level Listing")) {
 
-			ImGui.columns(2);
+					ImGui.menuItem("Unlock All Levels", null, autoUnlockLevels);
 
-			int id = 0;
-			for (var custom : customs) {
-				ImGui.pushID(id++);
-
-				ImGui.checkbox("##active", custom.enabled);
-				ImGui.sameLine();
-				if (ImGui.selectable(custom.tcl.levelName, custom == selected)) {
-					selected = custom;
+					ImGui.endMenu();
 				}
 
-				ImGui.popID();
+				ImGui.endMenuBar();
 			}
 
-			ImGui.nextColumn();
-
-			if (selected != null) {
-
-				ImGui.text(selected.tcl.bpm + " BPM");
-				ImGui.textUnformatted("Author: " + selected.tcl.author);
-				ImGui.textWrapped(selected.tcl.description);
-
-				ImGui.sliderInt("Speed Modifier", selected.speedModifier, 1, 50, "%d0%%");
-
+			if (ImGui.button("Select All")) {
+				for (var custom : customs) {
+					custom.enabled.set(true);
+				}
+			}
+			ImGui.sameLine();
+			if (ImGui.button("Deselect All")) {
+				for (var custom : customs) {
+					custom.enabled.set(false);
+				}
 			}
 
-			ImGui.columns(1);
+			filter.draw();
+
+			ImGui.separator();
+
+			if (ImGui.beginChild("modview", ImGui.getWindowWidth(), ImGui.getWindowHeight() - 160)) {
+				if (ImGui.beginTable("modtable", 2)) {
+
+					ImGui.tableNextColumn();
+
+					if (ImGui.beginChild("Mod Listing")) {
+						int id = 0;
+						for (var custom : customs) {
+							if (!filter.passFilter(custom.tcl.levelName)) continue;
+
+							ImGui.pushID(id++);
+
+							ImGui.checkbox("##active", custom.enabled);
+							ImGui.sameLine();
+							if (ImGui.selectable(custom.tcl.levelName, custom == selected)) {
+								selected = custom;
+							}
+
+							ImGui.popID();
+						}
+					}
+					ImGui.endChild();
+
+					ImGui.tableNextColumn();
+
+					if (ImGui.beginChild("Mod Properties")) {
+						if (selected != null) {
+							ImGui.text(selected.tcl.levelName);
+							ImGui.text(selected.tcl.difficulty);
+							ImGui.text(selected.tcl.bpm + " BPM");
+							ImGui.textUnformatted("Author: " + selected.tcl.author);
+							ImGui.textWrapped(selected.tcl.description);
+
+							ImGui.separator();
+
+							ImGui.sliderInt("Speed Modifier", selected.speedModifier, 10, 300, "%d%%");
+
+						}
+					}
+					ImGui.endChild();
+
+					ImGui.endTable();
+				}
+			}
+			ImGui.endChild();
+
 			ImGui.separator();
 
 			String thumperpath = UserConfig.thumperPath();
@@ -123,8 +143,12 @@ public class ModLauncher {
 				ImGui.textUnformatted("Thumper Directory is not specified, levels will not be built");
 			}
 
+			if (ImGui.button("Reload")) reloadList();
+			ImGui.sameLine();
 			ImGui.checkbox("Build Mods", buildMods);
 			ImGui.setItemTooltip("Disable this checkbox to disable aurora touching the cache files");
+
+			ImGui.sameLine();
 
 			if (ImGui.button("Launch Thumper")) {
 
@@ -150,6 +174,28 @@ public class ModLauncher {
 							e.printStackTrace();
 						}
 					}
+
+					if (autoUnlockLevels.get()) {
+						try {
+							String filepath = String.format(thumperpath + "/cache/%s.pc",
+									Integer.toHexString(Hash.fnv1a("Aui/thumper.levels")));
+
+							AuroraReader reader = new AuroraReader(Files.readAllBytes(Path.of(filepath)));
+							LevelListingFile listing = reader.obj(LevelListingFile.class);
+
+							for (var level : listing.enteries) {
+								level.unlocks = "";
+								level.defaultLocked = false;
+							}
+
+							AuroraWriter out = new AuroraWriter();
+							out.obj(listing);
+							TMLBuilder.writefileBackedup(filepath, out.getBytes());
+						} catch (IOException e) {
+							e.printStackTrace();
+						}
+					}
+
 				}
 
 				Aurora.shouldLaunchThumper = true;

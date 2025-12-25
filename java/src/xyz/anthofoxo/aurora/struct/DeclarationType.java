@@ -23,7 +23,14 @@ public enum DeclarationType implements ThumperStruct {
 	PathDecorator("PathDecorator"),
 	TraitAnim("TraitAnim"),
 	Bender("Bender"),
-	SequinPulse("SequinPulse");
+	SequinPulse("SequinPulse"),
+	Cam("Cam"),
+	Scene("Scene"),
+	VrSettings("VrSettings"),
+	_DCH(0xac1abb2c),
+	_Vib(0x799c45a7),
+	_Pass(0x4e1efaa5),
+	_Pp(0x7c85d725);
 	// @formatter:on
 
 	public final int value;
@@ -34,5 +41,14 @@ public enum DeclarationType implements ThumperStruct {
 
 	private DeclarationType(int value) {
 		this.value = value;
+	}
+
+	public static DeclarationType fromValue(int value) {
+		for (DeclarationType t : values()) {
+			if (t.value == value) {
+				return t;
+			}
+		}
+		throw new IllegalArgumentException("Unknown DeclarationType value: " + Integer.toHexString(value));
 	}
 }

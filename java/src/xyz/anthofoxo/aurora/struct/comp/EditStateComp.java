@@ -4,5 +4,6 @@ import xyz.anthofoxo.aurora.Hash;
 import xyz.anthofoxo.aurora.struct.Comp;
 
 public class EditStateComp implements Comp {
-	public int hash = Hash.fnv1a("EditStateComp");
+	public static int HASH = Hash.fnv1a("EditStateComp");
+	public int hash = HASH;
 }

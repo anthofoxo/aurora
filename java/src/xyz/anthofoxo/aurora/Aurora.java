@@ -2,14 +2,12 @@ package xyz.anthofoxo.aurora;
 
 import static org.lwjgl.glfw.GLFW.glfwSetWindowShouldClose;
 
-import java.io.IOException;
-
 import imgui.ImGui;
 import imgui.app.Application;
 import imgui.type.ImBoolean;
 import xyz.anthofoxo.aurora.gui.Hasher;
-import xyz.anthofoxo.aurora.gui.LocalizationEditor;
 import xyz.anthofoxo.aurora.gui.ModLauncher;
+import xyz.anthofoxo.aurora.gui.ObjlibDecomp;
 
 public class Aurora {
 	public static boolean integrated;
@@ -18,15 +16,10 @@ public class Aurora {
 
 	private ImBoolean demo = new ImBoolean();
 	private Hasher hasher = new Hasher();
-	private LocalizationEditor locEditor;
 	private ModLauncher modLauncher = new ModLauncher();
+	private ObjlibDecomp objlibDecomp = new ObjlibDecomp();
 
 	public Aurora() {
-		try {
-			locEditor = new LocalizationEditor();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
 	}
 
 	public void update(Application app) {
@@ -52,6 +45,7 @@ public class Aurora {
 
 			if (ImGui.beginMenu("Tools")) {
 				ImGui.menuItem("Hasher", null, hasher.visible);
+				ImGui.menuItem("Objlib Decomp Tool", null, objlibDecomp.visible);
 				ImGui.separator();
 				ImGui.menuItem("Dear ImGui Demo", null, demo);
 
@@ -84,6 +78,6 @@ public class Aurora {
 
 		modLauncher.draw();
 		hasher.draw();
-		locEditor.draw();
+		objlibDecomp.draw();
 	}
 }

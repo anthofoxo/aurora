@@ -11,6 +11,10 @@ import xyz.anthofoxo.aurora.Hash;
 public class AuroraWriter {
 	private ArrayList<Byte> bytes = new ArrayList<>();
 
+	public int position() {
+		return bytes.size();
+	}
+	
 	public void bool(boolean v) {
 		i8(v ? (byte) 1 : (byte) 0);
 	}

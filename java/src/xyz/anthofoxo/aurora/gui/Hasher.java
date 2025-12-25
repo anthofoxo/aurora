@@ -6,6 +6,8 @@ import imgui.type.ImString;
 import xyz.anthofoxo.aurora.Hash;
 
 public class Hasher {
+	public static String commExport; 
+	
 	public ImBoolean visible = new ImBoolean();
 	public ImString input = new ImString(512);
 	public Integer hash;
@@ -36,6 +38,10 @@ public class Hasher {
 			
 			if (collision) {
 				ImGui.text("Hash found");
+				
+				if (ImGui.button("Open in ObjLib parse")) {
+					commExport = output; 
+				}
 			}
 		}
 		ImGui.end();

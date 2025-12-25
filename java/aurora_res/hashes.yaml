@@ -2162,6 +2162,7 @@ values:
   - "AnimComp"
   - "EditStateComp"
   - "XfmComp"
+  - "DrawComp"
   - "intensity"
   - "local_rot"
   - "world.cam"
