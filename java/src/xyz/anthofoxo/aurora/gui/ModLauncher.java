@@ -156,8 +156,10 @@ public class ModLauncher {
 					boolean restoreBackup = true;
 
 					for (var custom : customs) {
-						if (custom.enabled.get()) restoreBackup = false;
-						break;
+						if (custom.enabled.get()) {
+							restoreBackup = false;
+							break;
+						}
 					}
 
 					if (restoreBackup) {
