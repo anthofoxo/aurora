@@ -32,7 +32,7 @@ public final class EntryPoint extends Application {
 
 	@Override
 	protected void configure(Configuration config) {
-		config.setTitle("Aurora v0.1.0-a.1");
+		config.setTitle("Aurora v0.1.0-rc.1");
 	}
 
 	private static ByteBuffer readResourceImagePixels(String resource, IntBuffer pWidth, IntBuffer pHeight)
