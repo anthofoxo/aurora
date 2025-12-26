@@ -6,6 +6,7 @@
 
 #include <string>
 #include <iostream>
+#include <optional>
 #include <vector>
 #include <filesystem>
 
@@ -85,6 +86,13 @@ static void checkJavaException(JNIEnv* env) {
 
 static bool gWantThumperLaunch = false;
 
+static std::optional<std::string> findJar() {
+	for (auto const& entry : std::filesystem::directory_iterator(".")) {
+		if (entry.path().extension() == ".jar") { return entry.path().generic_string(); }
+	}
+	return std::nullopt;
+}
+
 static void spawnAurora() {
 	TCHAR* javahome = tryFindJavaHome();
 	if (javahome == nullptr) {
@@ -109,19 +117,30 @@ static void spawnAurora() {
 	impl_JNI_GetDefaultJavaVMInitArgs(&initArgs);
 
 	std::vector<JavaVMOption> options;
-
 	std::string classpath = "-Djava.class.path=";
 
-	if (std::filesystem::exists("aurora_lib")) {
-		for (auto const& entry : std::filesystem::directory_iterator("aurora_lib")) {
-			classpath += std::filesystem::absolute(entry.path()).generic_string();
-			classpath += ";";
+	auto jar = findJar();
+	if (jar.has_value()) {
+		std::cout << "Found .jar, running in user mode\n";
+
+		classpath += *jar;
+	}
+	else {
+		std::cout << "No jar found, running in developer mode\n";
+
+		if (std::filesystem::exists("aurora_lib")) {
+			for (auto const& entry : std::filesystem::directory_iterator("aurora_lib")) {
+				classpath += std::filesystem::absolute(entry.path()).generic_string();
+				classpath += ";";
+			}
 		}
+
+		classpath += std::filesystem::absolute("aurora_bin").generic_string();
+		classpath += ";";
+		classpath += std::filesystem::absolute("aurora_res").generic_string();
 	}
 
-	classpath += std::filesystem::absolute("aurora_bin").generic_string();
-	classpath += ";";
-	classpath += std::filesystem::absolute("aurora_res").generic_string();
+	std::cout << classpath << '\n';
 
 	options.emplace_back((char*)"-XX:+ShowCodeDetailsInExceptionMessages", nullptr);
 	options.emplace_back((char*)"-Xcheck:jni", nullptr);
