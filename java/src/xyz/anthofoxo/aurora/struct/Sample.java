@@ -2,6 +2,8 @@ package xyz.anthofoxo.aurora.struct;
 
 import java.util.List;
 
+import xyz.anthofoxo.aurora.struct.comp.Comp;
+
 public class Sample implements ThumperStruct {
 	public static int[] header() {
 		return new int[] { 12, 4 };

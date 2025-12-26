@@ -2,6 +2,8 @@ package xyz.anthofoxo.aurora.struct;
 
 import java.util.List;
 
+import xyz.anthofoxo.aurora.struct.comp.Comp;
+
 public class SequinMaster implements ThumperStruct {
 	public static final int[] HEADER = { 33, 33, 4 };
 

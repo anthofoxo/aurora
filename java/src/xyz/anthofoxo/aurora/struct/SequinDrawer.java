@@ -2,6 +2,8 @@ package xyz.anthofoxo.aurora.struct;
 
 import java.util.List;
 
+import xyz.anthofoxo.aurora.struct.comp.Comp;
+
 public class SequinDrawer {
 	public static int[] header() {
 		return new int[] { 7, 4 };

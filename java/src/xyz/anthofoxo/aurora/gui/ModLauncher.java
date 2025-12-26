@@ -24,43 +24,48 @@ import xyz.anthofoxo.aurora.tml.TMLBuilder;
 
 public class ModLauncher {
 
-	private List<Target> customs = new ArrayList<>();
-	private Target selected = null;
-	private ImBoolean buildMods = new ImBoolean(true);
-	private ImGuiTextFilter filter = new ImGuiTextFilter();
-	private ImBoolean autoUnlockLevels = new ImBoolean(true);
+	private ModLauncher() {
 
-	public ModLauncher() {
+	}
+
+	private static List<Target> customs = new ArrayList<>();
+	private static Target selected = null;
+	private static ImBoolean buildMods = new ImBoolean(true);
+	private static ImGuiTextFilter filter = new ImGuiTextFilter();
+	private static ImBoolean autoUnlockLevels = new ImBoolean(true);
+
+	static {
 		reloadList();
 	}
 
-	public void reloadList() {
+	public static void reloadList() {
 		customs.clear();
 		selected = null;
 
-		try (var stream = Files.list(Path.of("aurora_mods"))) {
-			for (Path path : stream.collect(Collectors.toList())) {
-				try {
-					customs.add(new Tcle3(path));
-					continue;
-				} catch (Exception e) {
-				}
+		for (var searchPath : UserConfig.modPaths) {
+			try (var stream = Files.list(Path.of(searchPath))) {
+				for (Path path : stream.collect(Collectors.toList())) {
+					try {
+						customs.add(new Tcle3(path));
+						continue;
+					} catch (Exception e) {
+					}
 
-				try {
-					customs.add(new TcleArtifact(path));
-					continue;
-				} catch (Exception e) {
-				}
+					try {
+						customs.add(new TcleArtifact(path));
+						continue;
+					} catch (Exception e) {
+					}
 
-				System.out.println("Failed to add target " + path);
+					System.out.println("Failed to add target " + path);
+				}
+			} catch (IOException e) {
+				e.printStackTrace();
 			}
-		} catch (IOException e) {
-			e.printStackTrace();
 		}
-
 	}
 
-	public void draw() {
+	public static void draw() {
 		if (ImGui.begin("Launcher", ImGuiWindowFlags.MenuBar)) {
 			if (ImGui.beginMenuBar()) {
 				if (ImGui.beginMenu("Level Listing")) {
@@ -90,6 +95,11 @@ public class ModLauncher {
 			ImGui.separator();
 
 			if (ImGui.beginChild("modview", ImGui.getWindowWidth(), ImGui.getWindowHeight() - 160)) {
+				if (UserConfig.modPaths.isEmpty()) {
+					ImGui.textUnformatted(
+							"No mod search paths are present, Goto File->Preferences to add a search path");
+				}
+
 				if (ImGui.beginTable("modtable", 2)) {
 
 					ImGui.tableNextColumn();
@@ -150,7 +160,9 @@ public class ModLauncher {
 
 			ImGui.sameLine();
 
-			if (ImGui.button("Launch Thumper")) {
+			String text = Aurora.integrated ? "Launch Thumper" : "Build Mods";
+
+			if (ImGui.button(text)) {
 
 				if (buildMods.get()) {
 					boolean restoreBackup = true;
@@ -202,6 +214,14 @@ public class ModLauncher {
 
 				Aurora.shouldLaunchThumper = true;
 				Aurora.requestClose = true;
+			}
+
+			ImGui.sameLine();
+
+			if (Aurora.integrated) {
+				ImGui.text("Aurora is running in integrated mode. All features are enabled");
+			} else {
+				ImGui.text("Aurora is running in standalone mode. Some features wil be disabled");
 			}
 
 		}

@@ -13,7 +13,6 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.ArrayNode;
 import xyz.anthofoxo.aurora.Util;
 import xyz.anthofoxo.aurora.struct.AuroraWriter;
-import xyz.anthofoxo.aurora.struct.Comp;
 import xyz.anthofoxo.aurora.struct.EntitySpawner;
 import xyz.anthofoxo.aurora.struct.FixedSize;
 import xyz.anthofoxo.aurora.struct.PrecompiledBin;
@@ -25,6 +24,8 @@ import xyz.anthofoxo.aurora.struct.Transform;
 import xyz.anthofoxo.aurora.struct.Vec3f;
 import xyz.anthofoxo.aurora.struct.Xfmer;
 import xyz.anthofoxo.aurora.struct.comp.AnimComp;
+import xyz.anthofoxo.aurora.struct.comp.ApproachAnimComp;
+import xyz.anthofoxo.aurora.struct.comp.Comp;
 import xyz.anthofoxo.aurora.struct.comp.EditStateComp;
 import xyz.anthofoxo.aurora.struct.comp.XfmComp;
 import xyz.anthofoxo.aurora.tml.TCLFile;
@@ -85,7 +86,7 @@ public class Tcle3 extends Target {
 			f.str(boss_pattern.get("lvl_name").asString());
 			f.bool(true);
 			f.str(boss_pattern.get("sentry_type").asString());
-			f.i8arr("00000000");
+			f.i32(0);
 			f.i32(boss_pattern.get("bucket_num").asInt());
 		}
 
@@ -157,8 +158,15 @@ public class Tcle3 extends Target {
 
 			if (objType.equals("SequinLeaf")) Write_Leaf(writer, obj);
 			else if (objType.equals("SequinLevel")) {
-				Write_Lvl_Header(writer);
-				Write_Approach_Anim_Comp(writer, obj);
+				writer.i32arr(51, 33, 4);
+
+				// @formatter:off
+				writer.objlist(List.of(
+						new ApproachAnimComp().withApproachBeats(obj.get("approach_beats").asInt()),
+						new EditStateComp())
+					);
+				// @formatter:on
+
 				Write_Lvl_Comp(writer, obj);
 			} else if (objType.equals("SequinGate")) writeGate(writer, obj);
 			else if (objType.equals("SequinMaster")) writer.obj(toSequinMaster(obj));
@@ -290,22 +298,6 @@ public class Tcle3 extends Target {
 			f.i8arrReverse(param_name);
 
 		f.i32(Integer.parseInt(param_idx));
-	}
-
-	private static void Write_Lvl_Header(AuroraWriter f) {
-		f.i32(51);
-		f.i32(33);
-		f.i32(4);
-		f.i32(2);
-	}
-
-	private static void Write_Approach_Anim_Comp(AuroraWriter f, JsonNode obj) {
-		f.hash("ApproachAnimComp");
-		f.i32(1);
-		f.f32(0);
-		f.str("kTimeBeats");
-		f.i32(0);
-		f.i32(obj.get("approach_beats").asInt());
 	}
 
 	private static List<String> trait_types = Arrays.asList("kTraitInt", "kTraitBool", "kTraitFloat", "kTraitColor",
@@ -483,7 +475,7 @@ public class Tcle3 extends Target {
 	}
 
 	private static void Write_Lvl_Comp(AuroraWriter f, JsonNode obj) {
-		f.obj(new EditStateComp());
+
 		Write_Sequencer_Objects(f, obj);
 
 		// .leaf sequence
@@ -544,13 +536,13 @@ public class Tcle3 extends Target {
 		return new Vec3f(obj.get(0).asFloat(), obj.get(1).asFloat(), obj.get(2).asFloat());
 	}
 
-	private static class SequinGate implements ThumperStruct {
-		private static class Param implements ThumperStruct {
+	public static class SequinGate implements ThumperStruct {
+		public static class Param implements ThumperStruct {
 			public int paramHash;
 			public int paramIdx; // typically -1
 		}
 
-		private static class BossPattern implements ThumperStruct {
+		public static class BossPattern implements ThumperStruct {
 			public int nodeHash;
 			public String levelName;
 			public boolean unknown0; // true

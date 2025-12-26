@@ -2,6 +2,8 @@ package xyz.anthofoxo.aurora;
 
 import static org.lwjgl.glfw.GLFW.glfwSetWindowShouldClose;
 
+import org.lwjgl.util.tinyfd.TinyFileDialogs;
+
 import imgui.ImGui;
 import imgui.app.Application;
 import imgui.type.ImBoolean;
@@ -14,9 +16,9 @@ public class Aurora {
 	public static boolean shouldLaunchThumper = false;
 	public static boolean requestClose = false;
 
+	private ImBoolean viewSettings = new ImBoolean();
 	private ImBoolean demo = new ImBoolean();
 	private Hasher hasher = new Hasher();
-	private ModLauncher modLauncher = new ModLauncher();
 	private ObjlibDecomp objlibDecomp = new ObjlibDecomp();
 
 	public Aurora() {
@@ -31,10 +33,7 @@ public class Aurora {
 
 			if (ImGui.beginMenu("File")) {
 
-				if (ImGui.menuItem("Launch Thumper")) {
-					shouldLaunchThumper = true;
-					requestClose = true;
-				}
+				ImGui.menuItem("Preferences", null, viewSettings);
 
 				if (ImGui.menuItem("Quit")) {
 					glfwSetWindowShouldClose(app.getHandle(), true);
@@ -63,20 +62,54 @@ public class Aurora {
 			ImGui.endMainMenuBar();
 		}
 
+		if (viewSettings.get()) {
+			if (ImGui.begin("Preferences", viewSettings)) {
+
+				if (ImGui.smallButton("Choose New Path")) {
+					UserConfig.properties.remove("thumper.path");
+					UserConfig.thumperPath();
+				}
+
+				ImGui.sameLine();
+
+				ImGui.textUnformatted(UserConfig.thumperPath());
+
+				ImGui.separatorText("Mod Search Paths");
+
+				int removeIdx = -1;
+
+				for (int i = 0; i < UserConfig.modPaths.size(); ++i) {
+					if (ImGui.smallButton("x")) removeIdx = i;
+					ImGui.sameLine();
+					ImGui.textUnformatted(UserConfig.modPaths.get(i));
+				}
+
+				if (removeIdx != -1) {
+					UserConfig.modPaths.remove(removeIdx);
+					UserConfig.save();
+					ModLauncher.reloadList();
+				}
+
+				if (ImGui.button("Add Search Path")) {
+					String path = TinyFileDialogs.tinyfd_selectFolderDialog("Mod Search Path", null);
+
+					if (path != null) {
+						UserConfig.modPaths.add(path);
+						UserConfig.save();
+						ModLauncher.reloadList();
+					}
+
+				}
+
+			}
+			ImGui.end();
+		}
+
 		if (demo.get()) {
 			ImGui.showDemoWindow(demo);
 		}
 
-		if (ImGui.begin("Aurora Information")) {
-			if (!integrated) {
-				ImGui.text("Aurora is running in standalone mode. Some features wil be disabled");
-			} else {
-				ImGui.text("Aurora is running in integrated mode. All features are enabled");
-			}
-		}
-		ImGui.end();
-
-		modLauncher.draw();
+		ModLauncher.draw();
 		hasher.draw();
 		objlibDecomp.draw();
 	}

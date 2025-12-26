@@ -14,7 +14,7 @@ public class AuroraWriter {
 	public int position() {
 		return bytes.size();
 	}
-	
+
 	public void bool(boolean v) {
 		i8(v ? (byte) 1 : (byte) 0);
 	}
@@ -39,11 +39,6 @@ public class AuroraWriter {
 	public void i8arrReverse(String v) {
 		var bytes = stringToByteArray(v);
 		for (int i = bytes.length - 1; i >= 0; --i) i8(bytes[i]);
-	}
-
-	@Deprecated
-	public void i8arr(String v) {
-		i8arr(stringToByteArray(v));
 	}
 
 	@Deprecated
@@ -93,6 +88,7 @@ public class AuroraWriter {
 
 	@SuppressWarnings("unchecked")
 	public <T extends ThumperStruct> void obj(T value) {
+
 		for (var field : value.getClass().getFields()) {
 			if (Modifier.isStatic(field.getModifiers())) continue;
 			var type = field.getType();

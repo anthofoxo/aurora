@@ -9,7 +9,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
-import xyz.anthofoxo.aurora.struct.comp.EditStateComp;
+import xyz.anthofoxo.aurora.struct.comp.Comp;
 
 public class AuroraReader {
 	public byte[] bytes;
@@ -106,30 +106,24 @@ public class AuroraReader {
 		return values;
 	}
 
-	public <T extends ThumperStruct> T comp(Class<T> clazz) {
-		int hash = i32();
-		if (hash == EditStateComp.HASH) return clazz.cast(new EditStateComp());
-		throw new IllegalStateException();
-	}
-
 	public <T extends ThumperStruct> List<T> objlist(Class<T> clazz) {
 		int count = i32();
 
-		if (Comp.class.isAssignableFrom(clazz)) {
-			List<T> values = new ArrayList<T>();
-			for (int i = 0; i < count; ++i) values.add(comp(clazz));
-			return values;
-
-		} else {
-			List<T> values = new ArrayList<T>();
-			for (int i = 0; i < count; ++i) values.add(obj(clazz));
-			return values;
-		}
+		List<T> values = new ArrayList<T>();
+		for (int i = 0; i < count; ++i) values.add(obj(clazz));
+		return values;
 
 	}
 
 	@SuppressWarnings("unchecked")
 	public <T extends ThumperStruct> T obj(Class<T> clazz) {
+
+		// We are trying to read the generic Comp superclass, the thumper binary only
+		// stores exacts and we need runtime calls for this
+		if (Comp.class.equals(clazz)) {
+			return clazz.cast(Comp.read(this)); // this cast is safe
+		}
+
 		// This is a 1 field enum struct
 		if (clazz.isEnum()) {
 			int count = 0;
@@ -221,5 +215,9 @@ public class AuroraReader {
 
 		return new String(data);
 
+	}
+
+	public int position() {
+		return pos;
 	}
 }

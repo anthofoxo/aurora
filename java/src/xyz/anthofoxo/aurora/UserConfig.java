@@ -3,20 +3,36 @@ package xyz.anthofoxo.aurora;
 import static org.lwjgl.util.tinyfd.TinyFileDialogs.tinyfd_openFileDialog;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.FileReader;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Properties;
 
 public class UserConfig {
+	public static final String CONFIG_PATH = "aurora.properties";
 	public static final Properties properties = new Properties();
 
+	public static final List<String> modPaths = new ArrayList<>();
+
 	static {
-		try (var resource = Util.getResource("config.properties")) {
-			if (resource != null) properties.load(resource);
+		try {
+			properties.load(new FileReader(new File(CONFIG_PATH)));
+		} catch (FileNotFoundException e) {
+			// config file wasnt found, this is okay, the default properties are fine
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+
+		var prop = properties.getProperty("aurora.mod_paths");
+
+		if (prop != null && !prop.isEmpty()) {
+			modPaths.addAll(List.of(prop.split(",")));
+		}
+
 	}
 
 	public static String thumperPath() {
@@ -34,7 +50,8 @@ public class UserConfig {
 
 	public static void save() {
 		try {
-			properties.store(new FileOutputStream(new File("aurora_res/config.properties")), "Aurora config");
+			properties.setProperty("aurora.mod_paths", String.join(",", modPaths));
+			properties.store(new FileOutputStream(new File("aurora.properties")), "Aurora config");
 		} catch (IOException e) {
 			e.printStackTrace();
 		}

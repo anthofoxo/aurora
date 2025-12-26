@@ -1,11 +1,12 @@
 package xyz.anthofoxo.aurora.struct.comp;
 
 import xyz.anthofoxo.aurora.Hash;
-import xyz.anthofoxo.aurora.struct.Comp;
 import xyz.anthofoxo.aurora.struct.Transform;
 
 public class XfmComp implements Comp {
-	public int hash = Hash.fnv1a("XfmComp");
+	public static final int HASH = Hash.fnv1a("XfmComp");
+
+	public int hash = HASH;
 	public int unknown = 1;
 	public String xfmName;
 	public String constraint;

@@ -21,7 +21,7 @@ public class ObjlibDecomp {
 			"C:\\Program Files (x86)\\Steam\\steamapps\\common\\Thumper\\cache\\673863f9.pc", 512);
 	private String error = "";
 
-	private static class ObjlibLevel {
+	public static class ObjlibLevel {
 		public int fileType;
 		public int objlibType;
 		@FixedSize(count = 4)
