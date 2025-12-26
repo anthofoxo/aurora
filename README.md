@@ -1,3 +1,5 @@
+# This repository is no longer updated. Visit https://github.com/anthofoxo/aurora2 for the current maintained version of aurora.
+
 # Aurora
 
 ## Installation
