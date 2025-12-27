@@ -4,8 +4,10 @@ import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Stack;
 
 import xyz.anthofoxo.aurora.Hash;
+import xyz.anthofoxo.aurora.struct.annotation.RemoveFieldIfEnclosed;
 
 public class AuroraWriter {
 	private ArrayList<Byte> bytes = new ArrayList<>();
@@ -25,9 +27,6 @@ public class AuroraWriter {
 	public void hash(String v) {
 		i32(Hash.fnv1a(v));
 	}
-	
-	
-
 
 	public void i32(int v) {
 		i8((byte) (v & 0xFF));
@@ -63,11 +62,34 @@ public class AuroraWriter {
 		for (var element : values) obj(element);
 	}
 
+	private Stack<Class<?>> enclosing = new Stack<>();
+
 	@SuppressWarnings("unchecked")
 	public <T extends ThumperStruct> void obj(T value) {
 
+		enclosing.push(value.getClass());
+
 		for (var field : value.getClass().getFields()) {
 			if (Modifier.isStatic(field.getModifiers())) continue;
+
+			var removalAnnotation = field.getAnnotation(RemoveFieldIfEnclosed.class);
+			if (removalAnnotation != null) {
+				boolean ignoreField = false;
+
+				for (var itCtx : enclosing) {
+					if (itCtx.equals(removalAnnotation.clazz())) {
+						ignoreField = true;
+						break;
+					}
+
+				}
+
+				if (ignoreField) {
+					// If this field shouldnt be written then do not write it
+					continue;
+				}
+			}
+
 			var type = field.getType();
 
 			try {
@@ -123,6 +145,8 @@ public class AuroraWriter {
 				e.printStackTrace();
 			}
 		}
+
+		enclosing.pop();
 	}
 
 	public byte[] getBytes() {

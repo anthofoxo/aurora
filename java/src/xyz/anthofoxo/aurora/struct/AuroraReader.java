@@ -8,12 +8,16 @@ import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Stack;
 
+import xyz.anthofoxo.aurora.struct.annotation.FixedSize;
+import xyz.anthofoxo.aurora.struct.annotation.RemoveFieldIfEnclosed;
 import xyz.anthofoxo.aurora.struct.comp.Comp;
 
 public class AuroraReader {
 	public byte[] bytes;
 	public int pos;
+	public Stack<Class<?>> enclosing = new Stack<>();
 
 	public AuroraReader(byte[] bytes) {
 		this.bytes = bytes;
@@ -118,6 +122,8 @@ public class AuroraReader {
 	@SuppressWarnings("unchecked")
 	public <T extends ThumperStruct> T obj(Class<T> clazz) {
 
+		enclosing.push(clazz);
+
 		// We are trying to read the generic Comp superclass, the thumper binary only
 		// stores exacts and we need runtime calls for this
 		if (Comp.class.equals(clazz)) {
@@ -162,6 +168,24 @@ public class AuroraReader {
 			if (Modifier.isStatic(field.getModifiers())) continue;
 			var type = field.getType();
 
+			var removalAnnotation = field.getAnnotation(RemoveFieldIfEnclosed.class);
+			if (removalAnnotation != null) {
+				boolean ignoreField = false;
+
+				for (var itCtx : enclosing) {
+					if (itCtx.equals(removalAnnotation.clazz())) {
+						ignoreField = true;
+						break;
+					}
+
+				}
+
+				if (ignoreField) {
+					// If this field shouldnt be written then do not write it
+					continue;
+				}
+			}
+
 			try {
 				if (boolean.class.equals(type)) field.setBoolean(instance, bool());
 				else if (byte.class.equals(type)) field.setByte(instance, i8());
@@ -196,6 +220,8 @@ public class AuroraReader {
 				e.printStackTrace();
 			}
 		}
+
+		enclosing.pop();
 
 		return instance;
 	}

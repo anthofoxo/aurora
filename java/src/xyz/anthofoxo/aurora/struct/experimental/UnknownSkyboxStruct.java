@@ -2,9 +2,9 @@ package xyz.anthofoxo.aurora.struct.experimental;
 
 import java.util.List;
 
-import xyz.anthofoxo.aurora.struct.FixedSize;
 import xyz.anthofoxo.aurora.struct.SequinGate;
 import xyz.anthofoxo.aurora.struct.ThumperStruct;
+import xyz.anthofoxo.aurora.struct.annotation.FixedSize;
 import xyz.anthofoxo.aurora.struct.comp.Comp;
 import xyz.anthofoxo.aurora.struct.comp.DrawComp;
 import xyz.anthofoxo.aurora.struct.comp.EditStateComp;

@@ -1,4 +1,4 @@
-package xyz.anthofoxo.aurora.struct;
+package xyz.anthofoxo.aurora.struct.annotation;
 
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 

@@ -2,6 +2,7 @@ package xyz.anthofoxo.aurora.struct;
 
 import java.util.List;
 
+import xyz.anthofoxo.aurora.struct.annotation.FixedSize;
 import xyz.anthofoxo.aurora.struct.comp.Comp;
 
 public class EntitySpawner implements ThumperStruct {

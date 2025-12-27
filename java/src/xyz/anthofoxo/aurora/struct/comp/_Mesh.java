@@ -2,8 +2,8 @@ package xyz.anthofoxo.aurora.struct.comp;
 
 import java.util.List;
 
-import xyz.anthofoxo.aurora.struct.FixedSize;
 import xyz.anthofoxo.aurora.struct.ThumperStruct;
+import xyz.anthofoxo.aurora.struct.annotation.FixedSize;
 
 public class _Mesh implements ThumperStruct {
 	public static int[] header() {
