@@ -30,7 +30,8 @@ public class ModLauncher {
 
 	private static List<Target> customs = new ArrayList<>();
 	private static Target selected = null;
-	private static ImBoolean buildMods = new ImBoolean(true);
+	private static ImBoolean buildTargets = new ImBoolean(true);
+	private static ImBoolean isModModeEnabled = new ImBoolean(true);
 	private static ImGuiTextFilter filter = new ImGuiTextFilter();
 	private static ImBoolean autoUnlockLevels = new ImBoolean(true);
 
@@ -155,26 +156,20 @@ public class ModLauncher {
 
 			if (ImGui.button("Reload")) reloadList();
 			ImGui.sameLine();
-			ImGui.checkbox("Build Mods", buildMods);
+			ImGui.checkbox("Build Targets", buildTargets);
 			ImGui.setItemTooltip("Disable this checkbox to disable aurora touching the cache files");
 
+			ImGui.sameLine();
+			ImGui.checkbox("Mod Mode Enabled", isModModeEnabled);
+			
 			ImGui.sameLine();
 
 			String text = Aurora.integrated ? "Launch Thumper" : "Build Mods";
 
 			if (ImGui.button(text)) {
 
-				if (buildMods.get()) {
-					boolean restoreBackup = true;
-
-					for (var custom : customs) {
-						if (custom.enabled.get()) {
-							restoreBackup = false;
-							break;
-						}
-					}
-
-					if (restoreBackup) {
+				if (buildTargets.get()) {
+					if (!isModModeEnabled.get()) {
 						try {
 							TMLBuilder.restoreBackups(Path.of(thumperpath).toString());
 						} catch (IOException e) {
