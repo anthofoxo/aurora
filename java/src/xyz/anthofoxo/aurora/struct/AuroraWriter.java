@@ -25,6 +25,9 @@ public class AuroraWriter {
 	public void hash(String v) {
 		i32(Hash.fnv1a(v));
 	}
+	
+	
+
 
 	public void i32(int v) {
 		i8((byte) (v & 0xFF));
@@ -68,14 +71,29 @@ public class AuroraWriter {
 			var type = field.getType();
 
 			try {
-				if (boolean.class.equals(type)) bool(field.getBoolean(value));
-				else if (Boolean.class.equals(type)) bool(field.getBoolean(value));
+				// Generic object
+				if (Object.class.equals(type)) {
+					var fieldValue = field.get(value);
+
+					if (fieldValue instanceof Boolean b) {
+						bool(b);
+					} else if (fieldValue instanceof Integer b) {
+						i32(b);
+					} else if (fieldValue instanceof String b) {
+						str(b);
+					} else {
+						throw new IllegalStateException();
+					}
+				}
+
+				else if (boolean.class.equals(type)) bool(field.getBoolean(value));
+				else if (Boolean.class.equals(type)) bool(Boolean.class.cast(field.getBoolean(value)));
 				else if (byte.class.equals(type)) i8(field.getByte(value));
-				else if (Byte.class.equals(type)) i8(field.getByte(value));
+				else if (Byte.class.equals(type)) i8(Byte.class.cast(field.getByte(value)));
 				else if (int.class.equals(type)) i32(field.getInt(value));
-				else if (Integer.class.equals(type)) i32(field.getInt(value));
+				else if (Integer.class.equals(type)) i32(Integer.class.cast(field.getInt(value)));
 				else if (float.class.equals(type)) f32(field.getFloat(value));
-				else if (Float.class.equals(type)) f32(field.getFloat(value));
+				else if (Float.class.equals(type)) f32(Float.class.cast(field.get(value)));
 				else if (String.class.equals(type)) str(String.class.cast(field.get(value)));
 				else if (byte[].class.equals(type)) i8arr(byte[].class.cast(field.get(value)));
 				else if (int[].class.equals(type)) i32arr(int[].class.cast(field.get(value)));

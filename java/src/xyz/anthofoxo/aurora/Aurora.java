@@ -2,6 +2,10 @@ package xyz.anthofoxo.aurora;
 
 import static org.lwjgl.glfw.GLFW.glfwSetWindowShouldClose;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+
 import org.lwjgl.util.tinyfd.TinyFileDialogs;
 
 import imgui.ImGui;
@@ -10,6 +14,7 @@ import imgui.type.ImBoolean;
 import xyz.anthofoxo.aurora.gui.Hasher;
 import xyz.anthofoxo.aurora.gui.ModLauncher;
 import xyz.anthofoxo.aurora.gui.ObjlibDecomp;
+import xyz.anthofoxo.aurora.struct.PrecompiledBin;
 
 public class Aurora {
 	public static boolean integrated;

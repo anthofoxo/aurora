@@ -68,6 +68,58 @@ public class Tcle3 extends Target {
 		if (tcl == null) throw new IllegalStateException("No TCL file found");
 	}
 
+	public static ParamPath parseParamPath(String param_path, String param_path_hash) {
+
+		String param;
+		String param_name;
+		String param_idx;
+
+		if (!isNullOrEmpty(param_path)) param = param_path;
+		else param = param_path_hash;
+		// a few specific param paths have a ',' followed by a number. In these special
+		// cases, split on ','
+		// [0] is the param_name and [1] is the value
+		if (param.contains(",")) {
+			var _p = param.split(",");
+			param_name = _p[0];
+			param_idx = _p[1];
+		}
+		// if the param_path does not have a ',', idx is -1
+		else {
+			param_name = param;
+			param_idx = "-1";
+		}
+
+		int hashedName;
+
+		// depending if the string is plain text or hex-hash, write it to .pc file
+		// differently
+		if (!isNullOrEmpty(param_path)) hashedName = Hash.fnv1a(param_name);
+		else {
+			byte[] str = stringToByteArray(param_name);
+			assert (str.length == 4);
+
+			hashedName = 0;
+			hashedName |= (str[0] & 0xFF) << 24;
+			hashedName |= (str[1] & 0xFF) << 16;
+			hashedName |= (str[2] & 0xFF) << 8;
+			hashedName |= (str[3] & 0xFF);
+		}
+
+		return new ParamPath(hashedName, Integer.parseInt(param_idx));
+	}
+
+	private static byte[] stringToByteArray(String hex) {
+		int len = hex.length();
+		byte[] bytes = new byte[len / 2];
+
+		for (int i = 0; i < len; i += 2) {
+			bytes[i / 2] = (byte) Integer.parseInt(hex.substring(i, i + 2), 16);
+		}
+
+		return bytes;
+	}
+
 	public static SequinGate toSequinGate(JsonNode obj) {
 		SequinGate gate = new SequinGate().withTMLDefaults();
 		gate.entitySpawnerName = obj.get("spn_name").asString();
@@ -150,6 +202,7 @@ public class Tcle3 extends Target {
 			}
 		}
 
+		writer.i8arr(PrecompiledBin.getObjDef0());
 		writer.i8arr(Util.getResourceBytes("obj_def_customlevel.objlib"));
 
 		for (var obj : objs) {
@@ -259,43 +312,14 @@ public class Tcle3 extends Target {
 		return false;
 	}
 
-	public static ParamPath parseParamPath(String paramPath, String paramPathHash) {
-		boolean isPlainText = !isNullOrEmpty(paramPath);
-		String raw = isPlainText ? paramPath : paramPathHash;
-
-		if (isNullOrEmpty(raw)) {
-			throw new IllegalArgumentException("Both paramPath and paramPathHash are null or empty");
-		}
-
-		// Split name and index
-		String name;
-		int index;
-
-		int comma = raw.indexOf(',');
-		if (comma >= 0) {
-			name = raw.substring(0, comma);
-			index = Integer.parseInt(raw.substring(comma + 1));
-		} else {
-			name = raw;
-			index = -1;
-		}
-
-		int hash = Hash.fnv1a(name);
-
-		// Convert name → int
-		int nameValue = isPlainText ? hash : Integer.reverseBytes(hash);
-
-		return new ParamPath(nameValue, index);
-	}
-
 	public static ParamPath parseParamPath(JsonNode paramPathNode, JsonNode paramPathHashNode) {
+		String pp = null;
+		String pph = null;
 
-		String paramPath = paramPathNode != null && !paramPathNode.isNull() ? paramPathNode.asString() : null;
+		if (paramPathNode != null) pp = paramPathNode.asString();
+		if (paramPathHashNode != null) pph = paramPathHashNode.asString();
 
-		String paramPathHash = paramPathHashNode != null && !paramPathHashNode.isNull() ? paramPathHashNode.asString()
-				: null;
-
-		return parseParamPath(paramPath, paramPathHash);
+		return parseParamPath(pp, pph);
 	}
 
 	private static List<String> trait_types = Arrays.asList("kTraitInt", "kTraitBool", "kTraitFloat", "kTraitColor",
@@ -328,6 +352,9 @@ public class Tcle3 extends Target {
 		String obj_name = _obj.get("obj_name").asString();
 		f.str(obj_name);
 		f.objlist(List.of(parseParamPath(_obj.get("param_path"), _obj.get("param_path_hash"))));
+
+		// writeParamPathU(f, _obj.get("param_path"), _obj.get("param_path_hash"));
+
 		f.i32(trait_types.indexOf(_obj.get("trait_type").asString()));
 
 		String traittype = _obj.get("trait_type").asString();
