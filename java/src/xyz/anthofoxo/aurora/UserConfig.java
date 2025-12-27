@@ -36,8 +36,8 @@ public class UserConfig {
 	}
 
 	public static boolean isModEnabled(String modName) {
-		return Boolean.parseBoolean(
-				properties.getProperty(String.format("mod.%s.enabled", modName), Boolean.toString(true)));
+		return Boolean
+				.parseBoolean(properties.getProperty(String.format("mod.%s.enabled", modName), Boolean.toString(true)));
 	}
 
 	public static void setModEnabled(String modName, boolean enabled) {
@@ -65,5 +65,14 @@ public class UserConfig {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+	}
+
+	public static boolean shouldShowGuide() {
+		return Boolean.parseBoolean(properties.getProperty("aurora.show_guide", Boolean.toString(true)));
+	}
+
+	public static void setShowGuide(boolean b) {
+		properties.setProperty("aurora.show_guide", Boolean.toString(b));
+		save();
 	}
 }
