@@ -5,7 +5,6 @@ import java.lang.reflect.ParameterizedType;
 import java.util.ArrayList;
 import java.util.List;
 
-import tools.jackson.databind.JsonNode;
 import xyz.anthofoxo.aurora.Hash;
 
 public class AuroraWriter {
@@ -21,31 +20,6 @@ public class AuroraWriter {
 
 	public void i8(byte value) {
 		bytes.add(value);
-	}
-
-	@Deprecated
-	private static byte[] stringToByteArray(String hex) {
-		int len = hex.length();
-		byte[] bytes = new byte[len / 2];
-
-		for (int i = 0; i < len; i += 2) {
-			bytes[i / 2] = (byte) Integer.parseInt(hex.substring(i, i + 2), 16);
-		}
-
-		return bytes;
-	}
-
-	@Deprecated
-	public void i8arrReverse(String v) {
-		var bytes = stringToByteArray(v);
-		for (int i = bytes.length - 1; i >= 0; --i) i8(bytes[i]);
-	}
-
-	@Deprecated
-	public void vec3(JsonNode jsonNode) {
-		f32(jsonNode.get(0).asFloat());
-		f32(jsonNode.get(1).asFloat());
-		f32(jsonNode.get(2).asFloat());
 	}
 
 	public void hash(String v) {

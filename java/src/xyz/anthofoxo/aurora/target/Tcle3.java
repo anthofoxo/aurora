@@ -15,18 +15,17 @@ import xyz.anthofoxo.aurora.Hash;
 import xyz.anthofoxo.aurora.Util;
 import xyz.anthofoxo.aurora.struct.AuroraWriter;
 import xyz.anthofoxo.aurora.struct.EntitySpawner;
-import xyz.anthofoxo.aurora.struct.FixedSize;
 import xyz.anthofoxo.aurora.struct.PrecompiledBin;
 import xyz.anthofoxo.aurora.struct.Sample;
 import xyz.anthofoxo.aurora.struct.SectionFile;
+import xyz.anthofoxo.aurora.struct.SequinGate;
+import xyz.anthofoxo.aurora.struct.SequinGate.ParamPath;
 import xyz.anthofoxo.aurora.struct.SequinMaster;
-import xyz.anthofoxo.aurora.struct.ThumperStruct;
 import xyz.anthofoxo.aurora.struct.Transform;
 import xyz.anthofoxo.aurora.struct.Vec3f;
 import xyz.anthofoxo.aurora.struct.Xfmer;
 import xyz.anthofoxo.aurora.struct.comp.AnimComp;
 import xyz.anthofoxo.aurora.struct.comp.ApproachAnimComp;
-import xyz.anthofoxo.aurora.struct.comp.Comp;
 import xyz.anthofoxo.aurora.struct.comp.EditStateComp;
 import xyz.anthofoxo.aurora.struct.comp.XfmComp;
 import xyz.anthofoxo.aurora.tml.TCLFile;
@@ -70,36 +69,43 @@ public class Tcle3 extends Target {
 		if (tcl == null) throw new IllegalStateException("No TCL file found");
 	}
 
-	public static void writeGate(AuroraWriter f, JsonNode obj) {
-		f.i32(26);
-		f.i32(4);
+	public static SequinGate toSequinGate(JsonNode obj) {
+		SequinGate gate = new SequinGate();
+		gate.header = SequinGate.header();
+		gate.comps = List.of(new EditStateComp());
+		gate.entitySpawnerName = obj.get("spn_name").asString();
+		gate.params = List.of(parseParamPath(obj.get("param_path"), obj.get("param_path_hash")));
 
-		f.objlist(List.of(new EditStateComp()));
-		f.str(obj.get("spn_name").asString());
+		gate.patterns = new ArrayList<>();
 
-		// writeParamPathU(f, obj.get("param_path"), obj.get("param_path_hash"));
-		writeParamPathi(f, parseParamPath(obj.get("param_path"), obj.get("param_path_hash")));
-
-		f.i32(((ArrayNode) obj.get("boss_patterns")).size());
 		for (var boss_pattern : obj.get("boss_patterns")) {
+			var pattern = new SequinGate.BossPattern();
+
 			var nodeName = boss_pattern.get("node_name");
-			if (nodeName != null) f.hash(nodeName.asString());
+			int hash;
+
+			if (nodeName != null) hash = Hash.fnv1a(nodeName.asString());
 			else
-				f.i8arrReverse(boss_pattern.get("node_name_hash").asString());
-			f.str(boss_pattern.get("lvl_name").asString());
-			f.bool(true);
-			f.str(boss_pattern.get("sentry_type").asString());
-			f.i32(0);
-			f.i32(boss_pattern.get("bucket_num").asInt());
+				hash = Integer.reverse(Hash.fnv1a(boss_pattern.get("node_name_hash").asString()));
+
+			pattern.nodeHash = hash;
+			pattern.levelName = boss_pattern.get("lvl_name").asString();
+			pattern.unknown0 = true;
+			pattern.sentryType = boss_pattern.get("sentry_type").asString();
+			pattern.unknown1 = 0;
+			pattern.bucketNum = boss_pattern.get("bucket_num").asInt();
+			gate.patterns.add(pattern);
 		}
 
-		f.str(obj.get("pre_lvl_name").asString());
-		f.str(obj.get("post_lvl_name").asString());
-		f.str(obj.get("restart_lvl_name").asString());
-		f.i32(0);
-		f.str(obj.get("section_type").asString());
-		f.f32(9);
-		f.str(obj.get("random_type").asString());
+		gate.preLevelName = obj.get("pre_lvl_name").asString();
+		gate.postLevelName = obj.get("post_lvl_name").asString();
+		gate.restartLevelName = obj.get("restart_lvl_name").asString();
+		gate.unknown0 = 0;
+		gate.sectionType = obj.get("section_type").asString();
+		gate.unknown1 = 9;
+		gate.randomType = obj.get("random_type").asString();
+
+		return gate;
 	}
 
 	@Override
@@ -171,7 +177,7 @@ public class Tcle3 extends Target {
 				// @formatter:on
 
 				Write_Lvl_Comp(writer, obj);
-			} else if (objType.equals("SequinGate")) writeGate(writer, obj);
+			} else if (objType.equals("SequinGate")) writer.obj(toSequinGate(obj));
 			else if (objType.equals("SequinMaster")) writer.obj(toSequinMaster(obj));
 			else if (objType.equals("EntitySpawner")) writer.obj(toEntiySpawner(obj));
 			else if (objType.equals("Sample")) {
@@ -262,10 +268,7 @@ public class Tcle3 extends Target {
 		return false;
 	}
 
-	public record ParamPathResult(int objectHash, int index) {
-	}
-
-	public static ParamPathResult parseParamPath(String paramPath, String paramPathHash) {
+	public static ParamPath parseParamPath(String paramPath, String paramPathHash) {
 		boolean isPlainText = !isNullOrEmpty(paramPath);
 		String raw = isPlainText ? paramPath : paramPathHash;
 
@@ -291,10 +294,10 @@ public class Tcle3 extends Target {
 		// Convert name → int
 		int nameValue = isPlainText ? hash : Integer.reverseBytes(hash);
 
-		return new ParamPathResult(nameValue, index);
+		return new ParamPath(nameValue, index);
 	}
 
-	public static ParamPathResult parseParamPath(JsonNode paramPathNode, JsonNode paramPathHashNode) {
+	public static ParamPath parseParamPath(JsonNode paramPathNode, JsonNode paramPathHashNode) {
 
 		String paramPath = paramPathNode != null && !paramPathNode.isNull() ? paramPathNode.asString() : null;
 
@@ -304,10 +307,10 @@ public class Tcle3 extends Target {
 		return parseParamPath(paramPath, paramPathHash);
 	}
 
-	private static void writeParamPathi(AuroraWriter f, ParamPathResult result) {
+	private static void writeParamPathi(AuroraWriter f, ParamPath result) {
 		f.i32(1);
-		f.i32(result.objectHash());
-		f.i32(result.index());
+		f.i32(result.paramHash);
+		f.i32(result.paramIdx);
 	}
 
 	private static List<String> trait_types = Arrays.asList("kTraitInt", "kTraitBool", "kTraitFloat", "kTraitColor",
@@ -545,42 +548,6 @@ public class Tcle3 extends Target {
 
 	private static Vec3f toVec3f(JsonNode obj) {
 		return new Vec3f(obj.get(0).asFloat(), obj.get(1).asFloat(), obj.get(2).asFloat());
-	}
-
-	public static class SequinGate implements ThumperStruct {
-		public static class Param implements ThumperStruct {
-			public int paramHash;
-			public int paramIdx; // typically -1
-		}
-
-		public static class BossPattern implements ThumperStruct {
-			public int nodeHash;
-			public String levelName;
-			public boolean unknown0; // true
-			public String sentryType;
-			public int unknown1; // 0
-			public int bucketNum;
-
-		}
-
-		public static int[] header() {
-			return new int[] { 26, 4 };
-		}
-
-		@FixedSize(count = 4)
-		public int[] header;
-		public List<Comp> comps;
-		public String entitySpawnerName;
-		public List<Param> params;
-		public List<BossPattern> patterns;
-		public String preLevelName;
-		public String postLevelName;
-		public String restartLevelName;
-		public int unknown0; // 0
-		public String sectionType;
-		public int unknown1; // 9
-		public String randomType;
-
 	}
 
 	private static Transform toTransform(JsonNode obj) {
