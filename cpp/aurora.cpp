@@ -109,6 +109,12 @@ static void spawnAurora() {
 	}
 
 	HMODULE jniModule = LoadLibrary(dllPath);
+	if (jniModule == nullptr) {
+		std::cerr << "Failed to load JNI\n";
+		gWantThumperLaunch = true;
+		return;
+	}
+
 	auto impl_JNI_GetDefaultJavaVMInitArgs = (decltype(&JNI_GetDefaultJavaVMInitArgs))GetProcAddress(jniModule, "JNI_GetDefaultJavaVMInitArgs");
 	auto impl_JNI_CreateJavaVM = (decltype(&JNI_CreateJavaVM))GetProcAddress(jniModule, "JNI_CreateJavaVM");
 
@@ -168,9 +174,22 @@ static void spawnAurora() {
 	jstring name = env->NewStringUTF("xyz.anthofoxo.aurora.EntryPoint");
 	jclass clazz = (jclass)env->CallObjectMethod(systemCl, loadClass, name);
 	checkJavaException(env);
+	if (clazz == NULL) {
+		jvm->DestroyJavaVM();
+		FreeLibrary(jniModule);
+		gWantThumperLaunch = true;
+		return;
+	}
 
 	jmethodID mid = env->GetStaticMethodID(clazz, "auroraMain", "(Z)Z");
 	checkJavaException(env);
+
+	if (mid == NULL) {
+		jvm->DestroyJavaVM();
+		FreeLibrary(jniModule);
+		gWantThumperLaunch = true;
+		return;
+	}
 
 	// 1 indicates that this is running in standalone mode
 	gWantThumperLaunch = env->CallStaticBooleanMethod(clazz, mid, jboolean(1));
