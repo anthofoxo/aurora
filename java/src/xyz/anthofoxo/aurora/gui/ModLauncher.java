@@ -75,6 +75,14 @@ public class ModLauncher {
 
 					ImGui.endMenu();
 				}
+				
+				if (ImGui.beginMenu("Advanced")) {
+
+					ImGui.menuItem("Build Targets", null, buildTargets);
+					ImGui.setItemTooltip("Uncheck to prevent aurora from touching any cache files");
+
+					ImGui.endMenu();
+				}
 
 				ImGui.endMenuBar();
 			}
@@ -157,8 +165,6 @@ public class ModLauncher {
 			if (ImGui.button("Reload")) reloadList();
 			ImGui.sameLine();
 			ImGui.checkbox("Build Targets", buildTargets);
-			ImGui.setItemTooltip("Disable this checkbox to disable aurora touching the cache files");
-
 			ImGui.sameLine();
 			ImGui.checkbox("Mod Mode Enabled", isModModeEnabled);
 			
