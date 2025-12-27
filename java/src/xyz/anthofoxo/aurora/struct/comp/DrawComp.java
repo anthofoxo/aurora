@@ -11,7 +11,7 @@ public class DrawComp implements Comp {
 
 	public int hash = HASH;
 	public int unknown0 = 8;
-	public boolean unknown1 = true;
+	public boolean unknown1 = true; // visible?
 	public String drawLayers = "kNumDrawLayers";
 	public String parent = "kBucketParent";
 	public int unknown2 = 0;

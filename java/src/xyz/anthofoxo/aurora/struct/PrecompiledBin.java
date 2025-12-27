@@ -1,9 +1,6 @@
 package xyz.anthofoxo.aurora.struct;
 
 import java.util.Arrays;
-import java.util.List;
-
-import xyz.anthofoxo.aurora.struct.comp.XfmComp;
 
 public final class PrecompiledBin {
 	private PrecompiledBin() {
@@ -42,38 +39,35 @@ public final class PrecompiledBin {
 		return out.getBytes();
 	}
 
-	public static byte[] getObjDeclaration3() {
-		Xfmer xfmer = new Xfmer();
-		xfmer.header = Xfmer.header();
-		xfmer.comps = List.of(new XfmComp("", "kConstraintParent", Transform.identity()));
-
-		AuroraWriter out = new AuroraWriter();
-		out.obj(xfmer);
-		return out.getBytes();
+	public static int getObjListCount() {
+		return 62;
 	}
 
 	/**
 	 * Generates the binary content of obj_list_2.objlib previously used by TML
-	 * There *MUST* be 63 declarations and they *CANNOT* be moved or removed When
-	 * the object declaration count is written, make sure to add 63 additional
-	 * objects to account for this table if inserted
+	 * There *MUST* be getObjListCount() declarations and they *CANNOT* be moved or
+	 * removed When the object declaration count is written, make sure to add
+	 * getObjListCount() additional objects to account for this table if inserted
 	 */
 	public static byte[] getObjList2Bin() {
+		// In the object declarations below, each end with a comment, 1 meaning we
+		// *think* this is required for level operation, no comment if we think this can
+		// be removed
+
 		AuroraWriter out = new AuroraWriter();
 		// @formatter:off
 		out.objlist(Arrays.asList(
 				new ObjectDeclaration(DeclarationType.Mesh,          "web_points.mesh"),
-				new ObjectDeclaration(DeclarationType.SequinDrawer,  "sequin.drawer"),
-				new ObjectDeclaration(DeclarationType.Xfmer,         "levels/Level9/level_9a.xfm"), // getObjDeclaration3
+				new ObjectDeclaration(DeclarationType.SequinDrawer,  "sequin.drawer"), // 1?
 				new ObjectDeclaration(DeclarationType.TraitAnim,     "gamma_modulation.anim"),
 				new ObjectDeclaration(DeclarationType.Mat,           "skybox_src.mat"),
 				new ObjectDeclaration(DeclarationType.Mat,           "skybox_subtract.mat"),
 				new ObjectDeclaration(DeclarationType.TraitAnim,     "skybox_rotation.anim"),
 				new ObjectDeclaration(DeclarationType.Flow,          "level_start.flow"),
 				new ObjectDeclaration(DeclarationType.Flow,          "beneath_ice.flow"),
-				new ObjectDeclaration(DeclarationType.Env,           "world.env"),
-				new ObjectDeclaration(DeclarationType.TraitAnim,     "skybox_colors.anim"),
-				new ObjectDeclaration(DeclarationType.Flow,          "skybox_colors.flow"),
+				new ObjectDeclaration(DeclarationType.Env,           "world.env"), // 1
+				new ObjectDeclaration(DeclarationType.TraitAnim,     "skybox_colors.anim"),  // 1
+				new ObjectDeclaration(DeclarationType.Flow,          "skybox_colors.flow"), // 1
 				new ObjectDeclaration(DeclarationType.TraitAnim,     "boss_colors.anim"),
 				new ObjectDeclaration(DeclarationType.Flow,          "boss_colors.flow"),
 				new ObjectDeclaration(DeclarationType.TraitAnim,     "crakhed_colors.anim"),
@@ -89,7 +83,7 @@ public final class PrecompiledBin {
 				new ObjectDeclaration(DeclarationType.Flow,          "diamond_colors.flow"),
 				new ObjectDeclaration(DeclarationType.TraitAnim,     "ending_sequence_colors.anim"),
 				new ObjectDeclaration(DeclarationType.PathDecorator, "start_cap_tunnel_chrome.dec"),
-				new ObjectDeclaration(DeclarationType.Flow,          "fade.flow"),
+				new ObjectDeclaration(DeclarationType.Flow,          "fade.flow"), // 1
 				new ObjectDeclaration(DeclarationType.Flow,          "ending_sequence_colors.flow"),
 				new ObjectDeclaration(DeclarationType.Path,          "chrome_rail_20.path"),
 				new ObjectDeclaration(DeclarationType.Path,          "chrome_rail_stretched.path"),
@@ -103,10 +97,10 @@ public final class PrecompiledBin {
 				new ObjectDeclaration(DeclarationType.Mat,           "tunnel_chrome_dark.mat"),
 				new ObjectDeclaration(DeclarationType.Path,          "tunnel_chrome_dark.path"),
 				new ObjectDeclaration(DeclarationType.Mesh,          "tunnel_chrome_dark.mesh"),
-				new ObjectDeclaration(DeclarationType.Path,          "landscape01.path"),
-				new ObjectDeclaration(DeclarationType.Mesh,          "landscape01.mesh"),
-				new ObjectDeclaration(DeclarationType.Tex2D,         "landscape1.tex"),
-				new ObjectDeclaration(DeclarationType.Mat,           "landscape.mat"),
+				new ObjectDeclaration(DeclarationType.Path,          "landscape01.path"), // 1
+				new ObjectDeclaration(DeclarationType.Mesh,          "landscape01.mesh"), // 1
+				new ObjectDeclaration(DeclarationType.Tex2D,         "landscape1.tex"), // 1
+				new ObjectDeclaration(DeclarationType.Mat,           "landscape.mat"), // 1
 				new ObjectDeclaration(DeclarationType.Flow,          "extreme_path_sx.flow"),
 				new ObjectDeclaration(DeclarationType.SequinPulse,   "angle_frac_reverse.pulse"),
 				new ObjectDeclaration(DeclarationType.SequinPulse,   "angle_frac.pulse"),

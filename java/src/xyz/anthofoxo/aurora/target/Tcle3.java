@@ -10,7 +10,6 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.node.ArrayNode;
 import xyz.anthofoxo.aurora.Hash;
 import xyz.anthofoxo.aurora.Util;
 import xyz.anthofoxo.aurora.struct.AuroraWriter;
@@ -70,29 +69,22 @@ public class Tcle3 extends Target {
 	}
 
 	public static SequinGate toSequinGate(JsonNode obj) {
-		SequinGate gate = new SequinGate();
-		gate.header = SequinGate.header();
-		gate.comps = List.of(new EditStateComp());
+		SequinGate gate = new SequinGate().withTMLDefaults();
 		gate.entitySpawnerName = obj.get("spn_name").asString();
 		gate.params = List.of(parseParamPath(obj.get("param_path"), obj.get("param_path_hash")));
 
-		gate.patterns = new ArrayList<>();
-
 		for (var boss_pattern : obj.get("boss_patterns")) {
-			var pattern = new SequinGate.BossPattern();
+			var pattern = new SequinGate.BossPattern().withTMLDefaults();
 
 			var nodeName = boss_pattern.get("node_name");
 			int hash;
 
 			if (nodeName != null) hash = Hash.fnv1a(nodeName.asString());
-			else
-				hash = Integer.reverse(Hash.fnv1a(boss_pattern.get("node_name_hash").asString()));
+			else hash = Integer.reverse(Hash.fnv1a(boss_pattern.get("node_name_hash").asString()));
 
 			pattern.nodeHash = hash;
 			pattern.levelName = boss_pattern.get("lvl_name").asString();
-			pattern.unknown0 = true;
 			pattern.sentryType = boss_pattern.get("sentry_type").asString();
-			pattern.unknown1 = 0;
 			pattern.bucketNum = boss_pattern.get("bucket_num").asInt();
 			gate.patterns.add(pattern);
 		}
@@ -100,9 +92,7 @@ public class Tcle3 extends Target {
 		gate.preLevelName = obj.get("pre_lvl_name").asString();
 		gate.postLevelName = obj.get("post_lvl_name").asString();
 		gate.restartLevelName = obj.get("restart_lvl_name").asString();
-		gate.unknown0 = 0;
 		gate.sectionType = obj.get("section_type").asString();
-		gate.unknown1 = 9;
 		gate.randomType = obj.get("random_type").asString();
 
 		return gate;
@@ -145,7 +135,7 @@ public class Tcle3 extends Target {
 		writer.str(String.format("levels/custom/%s.objlib", tcl.levelName));
 		writer.i8arr(PrecompiledBin.getObjList1Bin());
 
-		writer.i32(63 + objs.size());
+		writer.i32(PrecompiledBin.getObjListCount() + objs.size());
 		writer.i8arr(PrecompiledBin.getObjList2Bin());
 
 		for (var obj : objs) {
@@ -307,12 +297,6 @@ public class Tcle3 extends Target {
 		return parseParamPath(paramPath, paramPathHash);
 	}
 
-	private static void writeParamPathi(AuroraWriter f, ParamPath result) {
-		f.i32(1);
-		f.i32(result.paramHash);
-		f.i32(result.paramIdx);
-	}
-
 	private static List<String> trait_types = Arrays.asList("kTraitInt", "kTraitBool", "kTraitFloat", "kTraitColor",
 			"kTraitObj", "kTraitVec3", "kTraitPath", "kTraitEnum", "kTraitAction", "kTraitObjVec", "kTraitString",
 			"kTraitCue", "kTraitEvent", "kTraitSym", "kTraitList", "kTraitTraitPath", "kTraitQuat", "kTraitChildLib",
@@ -340,20 +324,14 @@ public class Tcle3 extends Target {
 	}
 
 	private static void Write_Sequencer_Object_v3(AuroraWriter f, JsonNode _obj, int beat_cnt) {
-		/// header of object
-
 		String obj_name = _obj.get("obj_name").asString();
-
 		f.str(obj_name);
-		// writeParamPathU(f, _obj.get("param_path"), _obj.get("param_path_hash"));
-		writeParamPathi(f, parseParamPath(_obj.get("param_path"), _obj.get("param_path_hash")));
+		f.objlist(List.of(parseParamPath(_obj.get("param_path"), _obj.get("param_path_hash"))));
 		f.i32(trait_types.indexOf(_obj.get("trait_type").asString()));
 
 		String traittype = _obj.get("trait_type").asString();
 		String default_value = _obj.get("default").asString();
 
-		/// data points of object
-		//
 		// Data points written different depending on STEP
 		if (asBool(_obj.get("step")) == true) {
 			/// STEP true = value updates every beat, and if no value is set for a beat,
@@ -463,22 +441,14 @@ public class Tcle3 extends Target {
 	}
 
 	private static void Write_Leaf(AuroraWriter f, JsonNode obj) {
-		///header
-		// honestly don't know what these values do
 		f.i32(34);
 		f.i32(33);
 		f.i32(4);
 
-		// @formatter:off
-		f.objlist(List.of(
-				new AnimComp(),
-				new EditStateComp())
-			);
-		// @formatter:on
+		f.objlist(List.of(new AnimComp(), new EditStateComp()));
 
 		Write_Sequencer_Objects(f, obj);
 
-		///footer
 		int beat_cnt = obj.get("beat_cnt").asInt();
 		f.i32(0);
 		f.i32(beat_cnt);
@@ -505,7 +475,7 @@ public class Tcle3 extends Target {
 			f.bool(false);
 			f.str(leaf.get("leaf_name").asString());
 			f.str(leaf.get("main_path").asString());
-			f.i32(((ArrayNode) leaf.get("sub_paths")).size());
+			f.i32(leaf.get("sub_paths").size());
 			for (var sub_path : leaf.get("sub_paths")) {
 				f.str(sub_path.asString());
 				f.i32(0);
@@ -527,8 +497,6 @@ public class Tcle3 extends Target {
 			f.i32(loop.get("beats_per_loop").asInt());
 			f.i32(0);
 		}
-
-		// FOOTER //
 
 		f.bool(false);
 		f.f32(obj.get("volume").asFloat());
