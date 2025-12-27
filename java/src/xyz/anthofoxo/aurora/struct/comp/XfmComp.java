@@ -4,6 +4,10 @@ import xyz.anthofoxo.aurora.Hash;
 import xyz.anthofoxo.aurora.struct.Transform;
 
 public class XfmComp implements Comp {
+	/**
+	 * LE: EB 61 E7 84<br>
+	 * BE: 84 E7 61 EB
+	 */
 	public static final int HASH = Hash.fnv1a("XfmComp");
 
 	public int hash = HASH;

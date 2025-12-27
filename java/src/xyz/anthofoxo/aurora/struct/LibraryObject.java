@@ -3,16 +3,16 @@ package xyz.anthofoxo.aurora.struct;
 public class LibraryObject implements ThumperStruct {
 	public int type;
 	public String name;
-	public int unknown;
+	public int objlibType;
 	public String path;
 
 	public LibraryObject() {
 	}
 
-	public LibraryObject(int type, String name, int unknown, String path) {
+	public LibraryObject(int type, String name, int objlibType, String path) {
 		this.type = type;
 		this.name = name;
-		this.unknown = unknown;
+		this.objlibType = objlibType;
 		this.path = path;
 	}
 }

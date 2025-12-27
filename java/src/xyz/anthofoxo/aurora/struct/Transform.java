@@ -6,7 +6,7 @@ public class Transform implements ThumperStruct {
 	public Vec3f roty;
 	public Vec3f rotz;
 	public Vec3f scale;
-	
+
 	public static Transform identity() {
 		Transform t = new Transform();
 		t.pos = new Vec3f(0, 0, 0);
@@ -14,6 +14,14 @@ public class Transform implements ThumperStruct {
 		t.roty = new Vec3f(0, 1, 0);
 		t.rotz = new Vec3f(0, 0, 1);
 		t.scale = new Vec3f(1, 1, 1);
+		return t;
+	}
+
+	public static Transform identityScaled(float scaleX, float scaleY, float scaleZ) {
+		Transform t = identity();
+		t.scale.x = scaleX;
+		t.scale.y = scaleY;
+		t.scale.z = scaleZ;
 		return t;
 	}
 }

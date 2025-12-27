@@ -20,7 +20,7 @@ public class Hasher {
 
 	public void compute() {
 		hash = Hash.fnv1a(Hash.escapedToByteArray(input.get()));
-		output = "0x" + Integer.toHexString(hash);
+		output = Integer.toHexString(hash);
 		collision = Hash.hashes.containsKey(hash);
 	}
 

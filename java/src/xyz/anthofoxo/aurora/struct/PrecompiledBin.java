@@ -1,6 +1,14 @@
 package xyz.anthofoxo.aurora.struct;
 
 import java.util.Arrays;
+import java.util.List;
+
+import xyz.anthofoxo.aurora.struct.comp.DrawComp;
+import xyz.anthofoxo.aurora.struct.comp.EditStateComp;
+import xyz.anthofoxo.aurora.struct.comp.XfmComp;
+import xyz.anthofoxo.aurora.struct.comp._UnknownSkyboxComp;
+import xyz.anthofoxo.aurora.struct.experimental.UnknownSkyboxStruct;
+import xyz.anthofoxo.aurora.struct.experimental.UnknownSkyboxStruct.Grouping;
 
 public final class PrecompiledBin {
 	private PrecompiledBin() {
@@ -26,6 +34,28 @@ public final class PrecompiledBin {
 				new LibraryImport(0, "global/global_lattices/global_lattices.objlib")
 			));
 		// @formatter:on
+		return out.getBytes();
+	}
+
+	public static byte[] getObjDef0() {
+		AuroraWriter out = new AuroraWriter();
+		UnknownSkyboxStruct s = new UnknownSkyboxStruct();
+		s.header = UnknownSkyboxStruct.header();
+		s.unknown0 = true;
+		// @formatter:off
+		s.groupings = List.of(
+				new Grouping(List.of(new SequinGate.ParamPath(0xF04BF1D9, -1)), "kTraitObj", "skybox_src.mat"),
+				new Grouping(List.of(new SequinGate.ParamPath(0xE92ABC92, -1)), "kTraitObj", "skybox_subtract.mat"),
+				new Grouping(List.of(new SequinGate.ParamPath(0xC8FD3CD7, -1)), "kTraitBool", true)
+			);
+		s.comps = List.of(
+				new _UnknownSkyboxComp(0),
+				new EditStateComp(),
+				new DrawComp(8, true, "kNumDrawLayers", "kBucketTerrain"),
+				new XfmComp("", "kConstraintParent", Transform.identityScaled(150, 150, 150))
+			);
+		// @formatter:on
+		out.obj(s);
 		return out.getBytes();
 	}
 

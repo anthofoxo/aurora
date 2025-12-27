@@ -69,9 +69,13 @@ public class AuroraWriter {
 
 			try {
 				if (boolean.class.equals(type)) bool(field.getBoolean(value));
+				else if (Boolean.class.equals(type)) bool(field.getBoolean(value));
 				else if (byte.class.equals(type)) i8(field.getByte(value));
+				else if (Byte.class.equals(type)) i8(field.getByte(value));
 				else if (int.class.equals(type)) i32(field.getInt(value));
+				else if (Integer.class.equals(type)) i32(field.getInt(value));
 				else if (float.class.equals(type)) f32(field.getFloat(value));
+				else if (Float.class.equals(type)) f32(field.getFloat(value));
 				else if (String.class.equals(type)) str(String.class.cast(field.get(value)));
 				else if (byte[].class.equals(type)) i8arr(byte[].class.cast(field.get(value)));
 				else if (int[].class.equals(type)) i32arr(int[].class.cast(field.get(value)));
