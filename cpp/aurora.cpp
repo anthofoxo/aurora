@@ -126,7 +126,7 @@ static void spawnAurora() {
 		classpath += *jar;
 	}
 	else {
-		std::cout << "No jar found, running in developer mode\n";
+		std::cout << "No jar found, is the aurora .jar next to THUMPER_win8.exe?\nAttempting to run in developer mode\n";
 
 		if (std::filesystem::exists("aurora_lib")) {
 			for (auto const& entry : std::filesystem::directory_iterator("aurora_lib")) {
