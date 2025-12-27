@@ -11,16 +11,18 @@ public class DrawComp implements Comp {
 
 	public int hash = HASH;
 	public int unknown0 = 8; // might be a kTraitAction which expects a boolean after?
-	public boolean unknown1 = true; // visible?
-	public String drawLayers = "kNumDrawLayers";
-	public String parent = "kBucketParent";
-	
+	public boolean unknown1; // = true; // visible?
+	public String drawLayers; // = "kNumDrawLayers";
+	public String parent; // = "kBucketParent";
+
+	public DrawComp() {
+	}
+
 	public DrawComp(int unknown0, boolean unknown1, String drawLayers, String parent) {
 		this.unknown0 = unknown0;
 		this.unknown1 = unknown1;
 		this.drawLayers = drawLayers;
 		this.parent = parent;
 	}
-	
-	
+
 }
