@@ -93,9 +93,11 @@ public class Aurora {
 				int removeIdx = -1;
 
 				for (int i = 0; i < UserConfig.modPaths.size(); ++i) {
+					ImGui.pushID(i);
 					if (ImGui.smallButton("x")) removeIdx = i;
 					ImGui.sameLine();
 					ImGui.textUnformatted(UserConfig.modPaths.get(i));
+					ImGui.popID();
 				}
 
 				if (removeIdx != -1) {
