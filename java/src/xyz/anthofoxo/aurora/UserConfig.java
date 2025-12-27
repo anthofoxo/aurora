@@ -35,6 +35,16 @@ public class UserConfig {
 
 	}
 
+	public static boolean isModEnabled(String modName) {
+		return Boolean.parseBoolean(
+				properties.getProperty(String.format("mod.%s.enabled", modName), Boolean.toString(true)));
+	}
+
+	public static void setModEnabled(String modName, boolean enabled) {
+		properties.setProperty(String.format("mod.%s.enabled", modName), Boolean.toString(enabled));
+		save();
+	}
+
 	public static String thumperPath() {
 		var prop = properties.getProperty("thumper.path");
 		if (prop != null) return prop;

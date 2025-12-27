@@ -47,13 +47,17 @@ public class ModLauncher {
 			try (var stream = Files.list(Path.of(searchPath))) {
 				for (Path path : stream.collect(Collectors.toList())) {
 					try {
-						customs.add(new Tcle3(path));
+						var target = new Tcle3(path);
+						target.enabled.set(UserConfig.isModEnabled(target.tcl.levelName));
+						customs.add(target);
 						continue;
 					} catch (Exception e) {
 					}
 
 					try {
-						customs.add(new TcleArtifact(path));
+						var target = new TcleArtifact(path);
+						target.enabled.set(UserConfig.isModEnabled(target.tcl.levelName));
+						customs.add(target);
 						continue;
 					} catch (Exception e) {
 					}
@@ -75,7 +79,7 @@ public class ModLauncher {
 
 					ImGui.endMenu();
 				}
-				
+
 				if (ImGui.beginMenu("Advanced")) {
 
 					ImGui.menuItem("Build Targets", null, buildTargets);
@@ -90,12 +94,14 @@ public class ModLauncher {
 			if (ImGui.button("Select All")) {
 				for (var custom : customs) {
 					custom.enabled.set(true);
+					UserConfig.setModEnabled(custom.tcl.levelName, true);
 				}
 			}
 			ImGui.sameLine();
 			if (ImGui.button("Deselect All")) {
 				for (var custom : customs) {
 					custom.enabled.set(false);
+					UserConfig.setModEnabled(custom.tcl.levelName, false);
 				}
 			}
 
@@ -120,7 +126,10 @@ public class ModLauncher {
 
 							ImGui.pushID(id++);
 
-							ImGui.checkbox("##active", custom.enabled);
+							if (ImGui.checkbox("##active", custom.enabled)) {
+								UserConfig.setModEnabled(custom.tcl.levelName, custom.enabled.get());
+							}
+
 							ImGui.sameLine();
 							if (ImGui.selectable(custom.tcl.levelName, custom == selected)) {
 								selected = custom;
@@ -164,10 +173,8 @@ public class ModLauncher {
 
 			if (ImGui.button("Reload")) reloadList();
 			ImGui.sameLine();
-			ImGui.checkbox("Build Targets", buildTargets);
-			ImGui.sameLine();
 			ImGui.checkbox("Mod Mode Enabled", isModModeEnabled);
-			
+
 			ImGui.sameLine();
 
 			String text = Aurora.integrated ? "Launch Thumper" : "Build Mods";
