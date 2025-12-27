@@ -11,6 +11,7 @@ import java.util.stream.Collectors;
 
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.ArrayNode;
+import xyz.anthofoxo.aurora.Hash;
 import xyz.anthofoxo.aurora.Util;
 import xyz.anthofoxo.aurora.struct.AuroraWriter;
 import xyz.anthofoxo.aurora.struct.EntitySpawner;
@@ -75,7 +76,9 @@ public class Tcle3 extends Target {
 
 		f.objlist(List.of(new EditStateComp()));
 		f.str(obj.get("spn_name").asString());
-		writeParamPathU(f, obj.get("param_path"), obj.get("param_path_hash"));
+
+		// writeParamPathU(f, obj.get("param_path"), obj.get("param_path_hash"));
+		writeParamPathi(f, parseParamPath(obj.get("param_path"), obj.get("param_path_hash")));
 
 		f.i32(((ArrayNode) obj.get("boss_patterns")).size());
 		for (var boss_pattern : obj.get("boss_patterns")) {
@@ -259,45 +262,52 @@ public class Tcle3 extends Target {
 		return false;
 	}
 
-	private static void writeParamPathU(AuroraWriter f, JsonNode param_path, JsonNode param_path_hash) {
-		String pp = null;
-		String pph = null;
-
-		if (param_path != null) pp = param_path.asString();
-		if (param_path_hash != null) pph = param_path_hash.asString();
-
-		writeParamPath(f, pp, pph);
+	public record ParamPathResult(int objectHash, int index) {
 	}
 
-	private static void writeParamPath(AuroraWriter f, String param_path, String param_path_hash) {
+	public static ParamPathResult parseParamPath(String paramPath, String paramPathHash) {
+		boolean isPlainText = !isNullOrEmpty(paramPath);
+		String raw = isPlainText ? paramPath : paramPathHash;
+
+		if (isNullOrEmpty(raw)) {
+			throw new IllegalArgumentException("Both paramPath and paramPathHash are null or empty");
+		}
+
+		// Split name and index
+		String name;
+		int index;
+
+		int comma = raw.indexOf(',');
+		if (comma >= 0) {
+			name = raw.substring(0, comma);
+			index = Integer.parseInt(raw.substring(comma + 1));
+		} else {
+			name = raw;
+			index = -1;
+		}
+
+		int hash = Hash.fnv1a(name);
+
+		// Convert name → int
+		int nameValue = isPlainText ? hash : Integer.reverseBytes(hash);
+
+		return new ParamPathResult(nameValue, index);
+	}
+
+	public static ParamPathResult parseParamPath(JsonNode paramPathNode, JsonNode paramPathHashNode) {
+
+		String paramPath = paramPathNode != null && !paramPathNode.isNull() ? paramPathNode.asString() : null;
+
+		String paramPathHash = paramPathHashNode != null && !paramPathHashNode.isNull() ? paramPathHashNode.asString()
+				: null;
+
+		return parseParamPath(paramPath, paramPathHash);
+	}
+
+	private static void writeParamPathi(AuroraWriter f, ParamPathResult result) {
 		f.i32(1);
-		String param;
-		String param_name;
-		String param_idx;
-
-		if (!isNullOrEmpty(param_path)) param = param_path;
-		else
-			param = param_path_hash;
-		// a few specific param paths have a ',' followed by a number. In these special
-		// cases, split on ','
-		// [0] is the param_name and [1] is the value
-		if (param.contains(",")) {
-			var _p = param.split(",");
-			param_name = _p[0];
-			param_idx = _p[1];
-		}
-		// if the param_path does not have a ',', idx is -1
-		else {
-			param_name = param;
-			param_idx = "-1";
-		}
-		// depending if the string is plain text or hex-hash, write it to .pc file
-		// differently
-		if (!isNullOrEmpty(param_path)) f.hash(param_name);
-		else
-			f.i8arrReverse(param_name);
-
-		f.i32(Integer.parseInt(param_idx));
+		f.i32(result.objectHash());
+		f.i32(result.index());
 	}
 
 	private static List<String> trait_types = Arrays.asList("kTraitInt", "kTraitBool", "kTraitFloat", "kTraitColor",
@@ -332,7 +342,8 @@ public class Tcle3 extends Target {
 		String obj_name = _obj.get("obj_name").asString();
 
 		f.str(obj_name);
-		writeParamPathU(f, _obj.get("param_path"), _obj.get("param_path_hash"));
+		// writeParamPathU(f, _obj.get("param_path"), _obj.get("param_path_hash"));
+		writeParamPathi(f, parseParamPath(_obj.get("param_path"), _obj.get("param_path_hash")));
 		f.i32(trait_types.indexOf(_obj.get("trait_type").asString()));
 
 		String traittype = _obj.get("trait_type").asString();
