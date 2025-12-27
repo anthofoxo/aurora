@@ -33,6 +33,7 @@ public final class PrecompiledBin {
 		AuroraWriter out = new AuroraWriter();
 		// @formatter:off
 		out.objlist(Arrays.asList(
+				// 0x1BA51443 = GFX OBJLIB
 				new LibraryObject(0x1BA51443, "skybox_cube", 0, "skybox/skybox_cube.objlib")
 			));
 		// @formatter:on
