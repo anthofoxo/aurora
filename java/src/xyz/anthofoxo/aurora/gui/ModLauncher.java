@@ -220,8 +220,10 @@ public class ModLauncher {
 
 				}
 
-				Aurora.shouldLaunchThumper = true;
-				Aurora.requestClose = true;
+				if (Aurora.integrated) {
+					Aurora.shouldLaunchThumper = true;
+					Aurora.requestClose = true;
+				}
 			}
 
 			ImGui.sameLine();
