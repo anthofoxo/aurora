@@ -23,4 +23,9 @@ public class Sample implements ThumperStruct {
 	public float pan;
 	public float offset;
 	public String channelGroup;
+	
+	@Override
+	public String toString() {
+		return path;
+	}
 }

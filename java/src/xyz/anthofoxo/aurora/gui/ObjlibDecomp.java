@@ -14,9 +14,12 @@ import xyz.anthofoxo.aurora.struct.AuroraReader;
 import xyz.anthofoxo.aurora.struct.LibraryImport;
 import xyz.anthofoxo.aurora.struct.LibraryObject;
 import xyz.anthofoxo.aurora.struct.ObjectDeclaration;
+import xyz.anthofoxo.aurora.struct.Sample;
+import xyz.anthofoxo.aurora.struct.SequinGate;
 import xyz.anthofoxo.aurora.struct.SequinGate.ParamPath;
 import xyz.anthofoxo.aurora.struct.annotation.FixedSize;
 import xyz.anthofoxo.aurora.struct.comp.Comp;
+import xyz.anthofoxo.aurora.struct.comp.EditStateComp;
 import xyz.anthofoxo.aurora.struct.experimental.UnknownSkyboxStruct;
 import xyz.anthofoxo.aurora.struct.experimental.UnknownSkyboxStruct.Grouping;
 
@@ -37,6 +40,8 @@ public class ObjlibDecomp {
 		public int _startcontentoffset;
 		public int _endskyboxoffset;
 		public List<Object> defs = new ArrayList<>();
+
+		public List<Sample> samples = new ArrayList<>();
 	}
 
 	private ObjlibLevel level = null;
@@ -87,13 +92,18 @@ public class ObjlibDecomp {
 					s.groupings.add(g);
 				}
 
+				// when parsing a skybox, drawcomp needs one field stripped, ensure the parser
+				// knows this dependency
+				in.enclosing.push(UnknownSkyboxStruct.class);
 				s.comps = in.objlist(Comp.class);
+				in.enclosing.pop();
 
 				level.defs.add(s);
 
 			} else throw new IllegalStateException();
 		}
 		level._endskyboxoffset = in.position();
+
 	}
 
 	private void drawParsed() {
