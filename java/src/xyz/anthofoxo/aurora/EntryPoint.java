@@ -32,7 +32,7 @@ public final class EntryPoint {
 	private static ImGuiImplGlfw imGuiGlfw = new ImGuiImplGlfw();
 	private static ImGuiImplGl3 imGuiGl3 = new ImGuiImplGl3();
 
-	private static Aurora aurora = new Aurora();
+	private static Aurora aurora;
 
 	private EntryPoint() {
 	}
@@ -152,6 +152,8 @@ public final class EntryPoint {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+
+		aurora = new Aurora();
 
 		while (running) {
 			imGuiGl3.newFrame();
