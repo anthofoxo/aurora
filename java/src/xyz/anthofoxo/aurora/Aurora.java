@@ -17,7 +17,7 @@ import xyz.anthofoxo.aurora.gui.ModLauncher;
 import xyz.anthofoxo.aurora.gui.ObjlibDecomp;
 
 public class Aurora {
-	public static final String TITLE = "Aurora v0.1.0";
+	public static final String TITLE = "Aurora v0.2.0-a.1+WIP";
 
 	public static boolean integrated;
 	public static boolean shouldLaunchThumper = false;
