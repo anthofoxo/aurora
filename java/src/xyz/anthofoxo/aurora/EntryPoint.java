@@ -91,7 +91,18 @@ public final class EntryPoint {
 	}
 
 	private static void update() {
+		imGuiGl3.newFrame();
+		imGuiGlfw.newFrame();
+		ImGui.newFrame();
+
+		ImGui.dockSpaceOverViewport();
 		aurora.update();
+
+		glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+
+		ImGui.render();
+		imGuiGl3.renderDrawData(ImGui.getDrawData());
 	}
 
 	public static boolean auroraMain(boolean integrated) {
@@ -134,7 +145,7 @@ public final class EntryPoint {
 		glfwSwapInterval(1);
 		glfwShowWindow(window);
 
-		glfwSetWindowSizeCallback(window, (long _, int _, int _) -> {
+		glfwSetWindowRefreshCallback(window, (long _) -> {
 			update();
 		});
 
@@ -156,18 +167,8 @@ public final class EntryPoint {
 		aurora = new Aurora();
 
 		while (running) {
-			imGuiGl3.newFrame();
-			imGuiGlfw.newFrame();
-			ImGui.newFrame();
 
-			ImGui.dockSpaceOverViewport();
 			update();
-
-			glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
-			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-
-			ImGui.render();
-			imGuiGl3.renderDrawData(ImGui.getDrawData());
 
 			if (ImGui.getIO().hasConfigFlags(ImGuiConfigFlags.ViewportsEnable)) {
 				final long backupCurrentContext = glfwGetCurrentContext();
