@@ -1,2 +1,20 @@
-site_name: Aurora Documentation
+site_name: Thumper Documentation
 theme: readthedocs
+site_url: https://anthofoxo.xyz/aurora
+repo_url: https://github.com/anthofoxo/aurora
+edit_uri: tree/docs/docs
+repo_name: GitHub
+site_description: Thumper and Thumper Tooling Documentation
+site_author: AnthoFoxo
+extra_css:
+  - extra.css
+nav:
+  - Home: index.md
+  - Aurora:
+    - "User Installation Guide": aurora/user_install_guide.md
+  - Thumper:
+    - Introduction: thumper/index.md
+    - Overview:
+      - "What We Know about Drool's Editor": thumper/drools_editor.md
+      - "Overall File Structure": thumper/overall_structure.md
+      - "Objlib Structure": thumper/objlib_structure.md
