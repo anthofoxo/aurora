@@ -1,6 +1,6 @@
 package xyz.anthofoxo.aurora.gfx;
 
-import static org.lwjgl.opengl.GL11C.*;
+import static org.lwjgl.opengl.GL46C.*;
 import static org.lwjgl.opengl.GL12C.GL_CLAMP_TO_EDGE;
 import static org.lwjgl.opengl.GL45C.*;
 import static org.lwjgl.stb.STBImage.stbi_image_free;
@@ -89,6 +89,9 @@ public class Texture implements AutoCloseable {
 		glTextureParameteri(handle, GL_TEXTURE_MAG_FILTER, magFilter);
 		glTextureParameteri(handle, GL_TEXTURE_WRAP_S, wrap);
 		glTextureParameteri(handle, GL_TEXTURE_WRAP_T, wrap);
+
+		float maxAnisotropy = glGetFloat(GL_MAX_TEXTURE_MAX_ANISOTROPY);
+		glTextureParameterf(handle, GL_TEXTURE_MAX_ANISOTROPY, maxAnisotropy);
 	}
 
 	public void upload(int level, int xoffset, int yoffset, int width, int height, int format, int type,
