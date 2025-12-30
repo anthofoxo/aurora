@@ -6,13 +6,33 @@ import static org.lwjgl.opengl.GL45C.*;
 import static org.lwjgl.stb.STBImage.stbi_image_free;
 import static org.lwjgl.stb.STBImage.stbi_load_from_memory;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Objects;
 
 import org.lwjgl.system.MemoryStack;
+import org.lwjgl.system.MemoryUtil;
+
+import xyz.anthofoxo.aurora.Util;
 
 public class Texture implements AutoCloseable {
 	private int handle;
+
+	public static Texture makeFromResource(String resource) {
+		try {
+			byte[] bytes = Util.getResourceBytes(resource);
+			var buffer = MemoryUtil.memAlloc(bytes.length);
+			try {
+				buffer.put(0, bytes);
+				return Texture.makeFromPNG(buffer);
+			} finally {
+				MemoryUtil.memFree(buffer);
+			}
+
+		} catch (IOException e) {
+			return null;
+		}
+	}
 
 	/**
 	 * Takes in some png image data and creates a texture from it. If this operation
