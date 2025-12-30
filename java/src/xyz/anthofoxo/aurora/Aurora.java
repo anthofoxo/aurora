@@ -2,6 +2,11 @@ package xyz.anthofoxo.aurora;
 
 import static org.lwjgl.glfw.GLFW.glfwSetWindowShouldClose;
 
+import java.awt.Desktop;
+import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
+
 import org.lwjgl.util.tinyfd.TinyFileDialogs;
 
 import imgui.ImGui;
@@ -64,6 +69,24 @@ public class Aurora {
 			}
 
 			if (ImGui.beginMenu("Help")) {
+
+				if (ImGui.menuItem("Thumper / Aurora Documentation")) {
+					if (Desktop.isDesktopSupported()) {
+						Desktop desktop = Desktop.getDesktop();
+						if (desktop.isSupported(Desktop.Action.BROWSE)) {
+							try {
+								desktop.browse(new URI("https://anthofoxo.xyz/aurora/"));
+								System.out.println("Opened URL: https://anthofoxo.xyz/aurora/ in default browser.");
+							} catch (IOException | URISyntaxException e) {
+								e.printStackTrace();
+							}
+						} else {
+							System.err.println("Browse action is not supported on the current platform.");
+						}
+					} else {
+						System.err.println("Desktop API is not supported on the current platform.");
+					}
+				}
 
 				ImGui.menuItem("New User Guide", null, viewNewUserGuide);
 
