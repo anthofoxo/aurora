@@ -12,6 +12,7 @@ nav:
   - Home: index.md
   - Aurora:
     - "User Installation Guide": aurora/user_install_guide.md
+    - "Developer Installation and Setup Guide": aurora/dev_setup_guide.md
   - Thumper:
     - Introduction: thumper/index.md
     - Overview:
