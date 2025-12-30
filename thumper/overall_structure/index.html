@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="author" content="AnthoFoxo" /><link rel="canonical" href="https://anthofoxo.xyz/aurora/thumper/overall_structure/" />
+      <link rel="shortcut icon" href="../../img/favicon.ico" />
+    <title>Overall File Structure - Thumper Documentation</title>
+    <link rel="stylesheet" href="../../css/theme.css" />
+    <link rel="stylesheet" href="../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../../extra.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Overall File Structure";
+        var mkdocs_page_input_path = "thumper\\overall_structure.md";
+        var mkdocs_page_url = "/aurora/thumper/overall_structure/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../.." class="icon icon-home"> Thumper Documentation
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../..">Home</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Aurora</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../aurora/user_install_guide/">User Installation Guide</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Thumper</span></p>
+              <ul class="current">
+                  <li class="toctree-l1"><a class="reference internal" href="../">Introduction</a>
+                  </li>
+                  <li class="toctree-l1 current"><a class="reference internal current" >Overview</a>
+    <ul class="current">
+                <li class="toctree-l2"><a class="reference internal" href="../drools_editor/">What We Know about Drool's Editor</a>
+                </li>
+                <li class="toctree-l2 current"><a class="reference internal current" href="#">Overall File Structure</a>
+    <ul class="current">
+    <li class="toctree-l3"><a class="reference internal" href="#file-types">File Types</a>
+    </li>
+    </ul>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../objlib_structure/">Objlib Structure</a>
+                </li>
+    </ul>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../..">Thumper Documentation</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../.." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">Thumper</li>
+          <li class="breadcrumb-item">Overview</li>
+      <li class="breadcrumb-item active">Overall File Structure</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/anthofoxo/aurora/tree/docs/docs/thumper/overall_structure.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="overall-structure-of-game-files">Overall Structure of Game Files</h1>
+<p>Most of the game files, including 3D meshes, textures, audio samples and game object libraries are located in the <code>cache</code> directory in the game's installation files. All of them are cryptically named with hex characters plus a <code>.pc</code> file extension. The cryptic file names are resulted from applying a 32-bit hash function to their original file paths. For game object libraries and audio samples, their original file paths or file names are stored within the game files themselves and can be extracted.</p>
+<h2 id="file-types">File Types</h2>
+<p>The first 4 bytes of each game file is an <code>u32</code> identifying its file type. All possible values are listed in the table below.</p>
+<table>
+<thead>
+<tr>
+<th>Value</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>0</code></td>
+<td>Scoring file. Defines the scoring fules, such as how many points are awarded for each type of action and no miss and no damage bonuses.</td>
+</tr>
+<tr>
+<td><code>4</code></td>
+<td>Configuration files.</td>
+</tr>
+<tr>
+<td><code>5</code></td>
+<td>A list of UI menus, such as the credits, level select, leaderboards, options, and in-game pause screen.</td>
+</tr>
+<tr>
+<td><code>6</code></td>
+<td>Meshes. These are stored in a proprietary format.</td>
+</tr>
+<tr>
+<td><code>8</code></td>
+<td>Game object library. These are a custom format.</td>
+</tr>
+<tr>
+<td><code>9</code></td>
+<td>Credit files and level configuration files.</td>
+</tr>
+<tr>
+<td><code>12</code></td>
+<td>Textures. Stored as <code>.dds</code>.</td>
+</tr>
+<tr>
+<td><code>13</code></td>
+<td>Audio sample, These are stores as <code>FSB5 MFOD Banks</code></td>
+</tr>
+<tr>
+<td><code>14</code></td>
+<td>Level listing.</td>
+</tr>
+<tr>
+<td><code>28</code></td>
+<td>Shaders.</td>
+</tr>
+<tr>
+<td><code>93</code></td>
+<td>Unknown.</td>
+</tr>
+</tbody>
+</table>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../drools_editor/" class="btn btn-neutral float-left" title="What We Know about Drool's Editor"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../objlib_structure/" class="btn btn-neutral float-right" title="Objlib Structure">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/anthofoxo/aurora" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+      <span><a href="../drools_editor/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../objlib_structure/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../..";</script>
+    <script src="../../js/theme_extra.js"></script>
+    <script src="../../js/theme.js"></script>
+      <script src="../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="author" content="AnthoFoxo" /><link rel="canonical" href="https://anthofoxo.xyz/aurora/aurora/user_install_guide/" />
+      <link rel="shortcut icon" href="../../img/favicon.ico" />
+    <title>User Installation Guide - Thumper Documentation</title>
+    <link rel="stylesheet" href="../../css/theme.css" />
+    <link rel="stylesheet" href="../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../../extra.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "User Installation Guide";
+        var mkdocs_page_input_path = "aurora\\user_install_guide.md";
+        var mkdocs_page_url = "/aurora/aurora/user_install_guide/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../.." class="icon icon-home"> Thumper Documentation
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../..">Home</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Aurora</span></p>
+              <ul class="current">
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">User Installation Guide</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#prerequisites">Prerequisites</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#put-thumper-in-a-vanilla-state">Put Thumper in a Vanilla State</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#installing-java">Installing Java</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#shared-library-configuration">Shared Library Configuration</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#linux-and-proton-configuration">Linux and Proton Configuration</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#aurora-install">Aurora Install</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#testing-and-aurora-configuration">Testing and Aurora Configuration</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#standalone-mode">Standalone Mode</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#uninstalling-aurora">Uninstalling Aurora</a>
+    </li>
+    </ul>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Thumper</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../thumper/">Introduction</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" >Overview</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="../../thumper/drools_editor/">What We Know about Drool's Editor</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../thumper/overall_structure/">Overall File Structure</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../thumper/objlib_structure/">Objlib Structure</a>
+                </li>
+    </ul>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../..">Thumper Documentation</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../.." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">Aurora</li>
+      <li class="breadcrumb-item active">User Installation Guide</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/anthofoxo/aurora/tree/docs/docs/aurora/user_install_guide.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="user-installation-guide">User Installation Guide</h1>
+<h2 id="prerequisites">Prerequisites</h2>
+<h3 id="put-thumper-in-a-vanilla-state">Put Thumper in a Vanilla State</h3>
+<p>Thumper should be in an entirely vanilla state before installing Aurora. To do this perform the following actions:</p>
+<ol>
+<li>Open your Steam Library, right click on <code>Thumper</code>, click <code>Manage</code>, then click <code>Browse local files</code>. Remember this folder location. We will refer to this as the <code>Thumper Directory</code>.</li>
+<li>Delete the <code>cache</code> folder in the <code>Thumper Directory</code>.</li>
+<li>Open your Steam Library, right click on <code>Thumper</code>, click <code>Properties...</code>, click <code>Installed Files</code>, then click <code>Verify integrety of game files</code>. Steam will then proceed to redownload the <code>cache</code> directory and put the game into a vanilla state.</li>
+</ol>
+<h3 id="installing-java">Installing Java</h3>
+<p>Aurora requires Java 25 to be installed. Java <em>must</em> be installed via an installer. Aurora relies on certain registry keys to exist. Using an installer will ensure this happens properly. You can visit the <a href="https://www.oracle.com/java/technologies/downloads">Oracle website</a> to find the download links.</p>
+<p>Install Java using the <a href="https://download.oracle.com/java/25/latest/jdk-25_windows-x64_bin.msi">Windows x64 MSI Installer</a>. Use this same installer even if you are on Linux. Just install it via Wine.</p>
+<h3 id="shared-library-configuration">Shared Library Configuration</h3>
+<p>Aurora expects <code>steam_api64.dll.bak</code> to exist in the <code>Thumper Directory</code>. This is simply a copy of <code>steam_api64.dll</code>. If this <code>.bak</code> file doesn't already exist then copy/pase <code>steam_api64.dll</code> as <code>steam_api64.dll.bak</code>.</p>
+<h2 id="linux-and-proton-configuration">Linux and Proton Configuration</h2>
+<p>If you are using Linux, two additional changes are required:</p>
+<ul>
+<li>Add the following launch flag: <code>WINEDLLOVERRIDES="steam_api64.dll=n,b" %command%</code></li>
+<li>Make sure Thumper is ran using the experimental version of proton.</li>
+</ul>
+<h2 id="aurora-install">Aurora Install</h2>
+<p>To finally proceed with the install. Download the latest <code>.zip</code> file from <a href="https://github.com/anthofoxo/aurora/releases">GitHub</a>. Once downloaded you want to <em>directly</em> extract this into the <code>Thumper Directory</code>. Confirm any overwrites if needed.</p>
+<h2 id="testing-and-aurora-configuration">Testing and Aurora Configuration</h2>
+<p>At this point Aurora should be installed and ready to go. To validate this simply launch Thumper. If all went well the Aurora application should appear.</p>
+<ul>
+<li>You'll be prompted to select a Thumper Executable. Select and of the <code>.exe</code> files.</li>
+<li>The Aurora GUI will have a small guide on adding mod paths.</li>
+<li>Once ready. Click the <code>Launch Thumper</code> button. Aurora will proceed to build the targets and begin the game.</li>
+</ul>
+<h2 id="standalone-mode">Standalone Mode</h2>
+<p>Aurora can also run standalone mode. This may be useful in a few situation. The <code>.jar</code> file that is downloaded is executable. If Java is installed correctly you can simply open this file.</p>
+<p>When in standalone mode, Aurora will be unable to directly launch Thumper. Instead you are given the option to <code>Build Mods</code>.</p>
+<h2 id="uninstalling-aurora">Uninstalling Aurora</h2>
+<p>If you want to uninstall Aurora. You can simply delete <code>steam_api64.dll</code> and rename <code>steam_api64.dll.bak</code> to <code>steam_api64.dll</code>. This will prevent Aurora from running on game startup. You may delete the <code>.jar</code> file if you want.</p>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../.." class="btn btn-neutral float-left" title="Home"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../../thumper/" class="btn btn-neutral float-right" title="Introduction">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/anthofoxo/aurora" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+      <span><a href="../.." style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../../thumper/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../..";</script>
+    <script src="../../js/theme_extra.js"></script>
+    <script src="../../js/theme.js"></script>
+      <script src="../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>
