@@ -15,11 +15,9 @@ import xyz.anthofoxo.aurora.struct.LibraryImport;
 import xyz.anthofoxo.aurora.struct.LibraryObject;
 import xyz.anthofoxo.aurora.struct.ObjectDeclaration;
 import xyz.anthofoxo.aurora.struct.Sample;
-import xyz.anthofoxo.aurora.struct.SequinGate;
 import xyz.anthofoxo.aurora.struct.SequinGate.ParamPath;
 import xyz.anthofoxo.aurora.struct.annotation.FixedSize;
 import xyz.anthofoxo.aurora.struct.comp.Comp;
-import xyz.anthofoxo.aurora.struct.comp.EditStateComp;
 import xyz.anthofoxo.aurora.struct.experimental.UnknownSkyboxStruct;
 import xyz.anthofoxo.aurora.struct.experimental.UnknownSkyboxStruct.Grouping;
 
