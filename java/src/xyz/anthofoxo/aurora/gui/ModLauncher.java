@@ -12,6 +12,7 @@ import imgui.ImGuiTextFilter;
 import imgui.flag.ImGuiWindowFlags;
 import imgui.type.ImBoolean;
 import xyz.anthofoxo.aurora.Aurora;
+import xyz.anthofoxo.aurora.EntryPoint;
 import xyz.anthofoxo.aurora.Hash;
 import xyz.anthofoxo.aurora.UserConfig;
 import xyz.anthofoxo.aurora.struct.AuroraReader;
@@ -222,7 +223,7 @@ public class ModLauncher {
 
 				if (Aurora.integrated) {
 					Aurora.shouldLaunchThumper = true;
-					Aurora.requestClose = true;
+					EntryPoint.running = false;
 				}
 			}
 

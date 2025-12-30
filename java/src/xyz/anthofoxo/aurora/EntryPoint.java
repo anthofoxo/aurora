@@ -1,6 +1,7 @@
 package xyz.anthofoxo.aurora;
 
-import static org.lwjgl.glfw.GLFW.glfwSetWindowIcon;
+import static org.lwjgl.glfw.GLFW.*;
+import static org.lwjgl.opengl.GL11C.*;
 import static org.lwjgl.stb.STBImage.stbi_image_free;
 import static org.lwjgl.stb.STBImage.stbi_load_from_memory;
 import static org.lwjgl.stb.STBImageResize.STBIR_RGBA;
@@ -11,29 +12,32 @@ import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import java.util.Objects;
 
+import org.lwjgl.glfw.Callbacks;
+import org.lwjgl.glfw.GLFWErrorCallback;
 import org.lwjgl.glfw.GLFWImage;
+import org.lwjgl.opengl.GL;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.system.MemoryUtil;
 import org.lwjgl.system.libc.LibCStdlib;
 
 import imgui.ImFontConfig;
 import imgui.ImGui;
-import imgui.app.Application;
-import imgui.app.Configuration;
 import imgui.flag.ImGuiConfigFlags;
+import imgui.gl3.ImGuiImplGl3;
+import imgui.glfw.ImGuiImplGlfw;
 
-public final class EntryPoint extends Application {
-	private Aurora aurora = new Aurora();
+public final class EntryPoint {
+	public static boolean running = true;
+	public static long window;
+	private static ImGuiImplGlfw imGuiGlfw = new ImGuiImplGlfw();
+	private static ImGuiImplGl3 imGuiGl3 = new ImGuiImplGl3();
+
+	private static Aurora aurora = new Aurora();
 
 	private EntryPoint() {
 	}
 
-	private byte[] ttf;
-
-	@Override
-	protected void configure(Configuration config) {
-		config.setTitle(Aurora.TITLE);
-	}
+	private static byte[] ttf;
 
 	private static ByteBuffer readResourceImagePixels(String resource, IntBuffer pWidth, IntBuffer pHeight)
 			throws IOException {
@@ -53,7 +57,7 @@ public final class EntryPoint extends Application {
 		}
 	}
 
-	private void setIcons() throws IOException {
+	private static void setIcons() throws IOException {
 		try (MemoryStack stack = MemoryStack.stackPush()) {
 			IntBuffer pWidth = stack.mallocInt(1);
 			IntBuffer pHeight = stack.mallocInt(1);
@@ -74,7 +78,7 @@ public final class EntryPoint extends Application {
 						images.get(i).set(size, size, pixels);
 					}
 
-					glfwSetWindowIcon(handle, images);
+					glfwSetWindowIcon(window, images);
 				} finally {
 					for (int i = 0; i < numImages; ++i) {
 						LibCStdlib.free(images.get(i).pixels(0));
@@ -86,20 +90,58 @@ public final class EntryPoint extends Application {
 		}
 	}
 
-	@Override
-	protected void initWindow(Configuration config) {
-		super.initWindow(config);
+	private static void update() {
+		aurora.update();
+	}
+
+	public static boolean auroraMain(boolean integrated) {
+		Aurora.integrated = integrated;
+
+		GLFWErrorCallback.createPrint(System.err).set();
+
+		if (!glfwInit()) {
+			throw new IllegalStateException("Unable to initialize GLFW");
+		}
+
+		glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
+		glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+		glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
+		glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+		glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE);
+		window = glfwCreateWindow(1600, 900, Aurora.TITLE, MemoryUtil.NULL, MemoryUtil.NULL);
+
+		if (window == MemoryUtil.NULL) {
+			throw new RuntimeException("Failed to create the GLFW window");
+		}
 
 		try {
 			setIcons();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-	}
 
-	@Override
-	protected void initImGui(Configuration config) {
-		super.initImGui(config);
+		try (MemoryStack stack = MemoryStack.stackPush()) {
+			var pWidth = stack.mallocInt(1);
+			var pHeight = stack.mallocInt(1);
+
+			glfwGetWindowSize(window, pWidth, pHeight);
+			var vidmode = Objects.requireNonNull(glfwGetVideoMode(glfwGetPrimaryMonitor()));
+			glfwSetWindowPos(window, (vidmode.width() - pWidth.get(0)) / 2, (vidmode.height() - pHeight.get(0)) / 2);
+		}
+
+		glfwMakeContextCurrent(window);
+		GL.createCapabilities(true);
+		glfwSwapInterval(1);
+		glfwShowWindow(window);
+
+		glfwSetWindowSizeCallback(window, (long _, int _, int _) -> {
+			update();
+		});
+
+		ImGui.createContext();
+		imGuiGlfw.init(window, true);
+		imGuiGl3.init("#version 460 core");
+
 		ImGui.getIO().addConfigFlags(ImGuiConfigFlags.DockingEnable);
 
 		try (var stream = Util.getResource("NotoSans-Regular.ttf")) {
@@ -110,17 +152,42 @@ public final class EntryPoint extends Application {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-	}
 
-	@Override
-	public void process() {
-		ImGui.dockSpaceOverViewport();
-		aurora.update(this);
-	}
+		while (running) {
+			imGuiGl3.newFrame();
+			imGuiGlfw.newFrame();
+			ImGui.newFrame();
 
-	public static boolean auroraMain(boolean integrated) {
-		Aurora.integrated = integrated;
-		Application.launch(new EntryPoint());
+			ImGui.dockSpaceOverViewport();
+			update();
+
+			glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+
+			ImGui.render();
+			imGuiGl3.renderDrawData(ImGui.getDrawData());
+
+			if (ImGui.getIO().hasConfigFlags(ImGuiConfigFlags.ViewportsEnable)) {
+				final long backupCurrentContext = glfwGetCurrentContext();
+				ImGui.updatePlatformWindows();
+				ImGui.renderPlatformWindowsDefault();
+				glfwMakeContextCurrent(backupCurrentContext);
+			}
+
+			glfwSwapBuffers(window);
+			glfwPollEvents();
+			if (glfwWindowShouldClose(window)) running = false;
+		}
+
+		imGuiGl3.shutdown();
+		imGuiGlfw.shutdown();
+		ImGui.destroyContext();
+
+		Callbacks.glfwFreeCallbacks(window);
+		glfwDestroyWindow(window);
+		glfwTerminate();
+		Objects.requireNonNull(glfwSetErrorCallback(null)).free();
+
 		return Aurora.shouldLaunchThumper;
 	}
 

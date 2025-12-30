@@ -1,7 +1,5 @@
 package xyz.anthofoxo.aurora;
 
-import static org.lwjgl.glfw.GLFW.glfwSetWindowShouldClose;
-
 import java.awt.Desktop;
 import java.io.IOException;
 import java.net.URI;
@@ -10,7 +8,6 @@ import java.net.URISyntaxException;
 import org.lwjgl.util.tinyfd.TinyFileDialogs;
 
 import imgui.ImGui;
-import imgui.app.Application;
 import imgui.type.ImBoolean;
 import xyz.anthofoxo.aurora.gui.Hasher;
 import xyz.anthofoxo.aurora.gui.ModLauncher;
@@ -21,7 +18,6 @@ public class Aurora {
 
 	public static boolean integrated;
 	public static boolean shouldLaunchThumper = false;
-	public static boolean requestClose = false;
 	public static ImBoolean showUserGuideOnStartup = new ImBoolean(UserConfig.shouldShowGuide());
 	public static ImBoolean viewNewUserGuide = new ImBoolean(UserConfig.shouldShowGuide());
 
@@ -33,11 +29,7 @@ public class Aurora {
 	public Aurora() {
 	}
 
-	public void update(Application app) {
-		if (requestClose) {
-			glfwSetWindowShouldClose(app.getHandle(), true);
-		}
-
+	public void update() {
 		if (ImGui.beginMainMenuBar()) {
 
 			if (ImGui.beginMenu("File")) {
@@ -45,7 +37,7 @@ public class Aurora {
 				ImGui.menuItem("Preferences", null, viewSettings);
 
 				if (ImGui.menuItem("Quit")) {
-					glfwSetWindowShouldClose(app.getHandle(), true);
+					EntryPoint.running = false;
 				}
 
 				ImGui.endMenu();
