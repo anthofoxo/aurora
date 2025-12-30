@@ -1,14 +1,9 @@
 package xyz.anthofoxo.aurora;
 
-import java.awt.Desktop;
-import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
-
-import org.lwjgl.util.tinyfd.TinyFileDialogs;
-
 import imgui.ImGui;
 import imgui.type.ImBoolean;
+import xyz.anthofoxo.aurora.gui.GuiPreferences;
+import xyz.anthofoxo.aurora.gui.GuiUserGuide;
 import xyz.anthofoxo.aurora.gui.Hasher;
 import xyz.anthofoxo.aurora.gui.ModLauncher;
 import xyz.anthofoxo.aurora.gui.ObjlibDecomp;
@@ -18,10 +13,9 @@ public class Aurora {
 
 	public static boolean integrated;
 	public static boolean shouldLaunchThumper = false;
-	public static ImBoolean showUserGuideOnStartup = new ImBoolean(UserConfig.shouldShowGuide());
-	public static ImBoolean viewNewUserGuide = new ImBoolean(UserConfig.shouldShowGuide());
 
-	private ImBoolean viewSettings = new ImBoolean();
+	private GuiUserGuide userGuide = new GuiUserGuide();
+	private GuiPreferences preferences = new GuiPreferences();
 	private ImBoolean demo = new ImBoolean();
 	private Hasher hasher = new Hasher();
 	private ObjlibDecomp objlibDecomp = new ObjlibDecomp();
@@ -34,7 +28,7 @@ public class Aurora {
 
 			if (ImGui.beginMenu("File")) {
 
-				ImGui.menuItem("Preferences", null, viewSettings);
+				ImGui.menuItem("Preferences", null, preferences.visible);
 
 				if (ImGui.menuItem("Quit")) {
 					EntryPoint.running = false;
@@ -63,24 +57,10 @@ public class Aurora {
 			if (ImGui.beginMenu("Help")) {
 
 				if (ImGui.menuItem("Thumper / Aurora Documentation")) {
-					if (Desktop.isDesktopSupported()) {
-						Desktop desktop = Desktop.getDesktop();
-						if (desktop.isSupported(Desktop.Action.BROWSE)) {
-							try {
-								desktop.browse(new URI("https://anthofoxo.xyz/aurora/"));
-								System.out.println("Opened URL: https://anthofoxo.xyz/aurora/ in default browser.");
-							} catch (IOException | URISyntaxException e) {
-								e.printStackTrace();
-							}
-						} else {
-							System.err.println("Browse action is not supported on the current platform.");
-						}
-					} else {
-						System.err.println("Desktop API is not supported on the current platform.");
-					}
+					Util.openURL("https://anthofoxo.xyz/aurora/");
 				}
 
-				ImGui.menuItem("New User Guide", null, viewNewUserGuide);
+				ImGui.menuItem("New User Guide", null, userGuide.visible);
 
 				ImGui.endMenu();
 			}
@@ -88,102 +68,9 @@ public class Aurora {
 			ImGui.endMainMenuBar();
 		}
 
-		if (viewSettings.get()) {
-			if (ImGui.begin("Preferences", viewSettings)) {
-
-				if (ImGui.smallButton("Choose New Path")) {
-					UserConfig.properties.remove("thumper.path");
-					UserConfig.thumperPath();
-				}
-
-				ImGui.sameLine();
-
-				ImGui.textUnformatted(UserConfig.thumperPath());
-
-				ImGui.separatorText("Mod Search Paths");
-
-				int removeIdx = -1;
-
-				for (int i = 0; i < UserConfig.modPaths.size(); ++i) {
-					ImGui.pushID(i);
-					if (ImGui.smallButton("x")) removeIdx = i;
-					ImGui.sameLine();
-					ImGui.textUnformatted(UserConfig.modPaths.get(i));
-					ImGui.popID();
-				}
-
-				if (removeIdx != -1) {
-					UserConfig.modPaths.remove(removeIdx);
-					UserConfig.save();
-					ModLauncher.reloadList();
-				}
-
-				if (ImGui.button("Add Search Path")) {
-					String path = TinyFileDialogs.tinyfd_selectFolderDialog("Mod Search Path", null);
-
-					if (path != null) {
-						UserConfig.modPaths.add(path);
-						UserConfig.save();
-						ModLauncher.reloadList();
-					}
-
-				}
-
-			}
-			ImGui.end();
-		}
-
-		if (demo.get()) {
-			ImGui.showDemoWindow(demo);
-		}
-
-		if (viewNewUserGuide.get()) {
-			if (ImGui.begin("New User Guide", viewNewUserGuide)) {
-				ImGui.textWrapped(
-						"Welcome to Aurora, the new and fully featured mod loader for Thumper. If this is your first time then thank you for trying out Aurora.");
-
-				ImGui.separatorText("Speed Mofidier");
-				ImGui.textWrapped(
-						"Aurora allows you apply speed modifiers to any level, simply click on the custom level name and adjust the speed slider");
-
-				ImGui.separator();
-
-				ImGui.textWrapped(
-						"If we find any problems we will have some messages below to help assist in solving these problems. If these are not enough guidance then ask for help via discord. We are always happy to help!");
-
-				if (!Aurora.integrated) {
-					ImGui.separatorText("Aurora is running standalone instead of integrated");
-					ImGui.textWrapped(
-							"It seems you may have had trouble getting Aurora to run nativly with Thumper. Here's some tips to set that up.");
-					ImGui.bulletText(
-							"In the .zip you download there are two files: this .jar file, and a steam_api64.dll file");
-					ImGui.bulletText("Using steam browse the local files for Thumper");
-					ImGui.bulletText(
-							"Make sure a steam_api64.dll.bak exists. If not make a copy of steam_api64.dll and give it this name \"steam_api64.dll.bak\"");
-					ImGui.bulletText(
-							"Copy the contents of the .zip package directly next to THUMPER_win8.exe, confirm the file overwrite");
-					ImGui.bulletText(
-							"At this point aurora is integrated into thumper, You can simply launch thumper via steam to get the full feature set");
-				}
-
-				if (UserConfig.modPaths.isEmpty()) {
-					ImGui.separatorText("Levels cannot be found");
-					ImGui.textWrapped(
-							"You dont have any mod paths setup, aurora wont be able to find your custom levels!");
-					ImGui.textWrapped(
-							"Open the File > Preferences panel and add some search paths. You want to add the folder containing the levels. Not the level folder itself");
-					if (ImGui.button("Open Preferences")) viewSettings.set(true);
-				}
-
-				ImGui.separator();
-
-				if (ImGui.checkbox("Show User Guide on Startup", showUserGuideOnStartup)) {
-					UserConfig.setShowGuide(showUserGuideOnStartup.get());
-				}
-			}
-			ImGui.end();
-		}
-
+		if (demo.get()) ImGui.showDemoWindow(demo);
+		preferences.draw();
+		userGuide.draw(preferences);
 		ModLauncher.draw();
 		hasher.draw();
 		objlibDecomp.draw();

@@ -1,0 +1,60 @@
+package xyz.anthofoxo.aurora.gui;
+
+import org.lwjgl.util.tinyfd.TinyFileDialogs;
+
+import imgui.ImGui;
+import imgui.type.ImBoolean;
+import xyz.anthofoxo.aurora.UserConfig;
+
+public class GuiPreferences {
+	public ImBoolean visible = new ImBoolean(false);
+
+	public void draw() {
+		if (!visible.get()) return;
+
+		if (!ImGui.begin("Preferences", visible)) {
+			ImGui.end();
+		}
+
+		if (ImGui.smallButton("Choose New Path")) {
+			UserConfig.properties.remove("thumper.path");
+			UserConfig.thumperPath();
+		}
+
+		ImGui.sameLine();
+
+		ImGui.textUnformatted(UserConfig.thumperPath());
+
+		ImGui.separatorText("Mod Search Paths");
+
+		int removeIdx = -1;
+
+		for (int i = 0; i < UserConfig.modPaths.size(); ++i) {
+			ImGui.pushID(i);
+			if (ImGui.smallButton("x")) removeIdx = i;
+			ImGui.sameLine();
+			ImGui.textUnformatted(UserConfig.modPaths.get(i));
+			ImGui.popID();
+		}
+
+		if (removeIdx != -1) {
+			UserConfig.modPaths.remove(removeIdx);
+			UserConfig.save();
+			ModLauncher.reloadList();
+		}
+
+		if (ImGui.button("Add Search Path")) {
+			String path = TinyFileDialogs.tinyfd_selectFolderDialog("Mod Search Path", null);
+
+			if (path != null) {
+				UserConfig.modPaths.add(path);
+				UserConfig.save();
+				ModLauncher.reloadList();
+			}
+
+		}
+
+		ImGui.end();
+	}
+
+}
