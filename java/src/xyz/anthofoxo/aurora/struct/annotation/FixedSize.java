@@ -9,5 +9,5 @@ import java.lang.annotation.Target;
 @Retention(RUNTIME)
 @Target(ElementType.FIELD)
 public @interface FixedSize {
-	int count() default 1;
+	int count();
 }
