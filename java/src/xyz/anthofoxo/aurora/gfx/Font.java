@@ -11,17 +11,20 @@ import xyz.anthofoxo.aurora.EntryPoint;
 import xyz.anthofoxo.aurora.Util;
 
 public final class Font {
-	private Font() {
-	}
+	public static final float DEFAULT_SIZE = 18.0f;
+	public static final String DEFAULT = "default";
 
 	private static final ArrayList<byte[]> fontMemories = new ArrayList<>();
 	private static final HashMap<String, ImFont> fonts = new HashMap<>();
+
+	private Font() {
+	}
 
 	/**
 	 * Fonts MUST be registered at the start of the application. Given a resource
 	 * location, a string to identify this font later and a font size
 	 * 
-	 * @see EntryPoint#auroraMain(boolean)
+	 * @see EntryPoint#imGuiInit()
 	 */
 	public static void registerFont(String resource, String key, float size) {
 		try (var stream = Util.getResource("NotoSans-Regular.ttf")) {

@@ -37,8 +37,6 @@ public final class EntryPoint {
 	private EntryPoint() {
 	}
 
-	private static byte[] ttf;
-
 	private static ByteBuffer readResourceImagePixels(String resource, IntBuffer pWidth, IntBuffer pHeight)
 			throws IOException {
 		byte[] fileBytes = Util.getResourceBytes(resource);
@@ -105,6 +103,15 @@ public final class EntryPoint {
 		imGuiGl3.renderDrawData(ImGui.getDrawData());
 	}
 
+	private static void imGuiInit() {
+		ImGui.createContext();
+		imGuiGlfw.init(window, true);
+		imGuiGl3.init("#version 460 core");
+		ImGui.getIO().addConfigFlags(ImGuiConfigFlags.DockingEnable);
+		// The first registered font will be the default font
+		Font.registerFont("NotoSans-Regular.ttf", Font.DEFAULT, Font.DEFAULT_SIZE);
+	}
+
 	public static boolean auroraMain(boolean integrated) {
 		AuroraStub.integrated = integrated;
 
@@ -149,13 +156,7 @@ public final class EntryPoint {
 			update();
 		});
 
-		ImGui.createContext();
-		imGuiGlfw.init(window, true);
-		imGuiGl3.init("#version 460 core");
-
-		ImGui.getIO().addConfigFlags(ImGuiConfigFlags.DockingEnable);
-		Font.registerFont("NotoSans-Regular.ttf", "regular", 18.0f);
-
+		imGuiInit();
 		aurora = new Aurora();
 
 		while (running) {

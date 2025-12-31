@@ -8,7 +8,6 @@ import java.util.Stack;
 
 import xyz.anthofoxo.aurora.Hash;
 import xyz.anthofoxo.aurora.struct.annotation.RemoveFieldIfEnclosed;
-import xyz.anthofoxo.aurora.struct.comp.Comp;
 
 public class AuroraWriter {
 	private ArrayList<Byte> bytes = new ArrayList<>();
