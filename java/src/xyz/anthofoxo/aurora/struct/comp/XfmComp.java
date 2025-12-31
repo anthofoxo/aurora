@@ -2,7 +2,9 @@ package xyz.anthofoxo.aurora.struct.comp;
 
 import xyz.anthofoxo.aurora.Hash;
 import xyz.anthofoxo.aurora.struct.Transform;
+import xyz.anthofoxo.aurora.struct.annotation.KnownNativeName;
 
+@KnownNativeName
 public class XfmComp implements Comp {
 	/**
 	 * LE: EB 61 E7 84<br>

@@ -9,6 +9,8 @@ import xyz.anthofoxo.aurora.struct.comp.XfmComp;
 import xyz.anthofoxo.aurora.struct.comp._UnknownSkyboxComp;
 import xyz.anthofoxo.aurora.struct.experimental.UnknownSkyboxStruct;
 import xyz.anthofoxo.aurora.struct.experimental.UnknownSkyboxStruct.Grouping;
+import xyz.anthofoxo.aurora.struct.trait.TraitBucket;
+import xyz.anthofoxo.aurora.struct.trait.TraitLayer;
 
 public final class PrecompiledBin {
 	private PrecompiledBin() {
@@ -51,7 +53,7 @@ public final class PrecompiledBin {
 		s.comps = List.of(
 				new _UnknownSkyboxComp(0),
 				new EditStateComp(),
-				new DrawComp(8, true, "kNumDrawLayers", "kBucketTerrain"),
+				new DrawComp(8, true, TraitLayer.NumLayers, TraitBucket.Terrain),
 				new XfmComp("", "kConstraintParent", Transform.identityScaled(150, 150, 150))
 			);
 		// @formatter:on

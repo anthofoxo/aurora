@@ -4,7 +4,9 @@ import java.util.List;
 
 import xyz.anthofoxo.aurora.struct.ThumperStruct;
 import xyz.anthofoxo.aurora.struct.annotation.FixedSize;
+import xyz.anthofoxo.aurora.struct.annotation.UnknownNativeName;
 
+@UnknownNativeName
 public class _Mesh implements ThumperStruct {
 	public static int[] header() {
 		return new int[] { 15, 4 };
