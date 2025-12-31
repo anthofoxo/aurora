@@ -226,7 +226,9 @@ public class Tcle3 extends Target {
 			else if (objType.equals("Sample")) {
 				var sample = toSample(obj);
 				sample.pitch *= speedModifier;
-				sample.channelGroup = "sequin.ch";
+				if (speedModifier != 1.0f) {
+					sample.channelGroup = "sequin.ch";
+				}
 				writer.obj(sample);
 			} else if (objType.equals("Xfmer")) {
 				Xfmer xfm = new Xfmer();

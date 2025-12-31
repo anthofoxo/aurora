@@ -1,5 +1,9 @@
 package xyz.anthofoxo.aurora.gui;
 
+import java.awt.Desktop;
+import java.io.File;
+import java.io.IOException;
+
 import org.lwjgl.util.tinyfd.TinyFileDialogs;
 
 import imgui.ImGui;
@@ -32,6 +36,18 @@ public class GuiPreferences {
 		for (int i = 0; i < UserConfig.modPaths.size(); ++i) {
 			ImGui.pushID(i);
 			if (ImGui.smallButton("x")) removeIdx = i;
+
+			ImGui.sameLine();
+
+			if (ImGui.smallButton("Open")) {
+				try {
+					Desktop.getDesktop().open(new File(UserConfig.modPaths.get(i)));
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
+
 			ImGui.sameLine();
 			ImGui.textUnformatted(UserConfig.modPaths.get(i));
 			ImGui.popID();
