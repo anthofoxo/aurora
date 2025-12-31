@@ -1,8 +1,10 @@
 package xyz.anthofoxo.aurora.gfx;
 
-import static org.lwjgl.opengl.GL46C.*;
+import static org.lwjgl.opengl.GL11C.*;
 import static org.lwjgl.opengl.GL12C.GL_CLAMP_TO_EDGE;
 import static org.lwjgl.opengl.GL45C.*;
+import static org.lwjgl.opengl.GL46C.GL_MAX_TEXTURE_MAX_ANISOTROPY;
+import static org.lwjgl.opengl.GL46C.GL_TEXTURE_MAX_ANISOTROPY;
 import static org.lwjgl.stb.STBImage.stbi_image_free;
 import static org.lwjgl.stb.STBImage.stbi_load_from_memory;
 
@@ -17,6 +19,7 @@ import xyz.anthofoxo.aurora.Util;
 
 public class Texture implements AutoCloseable {
 	private int handle;
+	private float aspect;
 
 	public static Texture makeFromResource(String resource) {
 		try {
@@ -92,6 +95,8 @@ public class Texture implements AutoCloseable {
 
 		float maxAnisotropy = glGetFloat(GL_MAX_TEXTURE_MAX_ANISOTROPY);
 		glTextureParameterf(handle, GL_TEXTURE_MAX_ANISOTROPY, maxAnisotropy);
+
+		aspect = (float) width / (float) height;
 	}
 
 	public void upload(int level, int xoffset, int yoffset, int width, int height, int format, int type,
@@ -109,6 +114,10 @@ public class Texture implements AutoCloseable {
 
 	public int getHandle() {
 		return handle;
+	}
+
+	public float getAspect() {
+		return aspect;
 	}
 
 	@Override

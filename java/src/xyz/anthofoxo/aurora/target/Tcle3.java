@@ -2,6 +2,7 @@ package xyz.anthofoxo.aurora.target;
 
 import java.awt.Color;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -9,9 +10,12 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.lwjgl.system.MemoryUtil;
+
 import tools.jackson.databind.JsonNode;
 import xyz.anthofoxo.aurora.Hash;
 import xyz.anthofoxo.aurora.Util;
+import xyz.anthofoxo.aurora.gfx.Texture;
 import xyz.anthofoxo.aurora.struct.AuroraWriter;
 import xyz.anthofoxo.aurora.struct.EntitySpawner;
 import xyz.anthofoxo.aurora.struct.PrecompiledBin;
@@ -51,13 +55,22 @@ public class Tcle3 extends Target {
 	private List<Path> paths = new ArrayList<>();
 
 	public Tcle3(Path path) throws IOException {
-		super(path);
-
 		try (var stream = Files.walk(path)) {
 			for (var entry : stream.collect(Collectors.toList())) {
 				if (Files.isDirectory(entry)) continue;
 
-				if (".tcl".equals(getExtension(entry.toString()))) {
+				if (".png".equals(getExtension(entry.toString()))) {
+
+					var bytes = Files.readAllBytes(entry);
+					ByteBuffer buffer = MemoryUtil.memAlloc(bytes.length);
+
+					try {
+						buffer.put(0, bytes);
+						texture = Texture.makeFromPNG(buffer);
+					} finally {
+						MemoryUtil.memFree(buffer);
+					}
+				} else if (".tcl".equals(getExtension(entry.toString()))) {
 					tcl = TCLFile.parse(JSON_MAPPER.readTree(Files.readAllBytes(entry)));
 				}
 

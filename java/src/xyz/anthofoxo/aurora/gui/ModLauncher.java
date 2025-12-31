@@ -41,6 +41,12 @@ public class ModLauncher {
 	}
 
 	public static void reloadList() {
+		for (var element : customs) {
+			if (element instanceof Tcle3 target) {
+				if (target.texture != null) target.texture.close();
+			}
+		}
+
 		customs.clear();
 		selected = null;
 
@@ -75,7 +81,6 @@ public class ModLauncher {
 		if (ImGui.begin("Launcher", ImGuiWindowFlags.MenuBar)) {
 			if (ImGui.beginMenuBar()) {
 				if (ImGui.beginMenu("Level Listing")) {
-
 					ImGui.menuItem("Unlock All Levels", null, autoUnlockLevels);
 
 					ImGui.endMenu();

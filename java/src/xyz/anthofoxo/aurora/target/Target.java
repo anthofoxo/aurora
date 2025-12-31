@@ -1,31 +1,22 @@
 package xyz.anthofoxo.aurora.target;
 
 import java.io.IOException;
-import java.nio.file.Path;
 import java.util.HashMap;
 
 import imgui.type.ImBoolean;
 import tools.jackson.core.json.JsonReadFeature;
 import tools.jackson.databind.json.JsonMapper;
+import xyz.anthofoxo.aurora.gfx.Texture;
 import xyz.anthofoxo.aurora.tml.TCLFile;
 
 public abstract class Target {
 	public static final JsonMapper JSON_MAPPER = JsonMapper.builder()
 			.configure(JsonReadFeature.ALLOW_SINGLE_QUOTES, true).build();
 
-	/**
-	 * When a target is initialized, files must be iterated in order to determine
-	 * compatibility, its recommended to load all files into memory until
-	 * compilation time
-	 */
-	public Target(Path path) {
-		this.path = path;
-	}
-
 	public TCLFile tcl;
-	public Path path;
 	public ImBoolean enabled = new ImBoolean(true);
 	public int[] speedModifier = new int[] { 100 };
+	public Texture texture;
 
 	public static class CompiledTarget {
 		public HashMap<String, byte[]> pcFiles = new HashMap<>();
