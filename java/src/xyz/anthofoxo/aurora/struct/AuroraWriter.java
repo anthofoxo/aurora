@@ -8,6 +8,7 @@ import java.util.Stack;
 
 import xyz.anthofoxo.aurora.Hash;
 import xyz.anthofoxo.aurora.struct.annotation.RemoveFieldIfEnclosed;
+import xyz.anthofoxo.aurora.struct.comp.Comp;
 
 public class AuroraWriter {
 	private ArrayList<Byte> bytes = new ArrayList<>();
@@ -139,7 +140,7 @@ public class AuroraWriter {
 						throw new IllegalStateException("Failed to parse");
 					}
 				} else {
-					throw new IllegalStateException("Failed to parse");
+					throw new IllegalStateException("Failed to parse " + value.getClass());
 				}
 			} catch (IllegalArgumentException | IllegalAccessException e) {
 				e.printStackTrace();

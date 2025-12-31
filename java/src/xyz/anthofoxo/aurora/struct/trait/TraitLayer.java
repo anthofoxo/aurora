@@ -1,9 +1,10 @@
 package xyz.anthofoxo.aurora.struct.trait;
 
+import xyz.anthofoxo.aurora.struct.ThumperStruct;
 import xyz.anthofoxo.aurora.struct.annotation.UnknownNativeName;
 
 @UnknownNativeName
-public class TraitLayer {
+public class TraitLayer implements ThumperStruct {
 	public static final TraitLayer World = new TraitLayer("kLayerWorld");
 	public static final TraitLayer UI = new TraitLayer("kLayerUI");
 	public static final TraitLayer NumLayers = new TraitLayer("kNumDrawLayers");

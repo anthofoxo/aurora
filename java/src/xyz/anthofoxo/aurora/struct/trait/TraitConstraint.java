@@ -1,9 +1,10 @@
 package xyz.anthofoxo.aurora.struct.trait;
 
+import xyz.anthofoxo.aurora.struct.ThumperStruct;
 import xyz.anthofoxo.aurora.struct.annotation.UnknownNativeName;
 
 @UnknownNativeName
-public class TraitConstraint {
+public class TraitConstraint implements ThumperStruct {
 	public static final TraitConstraint Parent = new TraitConstraint("kConstraintParent");
 	public static final TraitConstraint Billboard = new TraitConstraint("kConstraintBillboard");
 	public static final TraitConstraint Skybox = new TraitConstraint("kConstraintSkybox");

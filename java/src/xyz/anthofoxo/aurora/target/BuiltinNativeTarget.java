@@ -14,6 +14,28 @@ import xyz.anthofoxo.aurora.struct.Sample;
 import xyz.anthofoxo.aurora.tml.TCLFile;
 
 public class BuiltinNativeTarget extends Target {
+	private static final String[] objlibs = { Integer.toHexString(Hash.fnv1a("Alevels/demo.objlib")),
+			Integer.toHexString(Hash.fnv1a("Alevels/level2/level_2a.objlib")),
+			Integer.toHexString(Hash.fnv1a("Alevels/level3/level_3a.objlib")),
+			Integer.toHexString(Hash.fnv1a("Alevels/level4/level_4a.objlib")),
+			Integer.toHexString(Hash.fnv1a("Alevels/level5/level_5a.objlib")),
+			Integer.toHexString(Hash.fnv1a("Alevels/level6/level_6.objlib")),
+			Integer.toHexString(Hash.fnv1a("Alevels/level7/level_7a.objlib")),
+			Integer.toHexString(Hash.fnv1a("Alevels/level8/level_8a.objlib")),
+			Integer.toHexString(Hash.fnv1a("Alevels/level9/level_9a.objlib")), };
+
+	private static final String[] secs = { Integer.toHexString(Hash.fnv1a("Alevels/demo.sec")),
+			Integer.toHexString(Hash.fnv1a("Alevels/level2/level_2a.sec")),
+			Integer.toHexString(Hash.fnv1a("Alevels/level3/level_3a.sec")),
+			Integer.toHexString(Hash.fnv1a("Alevels/level4/level_4a.sec")),
+			Integer.toHexString(Hash.fnv1a("Alevels/level5/level_5a.sec")),
+			Integer.toHexString(Hash.fnv1a("Alevels/level6/level_6.sec")),
+			Integer.toHexString(Hash.fnv1a("Alevels/level7/level_7a.sec")),
+			Integer.toHexString(Hash.fnv1a("Alevels/level8/level_8a.sec")),
+			Integer.toHexString(Hash.fnv1a("Alevels/level9/level_9a.sec")), };
+
+	private static final float[] bpms = { 320, 340, 360, 380, 400, 420, 440, 460, 480, };
+
 	private byte[] objlib;
 	private byte[] sec;
 	private String key;
@@ -21,29 +43,10 @@ public class BuiltinNativeTarget extends Target {
 
 	public BuiltinNativeTarget(int levelidx) throws IOException {
 
+		// Level 1 has a slightly different footer offset
 		if (levelidx == 0) {
 			footerOffset -= 1;
 		}
-
-		String[] objlibs = { Integer.toHexString(Hash.fnv1a("Alevels/demo.objlib")),
-				Integer.toHexString(Hash.fnv1a("Alevels/level2/level_2a.objlib")),
-				Integer.toHexString(Hash.fnv1a("Alevels/level3/level_3a.objlib")),
-				Integer.toHexString(Hash.fnv1a("Alevels/level4/level_4a.objlib")),
-				Integer.toHexString(Hash.fnv1a("Alevels/level5/level_5a.objlib")),
-				Integer.toHexString(Hash.fnv1a("Alevels/level6/level_6.objlib")),
-				Integer.toHexString(Hash.fnv1a("Alevels/level7/level_7a.objlib")),
-				Integer.toHexString(Hash.fnv1a("Alevels/level8/level_8a.objlib")),
-				Integer.toHexString(Hash.fnv1a("Alevels/level9/level_9a.objlib")), };
-
-		String[] secs = { Integer.toHexString(Hash.fnv1a("Alevels/demo.sec")),
-				Integer.toHexString(Hash.fnv1a("Alevels/level2/level_2a.sec")),
-				Integer.toHexString(Hash.fnv1a("Alevels/level3/level_3a.sec")),
-				Integer.toHexString(Hash.fnv1a("Alevels/level4/level_4a.sec")),
-				Integer.toHexString(Hash.fnv1a("Alevels/level5/level_5a.sec")),
-				Integer.toHexString(Hash.fnv1a("Alevels/level6/level_6.sec")),
-				Integer.toHexString(Hash.fnv1a("Alevels/level7/level_7a.sec")),
-				Integer.toHexString(Hash.fnv1a("Alevels/level8/level_8a.sec")),
-				Integer.toHexString(Hash.fnv1a("Alevels/level9/level_9a.sec")), };
 
 		this.key = String.format("level%d", levelidx + 1);
 		this.objlib = Files.readAllBytes(Path.of(UserConfig.thumperPath() + "/cache/" + objlibs[levelidx] + ".pc"));
@@ -54,7 +57,7 @@ public class BuiltinNativeTarget extends Target {
 
 		tcl = new TCLFile();
 		tcl.author = "Drool";
-		tcl.bpm = 100;
+		tcl.bpm = bpms[levelidx];
 		tcl.description = "Builtin Thumper Level";
 		tcl.difficulty = "?";
 		tcl.levelName = String.format("Level %d", levelidx + 1);
@@ -127,6 +130,9 @@ public class BuiltinNativeTarget extends Target {
 		floatBits |= (compiled.objlib[compiled.objlib.length - offset - 1] & 0xFF) << 24;
 
 		float bpm = Float.intBitsToFloat(floatBits);
+
+		System.out.println(bpm);
+
 		bpm *= speedModifier;
 		floatBits = Float.floatToRawIntBits(bpm);
 
