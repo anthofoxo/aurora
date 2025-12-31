@@ -106,7 +106,7 @@ public final class EntryPoint {
 	}
 
 	public static boolean auroraMain(boolean integrated) {
-		Aurora.integrated = integrated;
+		AuroraStub.integrated = integrated;
 
 		GLFWErrorCallback.createPrint(System.err).set();
 
@@ -191,7 +191,7 @@ public final class EntryPoint {
 		glfwTerminate();
 		Objects.requireNonNull(glfwSetErrorCallback(null)).free();
 
-		return Aurora.shouldLaunchThumper;
+		return AuroraStub.shouldLaunchThumper;
 	}
 
 	public static void main(String[] args) {

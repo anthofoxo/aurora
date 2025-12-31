@@ -11,9 +11,6 @@ import xyz.anthofoxo.aurora.gui.ObjlibDecomp;
 public class Aurora {
 	public static final String TITLE = "Aurora v0.2.0-a.1+WIP";
 
-	public static boolean integrated;
-	public static boolean shouldLaunchThumper = false;
-
 	private GuiUserGuide userGuide = new GuiUserGuide();
 	private GuiPreferences preferences = new GuiPreferences();
 	private ImBoolean demo = new ImBoolean();

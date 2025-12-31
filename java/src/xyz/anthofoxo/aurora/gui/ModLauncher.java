@@ -11,7 +11,7 @@ import imgui.ImGui;
 import imgui.ImGuiTextFilter;
 import imgui.flag.ImGuiWindowFlags;
 import imgui.type.ImBoolean;
-import xyz.anthofoxo.aurora.Aurora;
+import xyz.anthofoxo.aurora.AuroraStub;
 import xyz.anthofoxo.aurora.EntryPoint;
 import xyz.anthofoxo.aurora.Hash;
 import xyz.anthofoxo.aurora.UserConfig;
@@ -203,7 +203,7 @@ public class ModLauncher {
 
 			ImGui.sameLine();
 
-			String text = Aurora.integrated ? "Launch Thumper" : "Build Mods";
+			String text = AuroraStub.integrated ? "Launch Thumper" : "Build Mods";
 
 			if (ImGui.button(text)) {
 
@@ -246,15 +246,15 @@ public class ModLauncher {
 
 				}
 
-				if (Aurora.integrated) {
-					Aurora.shouldLaunchThumper = true;
+				if (AuroraStub.integrated) {
+					AuroraStub.shouldLaunchThumper = true;
 					EntryPoint.running = false;
 				}
 			}
 
 			ImGui.sameLine();
 
-			if (Aurora.integrated) {
+			if (AuroraStub.integrated) {
 				ImGui.text("Aurora is running in integrated mode. All features are enabled");
 			} else {
 				ImGui.text("Aurora is running in standalone mode. Some features wil be disabled");

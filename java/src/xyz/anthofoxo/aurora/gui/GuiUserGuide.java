@@ -2,7 +2,7 @@ package xyz.anthofoxo.aurora.gui;
 
 import imgui.ImGui;
 import imgui.type.ImBoolean;
-import xyz.anthofoxo.aurora.Aurora;
+import xyz.anthofoxo.aurora.AuroraStub;
 import xyz.anthofoxo.aurora.UserConfig;
 
 public class GuiUserGuide {
@@ -29,7 +29,7 @@ public class GuiUserGuide {
 		ImGui.textWrapped(
 				"If we find any problems we will have some messages below to help assist in solving these problems. If these are not enough guidance then ask for help via discord. We are always happy to help!");
 
-		if (!Aurora.integrated) {
+		if (!AuroraStub.integrated) {
 			ImGui.separatorText("Aurora is running standalone instead of integrated");
 			ImGui.textWrapped(
 					"It seems you may have had trouble getting Aurora to run nativly with Thumper. Here's some tips to set that up.");
