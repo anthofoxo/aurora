@@ -20,11 +20,11 @@ import org.lwjgl.system.MemoryStack;
 import org.lwjgl.system.MemoryUtil;
 import org.lwjgl.system.libc.LibCStdlib;
 
-import imgui.ImFontConfig;
 import imgui.ImGui;
 import imgui.flag.ImGuiConfigFlags;
 import imgui.gl3.ImGuiImplGl3;
 import imgui.glfw.ImGuiImplGlfw;
+import xyz.anthofoxo.aurora.gfx.Font;
 
 public final class EntryPoint {
 	public static boolean running = true;
@@ -154,15 +154,7 @@ public final class EntryPoint {
 		imGuiGl3.init("#version 460 core");
 
 		ImGui.getIO().addConfigFlags(ImGuiConfigFlags.DockingEnable);
-
-		try (var stream = Util.getResource("NotoSans-Regular.ttf")) {
-			ttf = stream.readAllBytes();
-			ImFontConfig cfg = new ImFontConfig();
-			cfg.setFontDataOwnedByAtlas(false);
-			ImGui.getIO().getFonts().addFontFromMemoryTTF(ttf, 18.0f, cfg);
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
+		Font.registerFont("NotoSans-Regular.ttf", "regular", 18.0f);
 
 		aurora = new Aurora();
 
