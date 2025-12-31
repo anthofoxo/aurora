@@ -11,7 +11,9 @@ extra_css:
 nav:
   - Home: index.md
   - Aurora:
-    - "User Installation Guide": aurora/user_install_guide.md
+    - User Guide:
+      - "Installation Guide": aurora/user_install_guide.md
+      - "Reloading Levels": aurora/user_level_reload.md
     - "Developer Installation and Setup Guide": aurora/dev_setup_guide.md
   - Thumper:
     - Introduction: thumper/index.md
