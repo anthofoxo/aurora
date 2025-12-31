@@ -6,6 +6,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.zip.ZipException;
 
 import imgui.ImGui;
 import imgui.ImGuiTextFilter;
@@ -18,6 +19,7 @@ import xyz.anthofoxo.aurora.UserConfig;
 import xyz.anthofoxo.aurora.struct.AuroraReader;
 import xyz.anthofoxo.aurora.struct.AuroraWriter;
 import xyz.anthofoxo.aurora.struct.LevelListingFile;
+import xyz.anthofoxo.aurora.target.BuiltinNativeTarget;
 import xyz.anthofoxo.aurora.target.Target;
 import xyz.anthofoxo.aurora.target.Tcle3;
 import xyz.anthofoxo.aurora.target.TcleArtifact;
@@ -35,6 +37,7 @@ public class ModLauncher {
 	private static ImBoolean isModModeEnabled = new ImBoolean(true);
 	private static ImGuiTextFilter filter = new ImGuiTextFilter();
 	private static ImBoolean autoUnlockLevels = new ImBoolean(true);
+	private static ImBoolean enableCampaignLevels = new ImBoolean(false);
 
 	static {
 		reloadList();
@@ -75,12 +78,30 @@ public class ModLauncher {
 				e.printStackTrace();
 			}
 		}
+
+		if (enableCampaignLevels.get()) {
+			for (int i = 0; i < 9; ++i) {
+				try {
+					BuiltinNativeTarget target = new BuiltinNativeTarget(i);
+					target.enabled.set(UserConfig.isModEnabled(target.tcl.levelName));
+					customs.add(target);
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+
+		}
 	}
 
 	public static void draw() {
 		if (ImGui.begin("Launcher", ImGuiWindowFlags.MenuBar)) {
 			if (ImGui.beginMenuBar()) {
 				if (ImGui.beginMenu("Level Listing")) {
+
+					if (ImGui.menuItem("Enable Campaign Levels", null, enableCampaignLevels)) {
+						reloadList();
+					}
+
 					ImGui.menuItem("Unlock All Levels", null, autoUnlockLevels);
 
 					ImGui.endMenu();
