@@ -109,12 +109,10 @@ public final class EntryPoint {
 		imGuiGl3.init("#version 460 core");
 		ImGui.getIO().addConfigFlags(ImGuiConfigFlags.DockingEnable);
 		// The first registered font will be the default font
-		Font.registerFont("NotoSans-Regular.ttf", Font.DEFAULT, Font.DEFAULT_SIZE);
+		Font.registerFont("NotoSans-Regular.ttf", Font.DEFAULT_NAME, Font.DEFAULT_SIZE);
 	}
 
-	public static boolean auroraMain(boolean integrated) {
-		AuroraStub.integrated = integrated;
-
+	public static void auroraMain() {
 		GLFWErrorCallback.createPrint(System.err).set();
 
 		if (!glfwInit()) {
@@ -188,11 +186,9 @@ public final class EntryPoint {
 		glfwDestroyWindow(window);
 		glfwTerminate();
 		Objects.requireNonNull(glfwSetErrorCallback(null)).free();
-
-		return AuroraStub.shouldLaunchThumper;
 	}
 
 	public static void main(String[] args) {
-		auroraMain(false);
+		auroraMain();
 	}
 }

@@ -171,6 +171,33 @@ static void spawnAurora() {
 	jobject systemCl = env->CallStaticObjectMethod(clClass, getSystemCL);
 	jclass classLoaderClass = env->GetObjectClass(systemCl);
 	jmethodID loadClass = env->GetMethodID(classLoaderClass, "loadClass", "(Ljava/lang/String;)Ljava/lang/Class;");
+
+	jstring auroraStubClassName = env->NewStringUTF("xyz.anthofoxo.aurora.AuroraStub");
+	jclass auroraStubClass = (jclass)env->CallObjectMethod(systemCl, loadClass, auroraStubClassName);
+	checkJavaException(env);
+
+	if (auroraStubClass == NULL) {
+		jvm->DestroyJavaVM();
+		FreeLibrary(jniModule);
+		gWantThumperLaunch = true;
+		return;
+	}
+
+	// Set the integrated field to true
+	{
+		jfieldID fieldid = env->GetStaticFieldID(auroraStubClass, "integrated", "Z");
+		checkJavaException(env);
+
+		if (fieldid == NULL) {
+			jvm->DestroyJavaVM();
+			FreeLibrary(jniModule);
+			gWantThumperLaunch = true;
+			return;
+		}
+
+		env->SetStaticBooleanField(auroraStubClass, fieldid, true);
+	}
+
 	jstring name = env->NewStringUTF("xyz.anthofoxo.aurora.EntryPoint");
 	jclass clazz = (jclass)env->CallObjectMethod(systemCl, loadClass, name);
 	checkJavaException(env);
@@ -181,7 +208,7 @@ static void spawnAurora() {
 		return;
 	}
 
-	jmethodID mid = env->GetStaticMethodID(clazz, "auroraMain", "(Z)Z");
+	jmethodID mid = env->GetStaticMethodID(clazz, "auroraMain", "()V");
 	checkJavaException(env);
 
 	if (mid == NULL) {
@@ -191,8 +218,25 @@ static void spawnAurora() {
 		return;
 	}
 
-	// 1 indicates that this is running in standalone mode
-	gWantThumperLaunch = env->CallStaticBooleanMethod(clazz, mid, jboolean(1));
+	env->CallStaticVoidMethod(clazz, mid);
+	checkJavaException(env);
+
+	// Aurora has returned, fetch the wantLaunchThumperFlag from vm
+	{
+		jfieldID fieldid = env->GetStaticFieldID(auroraStubClass, "shouldLaunchThumper", "Z");
+		checkJavaException(env);
+
+		if (fieldid == NULL) {
+			jvm->DestroyJavaVM();
+			FreeLibrary(jniModule);
+			gWantThumperLaunch = true;
+			return;
+		}
+
+		gWantThumperLaunch = env->GetStaticBooleanField(auroraStubClass, fieldid);
+	}
+
+	env->DeleteLocalRef(auroraStubClass);
 	checkJavaException(env);
 
 	env->DeleteLocalRef(clazz);

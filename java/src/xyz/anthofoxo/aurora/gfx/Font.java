@@ -12,7 +12,7 @@ import xyz.anthofoxo.aurora.Util;
 
 public final class Font {
 	public static final float DEFAULT_SIZE = 18.0f;
-	public static final String DEFAULT = "default";
+	public static final String DEFAULT_NAME = "default";
 
 	private static final ArrayList<byte[]> fontMemories = new ArrayList<>();
 	private static final HashMap<String, ImFont> fonts = new HashMap<>();

@@ -46,6 +46,8 @@ public class TMLBuilder {
 
 		System.out.println("Preparing target compilation...");
 
+		int totalTargets = 0;
+
 		for (var entry : levels) {
 			if (!entry.enabled.get()) continue;
 
@@ -66,6 +68,7 @@ public class TMLBuilder {
 			});
 
 			futures.add(future);
+			totalTargets++;
 		}
 
 		System.out.println("Waiting for targets to complete...");
@@ -80,7 +83,7 @@ public class TMLBuilder {
 				e.printStackTrace();
 			}
 			completed++;
-			System.out.format("%d%%\n", (int) (completed / levels.size() * 100.0f));
+			System.out.format("%d%%\n", (int) (completed / totalTargets * 100.0f));
 		}
 
 		executor.shutdown();
