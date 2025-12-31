@@ -1,13 +1,30 @@
 package xyz.anthofoxo.aurora;
 
 import java.awt.Desktop;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.URL;
+import java.nio.file.FileSystem;
+import java.nio.file.FileSystems;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.Collections;
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class Util {
 	public static InputStream getResource(String resource) {
+		try {
+			return new FileInputStream(resource);
+		} catch (FileNotFoundException e) {
+		}
+
 		return Util.class.getClassLoader().getResourceAsStream(resource);
 	}
 
@@ -39,6 +56,36 @@ public class Util {
 			e.printStackTrace();
 			return false;
 		}
+	}
 
+	public static List<Path> getAllFilesFromResourceDirectory(String directoryPath)
+			throws URISyntaxException, IOException {
+		URL url = Util.class.getClassLoader().getResource(directoryPath);
+		if (url == null) {
+			throw new IllegalArgumentException("Resource directory not found: " + directoryPath);
+		}
+
+		URI uri = url.toURI();
+		Path dirPath;
+		FileSystem fileSystem = null;
+
+		if ("jar".equals(uri.getScheme())) {
+			fileSystem = FileSystems.newFileSystem(uri, Collections.<String, Object>emptyMap());
+			dirPath = fileSystem.getPath(directoryPath);
+		} else {
+			dirPath = Paths.get(uri);
+		}
+
+		List<Path> files;
+
+		try (Stream<Path> walk = Files.walk(dirPath)) {
+			files = walk.filter(Files::isRegularFile).collect(Collectors.toList());
+		} finally {
+			if (fileSystem != null) {
+				fileSystem.close();
+			}
+		}
+
+		return files;
 	}
 }

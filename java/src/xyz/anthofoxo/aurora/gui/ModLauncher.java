@@ -11,6 +11,7 @@ import imgui.ImGui;
 import imgui.ImGuiTextFilter;
 import imgui.flag.ImGuiWindowFlags;
 import imgui.type.ImBoolean;
+import xyz.anthofoxo.aurora.Aurora;
 import xyz.anthofoxo.aurora.AuroraStub;
 import xyz.anthofoxo.aurora.EntryPoint;
 import xyz.anthofoxo.aurora.Hash;
@@ -159,6 +160,25 @@ public class ModLauncher {
 							ImGui.sameLine();
 							if (ImGui.selectable(custom.tcl.levelName, custom == selected)) {
 								selected = custom;
+							}
+
+							if (custom.tcl.difficulty != null && !custom.tcl.difficulty.isEmpty()) {
+
+								String match = custom.tcl.difficulty.toLowerCase() + "_small.png";
+
+								var texture = Aurora.icons.get(match);
+
+								if (texture != null) {
+									// ImGui.sameLine();
+									float size = ImGui.getFrameHeight();
+									float offset = ImGui.getContentRegionAvailX() - size
+											- ImGui.getStyle().getItemSpacingX() - ImGui.getStyle().getFramePaddingX();
+
+									ImGui.sameLine(ImGui.getCursorPosX() + offset, ImGui.getStyle().getItemSpacingX());
+
+									ImGui.image(texture.getHandle(), size, size);
+
+								}
 							}
 
 							ImGui.popID();

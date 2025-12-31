@@ -1,7 +1,13 @@
 package xyz.anthofoxo.aurora;
 
+import java.io.IOException;
+import java.net.URISyntaxException;
+import java.util.HashMap;
+import java.util.Map;
+
 import imgui.ImGui;
 import imgui.type.ImBoolean;
+import xyz.anthofoxo.aurora.gfx.Texture;
 import xyz.anthofoxo.aurora.gui.GuiPreferences;
 import xyz.anthofoxo.aurora.gui.GuiUserGuide;
 import xyz.anthofoxo.aurora.gui.Hasher;
@@ -17,7 +23,20 @@ public class Aurora {
 	private Hasher hasher = new Hasher();
 	private ObjlibDecomp objlibDecomp = new ObjlibDecomp();
 
+	public static Map<String, Texture> icons = new HashMap<>();
+
 	public Aurora() {
+
+		try {
+			var list = Util.getAllFilesFromResourceDirectory("difficulty_icons");
+
+			for (var item : list) {
+				icons.put(item.getFileName().toString(), Texture.makeFromResource(item.toString()));
+			}
+		} catch (URISyntaxException | IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 
 	public void update() {
