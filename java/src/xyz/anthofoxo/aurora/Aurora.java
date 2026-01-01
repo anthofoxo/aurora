@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import imgui.ImGui;
+import imgui.ImVec2;
 import imgui.type.ImBoolean;
 import xyz.anthofoxo.aurora.gfx.Texture;
 import xyz.anthofoxo.aurora.gui.GuiPreferences;

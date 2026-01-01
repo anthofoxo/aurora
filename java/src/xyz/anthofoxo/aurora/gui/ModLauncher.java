@@ -110,7 +110,8 @@ public class ModLauncher {
 		}
 	}
 
-	public static void draw() {
+	public static void draw() {	
+		ImGui.pushStyleVar(ImGuiStyleVar.FrameRounding, 6);
 		if (ImGui.begin("Launcher", ImGuiWindowFlags.MenuBar)) {
 			if (ImGui.beginMenuBar()) {
 				if (ImGui.beginMenu("Options")) {
@@ -156,13 +157,14 @@ public class ModLauncher {
 
 			}
 			ImGui.sameLine();
-			ImGui.pushFont(Font.getFont("defaultsmall"));
+			ImGui.pushFont(Font.getFont("defaultsmall")); 
 			ImGui.text("Any levels found in the listed paths will appear in the level list below.");
 			ImGui.popFont();
 
 			int removeIdx = -1;
 
 			for (int i = 0; i < UserConfig.modPaths.size(); ++i) {
+				ImGui.pushStyleVar(ImGuiStyleVar.ItemSpacing, new ImVec2(3f, 3f));
 				var buttonremove = Aurora.buttonicons.get("icon-remove.png");
 				ImGui.pushID(i);
 				ImGui.pushStyleColor(ImGuiCol.Button, new ImVec4(0.4f, 0, 0, 1));
@@ -181,6 +183,7 @@ public class ModLauncher {
 						e.printStackTrace();
 					}
 				}
+				ImGui.popStyleVar();
 
 				ImGui.sameLine();
 				ImGui.pushFont(Font.getFont("consolas"));
@@ -204,8 +207,22 @@ public class ModLauncher {
 			/// Mod list and search
 			/// 
 			ImGui.separatorText("Custom Level List");
+			ImGui.pushStyleVar(ImGuiStyleVar.ItemSpacing, new ImVec2(-257f, 5f));
+			ImGui.pushStyleVar(ImGuiStyleVar.ItemInnerSpacing, new ImVec2(20f, 5f));
 			filter.draw("Filter level names (prefix '-' to exclude)", ImGui.getWindowWidth() / 3);
+			ImGui.popStyleVar();
+			
+			ImGui.sameLine();
+			ImGui.pushStyleColor(ImGuiCol.Button, new ImVec4(0.4f, 0, 0, 1));
+			ImGui.pushStyleColor(ImGuiCol.ButtonHovered, new ImVec4(1f, 0, 0, 1));
+			if (ImGui.button("X")) {
+				filter.setInputBuffer("");
+				filter.build();
+			}
+			ImGui.popStyleColor(2);
+			ImGui.popStyleVar();
 
+			ImGui.pushStyleVar(ImGuiStyleVar.ItemSpacing, new ImVec2(3f, 3f));
 			ImGui.pushStyleColor(ImGuiCol.Button, new ImVec4(0, 0.4f, 0, 1));
 			ImGui.pushStyleColor(ImGuiCol.ButtonHovered, new ImVec4(0, 1f, 0, 1));
 			if (ImGui.button("Select All")) {
@@ -231,9 +248,25 @@ public class ModLauncher {
 			if (ImGui.checkbox("Show Selected Only", showselected)) {
 				showselected = !showselected;
 			}
+			ImGui.popStyleVar();
 			
 			ImGui.sameLine();
+			ImGui.pushStyleVar(ImGuiStyleVar.ItemSpacing, new ImVec2(3f, 5f));
 			ImGui.text("         Sort:");
+			ImGui.sameLine();
+			ImGui.pushStyleColor(ImGuiCol.Button, new ImVec4(0.4f, 0, 0.4f, 1));
+			ImGui.pushStyleColor(ImGuiCol.ButtonHovered, new ImVec4(1f, 0, 1f, 1));
+			if (ImGui.button("Name")) {
+				namesortorder = !namesortorder;
+				Collections.sort(customs, new Comparator<Target>() {
+					  public int compare(Target obj1, Target obj2) {
+						  if (namesortorder)
+							  return obj1.tcl.levelName.toUpperCase().compareTo(obj2.tcl.levelName.toUpperCase());
+						  else
+							  return obj2.tcl.levelName.toUpperCase().compareTo(obj1.tcl.levelName.toUpperCase());
+					  }
+				});
+			}
 			ImGui.sameLine();
 			if (ImGui.button("Rank")) {
 				ranksortorder = !ranksortorder;
@@ -246,18 +279,8 @@ public class ModLauncher {
 					  }
 				});
 			}
-			ImGui.sameLine();
-			if (ImGui.button("Name")) {
-				namesortorder = !namesortorder;
-				Collections.sort(customs, new Comparator<Target>() {
-					  public int compare(Target obj1, Target obj2) {
-						  if (namesortorder)
-							  return obj1.tcl.levelName.toUpperCase().compareTo(obj2.tcl.levelName.toUpperCase());
-						  else
-							  return obj2.tcl.levelName.toUpperCase().compareTo(obj1.tcl.levelName.toUpperCase());
-					  }
-				});
-			}
+			ImGui.popStyleColor(2);
+			ImGui.popStyleVar();
 
 			ImGui.separator();
 
@@ -274,7 +297,7 @@ public class ModLauncher {
 					if (ImGui.beginChild("Mod Listing")) {
 						int id = 0;
 						for (var custom : customs) {
-							if (!filter.passFilter(custom.tcl.levelName)) continue;
+							if (!filter.passFilter(custom.tcl.levelName) && !filter.passFilter(custom.tcl.author) && !filter.passFilter(custom.tcl.author.replace(" ", "")) && !filter.passFilter(custom.tcl.author.replace("-", ""))) continue;
 							if (showselected && !custom.enabled.get()) continue;
 
 							ImGui.pushID(id++);
@@ -345,11 +368,22 @@ public class ModLauncher {
 							ImGui.separator();
 							ImGui.popStyleColor();
 							
-							ImGui.textUnformatted("Author: " + selected.tcl.author);
+							ImGui.textUnformatted("Author:");
+							String[] authors = selected.tcl.author.replace(" ", "").split(",");
+							for (var author : authors) {
+								ImGui.sameLine();
+								if (ImGui.button(author)) {
+									filter.setInputBuffer(author);
+									filter.build();
+								}
+							}
+							
 							ImGui.text("Difficulty: " + selected.tcl.difficulty);
 
 							ImGui.text(selected.tcl.bpm + " BPM");
+							
 							ImGui.text(selected.tcl.sections.size() + " Sublevels");
+							
 							ImGui.text(" ");
 							ImGui.textWrapped("Description:\n" + selected.tcl.description);
 
@@ -368,6 +402,8 @@ public class ModLauncher {
 							//buttons to quick change speed modifier
 							var sizew = 48;
 							var sizeh = 25;
+							ImGui.pushStyleVar(ImGuiStyleVar.ItemSpacing, new ImVec2(3f, 3f));
+							
 							ImGui.pushStyleColor(ImGuiCol.Button, new ImVec4(0, 0.4f, 0, 1));
 							ImGui.pushStyleColor(ImGuiCol.ButtonHovered, new ImVec4(0, 1f, 0, 1));
 							if (ImGui.button("0.25x", sizew, sizeh)) {
@@ -409,8 +445,8 @@ public class ModLauncher {
 								selected.speedModifier[0] = 300;
 							}
 							ImGui.popStyleColor(2);
-							ImGui.sameLine();
 
+							ImGui.popStyleVar();
 						}
 					}
 					ImGui.endChild();
@@ -494,6 +530,7 @@ public class ModLauncher {
 			}
 
 		}
+		ImGui.popStyleVar();
 		ImGui.end();
 	}
 }
