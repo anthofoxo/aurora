@@ -16,6 +16,7 @@ import xyz.anthofoxo.aurora.AuroraStub;
 import xyz.anthofoxo.aurora.EntryPoint;
 import xyz.anthofoxo.aurora.Hash;
 import xyz.anthofoxo.aurora.UserConfig;
+import xyz.anthofoxo.aurora.gfx.Texture;
 import xyz.anthofoxo.aurora.struct.AuroraReader;
 import xyz.anthofoxo.aurora.struct.AuroraWriter;
 import xyz.anthofoxo.aurora.struct.LevelListingFile;
@@ -162,11 +163,16 @@ public class ModLauncher {
 								selected = custom;
 							}
 
-							if (custom.tcl.difficulty != null && !custom.tcl.difficulty.isEmpty()) {
+							{
+								Texture texture = null;
 
-								String match = custom.tcl.difficulty.toLowerCase() + "_small.png";
+								if (custom.tcl.difficulty != null && !custom.tcl.difficulty.isEmpty()) {
+									texture = Aurora.icons.get(custom.tcl.difficulty.toLowerCase() + "_small.png");
+								}
 
-								var texture = Aurora.icons.get(match);
+								if (texture == null) {
+									texture = Aurora.icons.get("dx_small.png");
+								}
 
 								if (texture != null) {
 									// ImGui.sameLine();
