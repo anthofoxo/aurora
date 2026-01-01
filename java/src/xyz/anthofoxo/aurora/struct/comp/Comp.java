@@ -37,7 +37,7 @@ public interface Comp extends ThumperStruct {
 		else if (hash == DrawComp.HASH) return in.obj(DrawComp.class);
 		else if (hash == EditStateComp.HASH) return in.obj(EditStateComp.class);
 		else if (hash == XfmComp.HASH) return in.obj(XfmComp.class);
-		else if (hash == _UnknownSkyboxComp.HASH) return in.obj(_UnknownSkyboxComp.class);
+		else if (hash == PollComp.HASH) return in.obj(PollComp.class);
 		else throw new IllegalStateException("Unknown comp type");
 	}
 

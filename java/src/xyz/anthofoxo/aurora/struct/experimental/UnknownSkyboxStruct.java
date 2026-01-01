@@ -9,7 +9,7 @@ import xyz.anthofoxo.aurora.struct.comp.Comp;
 import xyz.anthofoxo.aurora.struct.comp.DrawComp;
 import xyz.anthofoxo.aurora.struct.comp.EditStateComp;
 import xyz.anthofoxo.aurora.struct.comp.XfmComp;
-import xyz.anthofoxo.aurora.struct.comp._UnknownSkyboxComp;
+import xyz.anthofoxo.aurora.struct.comp.PollComp;
 
 public class UnknownSkyboxStruct implements ThumperStruct {
 
@@ -40,7 +40,7 @@ public class UnknownSkyboxStruct implements ThumperStruct {
 	public List<Grouping> groupings;
 
 	/**
-	 * Skyboxes typically have {@link _UnknownSkyboxComp}, {@link EditStateComp},
+	 * Skyboxes typically have {@link PollComp}, {@link EditStateComp},
 	 * {@link DrawComp}, and {@link XfmComp}
 	 */
 	public List<Comp> comps;

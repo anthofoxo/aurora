@@ -82,6 +82,11 @@ public class SequinLeaf implements ThumperStruct {
 
 			return d;
 		}
+
+		@Override
+		public String toString() {
+			return String.format("%.1f : %s", beat, data.toString());
+		}
 	}
 
 	public static class Trait implements ThumperStruct {

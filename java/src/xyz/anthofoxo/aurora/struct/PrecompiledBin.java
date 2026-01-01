@@ -6,7 +6,7 @@ import java.util.List;
 import xyz.anthofoxo.aurora.struct.comp.DrawComp;
 import xyz.anthofoxo.aurora.struct.comp.EditStateComp;
 import xyz.anthofoxo.aurora.struct.comp.XfmComp;
-import xyz.anthofoxo.aurora.struct.comp._UnknownSkyboxComp;
+import xyz.anthofoxo.aurora.struct.comp.PollComp;
 import xyz.anthofoxo.aurora.struct.experimental.UnknownSkyboxStruct;
 import xyz.anthofoxo.aurora.struct.experimental.UnknownSkyboxStruct.Grouping;
 import xyz.anthofoxo.aurora.struct.trait.TraitBucket;
@@ -51,7 +51,7 @@ public final class PrecompiledBin {
 				new Grouping(List.of(new SequinGate.ParamPath(0xC8FD3CD7, -1)), "kTraitBool", true)
 			);
 		s.comps = List.of(
-				new _UnknownSkyboxComp(0),
+				new PollComp(0),
 				new EditStateComp(),
 				new DrawComp(8, true, TraitLayer.NumLayers, TraitBucket.Terrain),
 				new XfmComp("", "kConstraintParent", Transform.identityScaled(150, 150, 150))
