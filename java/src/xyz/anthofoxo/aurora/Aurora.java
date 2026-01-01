@@ -21,9 +21,10 @@ public class Aurora {
 	private GuiPreferences preferences = new GuiPreferences();
 	private ImBoolean demo = new ImBoolean();
 	private Hasher hasher = new Hasher();
-	private ObjlibDecomp objlibDecomp = new ObjlibDecomp();
+	//private ObjlibDecomp objlibDecomp = new ObjlibDecomp();
 
 	public static Map<String, Texture> icons = new HashMap<>();
+	public static Map<String, Texture> buttonicons = new HashMap<>();
 
 	public Aurora() {
 
@@ -32,6 +33,10 @@ public class Aurora {
 
 			for (var item : list) {
 				icons.put(item.getFileName().toString(), Texture.makeFromResource(item.toString()));
+			}
+			list = Util.getAllFilesFromResourceDirectory("button_icons");
+			for (var item : list) {
+				buttonicons.put(item.getFileName().toString(), Texture.makeFromResource(item.toString()));
 			}
 		} catch (URISyntaxException | IOException e) {
 			// TODO Auto-generated catch block
@@ -55,7 +60,7 @@ public class Aurora {
 
 			if (ImGui.beginMenu("Tools")) {
 				ImGui.menuItem("Hasher", null, hasher.visible);
-				ImGui.menuItem("Objlib Decomp Tool", null, objlibDecomp.visible);
+				//ImGui.menuItem("Objlib Decomp Tool", null, objlibDecomp.visible);
 				ImGui.separator();
 				ImGui.menuItem("Dear ImGui Demo", null, demo);
 
@@ -89,6 +94,6 @@ public class Aurora {
 		userGuide.draw(preferences);
 		ModLauncher.draw();
 		hasher.draw();
-		objlibDecomp.draw();
+		//objlibDecomp.draw();
 	}
 }
