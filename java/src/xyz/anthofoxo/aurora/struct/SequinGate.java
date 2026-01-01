@@ -40,7 +40,7 @@ public class SequinGate implements ThumperStruct {
 		return new int[] { 26, 4 };
 	}
 
-	@FixedSize(count = 4)
+	@FixedSize(count = 2)
 	public int[] header;
 	public List<Comp> comps;
 	public String entitySpawnerName;

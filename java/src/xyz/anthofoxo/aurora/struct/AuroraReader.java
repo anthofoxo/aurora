@@ -103,6 +103,12 @@ public class AuroraReader {
 		return values;
 	}
 
+	public float[] f32arr(int count) {
+		float[] values = new float[count];
+		for (int i = 0; i < count; ++i) values[i] = f32();
+		return values;
+	}
+
 	public List<String> strlist() {
 		int count = i32();
 		List<String> values = new ArrayList<String>();
@@ -124,106 +130,127 @@ public class AuroraReader {
 
 		enclosing.push(clazz);
 
-		// We are trying to read the generic Comp superclass, the thumper binary only
-		// stores exacts and we need runtime calls for this
-		if (Comp.class.equals(clazz)) {
-			return clazz.cast(Comp.read(this)); // this cast is safe
-		}
+		try {
+			// Does class provide custom override?, if so then invoke it
+			try {
+				var method = clazz.getMethod("in", AuroraReader.class);
 
-		// This is a 1 field enum struct
-		if (clazz.isEnum()) {
-			int count = 0;
-			Type fieldType = null;
-			for (var field : clazz.getFields()) {
-				if (Modifier.isStatic(field.getModifiers())) continue;
-				++count;
-				fieldType = field.getType();
-			}
-
-			if (count != 1) {
-				throw new IllegalStateException("enum has more than one non static field");
-			}
-
-			if (int.class.equals(fieldType)) {
 				try {
-					Method method = clazz.getMethod("fromValue", int.class);
-					return (T) method.invoke(null, i32());
-				} catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
+					return clazz.cast(method.invoke(null, this));
+				} catch (IllegalAccessException | InvocationTargetException e) {
 					e.printStackTrace();
 				}
+			} catch (NoSuchMethodException e) {
 			}
-		}
 
-		T instance = null;
-		try {
-			instance = clazz.getConstructor().newInstance();
-		} catch (InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException
-				| NoSuchMethodException e) {
-			e.printStackTrace();
-		}
+			// Is this a comp base class?
+			// We are trying to read the generic Comp superclass, the thumper binary only
+			// stores exacts and we need runtime calls for this
+			if (Comp.class.equals(clazz)) {
+				return clazz.cast(Comp.read(this)); // this cast is safe
 
-		Objects.requireNonNull(instance);
+			}
 
-		for (var field : clazz.getFields()) {
-			if (Modifier.isStatic(field.getModifiers())) continue;
-			var type = field.getType();
+			// This is a 1 field enum struct
+			if (clazz.isEnum()) {
+				int count = 0;
+				Type fieldType = null;
+				for (var field : clazz.getFields()) {
+					if (Modifier.isStatic(field.getModifiers())) continue;
+					++count;
+					fieldType = field.getType();
+				}
 
-			var removalAnnotation = field.getAnnotation(RemoveFieldIfEnclosed.class);
-			if (removalAnnotation != null) {
-				boolean ignoreField = false;
+				if (count != 1) {
+					throw new IllegalStateException("enum has more than one non static field");
+				}
 
-				for (var itCtx : enclosing) {
-					if (itCtx.equals(removalAnnotation.clazz())) {
-						ignoreField = true;
-						break;
+				if (int.class.equals(fieldType)) {
+					try {
+						Method method = clazz.getMethod("fromValue", int.class);
+						return (T) method.invoke(null, i32());
+					} catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
+						e.printStackTrace();
+					}
+				}
+			}
+
+			T instance = null;
+			try {
+				instance = clazz.getConstructor().newInstance();
+			} catch (InstantiationException | IllegalAccessException | IllegalArgumentException
+					| InvocationTargetException | NoSuchMethodException e) {
+				e.printStackTrace();
+			}
+
+			Objects.requireNonNull(instance);
+
+			nextfield: for (var field : clazz.getFields()) {
+				if (Modifier.isStatic(field.getModifiers())) continue;
+				var type = field.getType();
+
+				var removalAnnotation = field.getAnnotation(RemoveFieldIfEnclosed.class);
+				if (removalAnnotation != null) {
+					boolean ignoreField = false;
+
+					for (var itCtx : enclosing) {
+						if (itCtx.equals(removalAnnotation.clazz())) {
+							ignoreField = true;
+							break;
+						}
+
 					}
 
+					if (ignoreField) {
+						// If this field shouldnt be written then do not write it
+						continue nextfield;
+					}
 				}
 
-				if (ignoreField) {
-					// If this field shouldnt be written then do not write it
-					continue;
-				}
-			}
+				try {
+					if (boolean.class.equals(type)) field.setBoolean(instance, bool());
+					else if (byte.class.equals(type)) field.setByte(instance, i8());
+					else if (int.class.equals(type)) field.setInt(instance, i32());
+					else if (float.class.equals(type)) field.setFloat(instance, f32());
+					else if (String.class.equals(type)) field.set(instance, str());
 
-			try {
-				if (boolean.class.equals(type)) field.setBoolean(instance, bool());
-				else if (byte.class.equals(type)) field.setByte(instance, i8());
-				else if (int.class.equals(type)) field.setInt(instance, i32());
-				else if (float.class.equals(type)) field.setFloat(instance, f32());
-				else if (String.class.equals(type)) field.set(instance, str());
-				else if (byte[].class.equals(type))
-					field.set(instance, i8arr(field.getAnnotation(FixedSize.class).count()));
-				else if (int[].class.equals(type))
-					field.set(instance, i32arr(field.getAnnotation(FixedSize.class).count()));
-				else if (ThumperStruct.class.isAssignableFrom(type))
-					field.set(instance, obj((Class<? extends ThumperStruct>) field.getType()));
-				else if (List.class.isAssignableFrom(type)) {
+					else if (byte[].class.equals(type))
+						field.set(instance, i8arr(field.getAnnotation(FixedSize.class).count()));
+					else if (float[].class.equals(type))
+						field.set(instance, f32arr(field.getAnnotation(FixedSize.class).count()));
+					else if (int[].class.equals(type))
+						field.set(instance, i32arr(field.getAnnotation(FixedSize.class).count()));
+					else if (ThumperStruct.class.isAssignableFrom(type))
+						field.set(instance, obj((Class<? extends ThumperStruct>) field.getType()));
+					else if (List.class.isAssignableFrom(type)) {
 
-					var genericType = field.getGenericType();
+						var genericType = field.getGenericType();
 
-					if (genericType instanceof ParameterizedType pt) {
-						var arg = pt.getActualTypeArguments()[0];
+						if (genericType instanceof ParameterizedType pt) {
+							var arg = pt.getActualTypeArguments()[0];
 
-						if (String.class.equals(arg)) {
-							field.set(instance, strlist());
-						} else if (arg instanceof Class<?> c && ThumperStruct.class.isAssignableFrom(c)) {
-							field.set(instance, objlist((Class<? extends ThumperStruct>) c));
+							if (String.class.equals(arg)) {
+								field.set(instance, strlist());
+							} else if (arg instanceof Class<?> c && ThumperStruct.class.isAssignableFrom(c)) {
+								field.set(instance, objlist((Class<? extends ThumperStruct>) c));
+							}
+						} else {
+							throw new IllegalStateException("Failed to parse");
 						}
 					} else {
 						throw new IllegalStateException("Failed to parse");
 					}
-				} else {
-					throw new IllegalStateException("Failed to parse");
+				} catch (IllegalArgumentException | IllegalAccessException e) {
+					e.printStackTrace();
 				}
-			} catch (IllegalArgumentException | IllegalAccessException e) {
-				e.printStackTrace();
 			}
+
+			return instance;
+
+		} finally {
+			enclosing.pop();
 		}
 
-		enclosing.pop();
-
-		return instance;
 	}
 
 	public String cstr() {

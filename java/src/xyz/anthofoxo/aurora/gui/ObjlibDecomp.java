@@ -11,19 +11,29 @@ import imgui.type.ImBoolean;
 import imgui.type.ImString;
 import xyz.anthofoxo.aurora.UserConfig;
 import xyz.anthofoxo.aurora.struct.AuroraReader;
+import xyz.anthofoxo.aurora.struct.EntitySpawner;
 import xyz.anthofoxo.aurora.struct.LibraryImport;
 import xyz.anthofoxo.aurora.struct.LibraryObject;
 import xyz.anthofoxo.aurora.struct.ObjectDeclaration;
 import xyz.anthofoxo.aurora.struct.Sample;
+import xyz.anthofoxo.aurora.struct.SequinDrawer;
+import xyz.anthofoxo.aurora.struct.SequinGate;
 import xyz.anthofoxo.aurora.struct.SequinGate.ParamPath;
+import xyz.anthofoxo.aurora.struct.SequinLeaf;
+import xyz.anthofoxo.aurora.struct.SequinLevel;
+import xyz.anthofoxo.aurora.struct.SequinMaster;
+import xyz.anthofoxo.aurora.struct.Tex2D;
+import xyz.anthofoxo.aurora.struct.Xfmer;
 import xyz.anthofoxo.aurora.struct.annotation.FixedSize;
 import xyz.anthofoxo.aurora.struct.comp.Comp;
+import xyz.anthofoxo.aurora.struct.comp.DrawComp;
 import xyz.anthofoxo.aurora.struct.experimental.UnknownSkyboxStruct;
 import xyz.anthofoxo.aurora.struct.experimental.UnknownSkyboxStruct.Grouping;
 
 public class ObjlibDecomp {
 	public ImBoolean visible = new ImBoolean(false);
-	private ImString input = new ImString(UserConfig.thumperPath() + "/cache/673863f9.pc", 512);
+	// C:\Program Files (x86)\Steam\steamapps\common\Thumper/cache/b2455736.pc
+	private ImString input = new ImString(UserConfig.thumperPath() + "/cache/b2455736.pc", 512);
 	private String error = "";
 
 	public static class ObjlibLevel {
@@ -102,6 +112,42 @@ public class ObjlibDecomp {
 		}
 		level._endskyboxoffset = in.position();
 
+		quit_reading: for (var declaration : level.objectDeclarations) {
+			switch (declaration.type) {
+			case SequinLeaf:
+				level.defs.add(in.obj(SequinLeaf.class));
+				break;
+			case SequinMaster:
+				level.defs.add(in.obj(SequinMaster.class));
+				break;
+			case SequinDrawer:
+				level.defs.add(in.obj(SequinDrawer.class));
+				break;
+			case SequinLevel:
+				level.defs.add(in.obj(SequinLevel.class));
+				break;
+			case Sample:
+				level.defs.add(in.obj(Sample.class));
+				break;
+			case EntitySpawner:
+				level.defs.add(in.obj(EntitySpawner.class));
+				break;
+			case SequinGate:
+				level.defs.add(in.obj(SequinGate.class));
+				break;
+			case Tex2D:
+				level.defs.add(in.obj(Tex2D.class));
+				break;
+			case Xfmer:
+				level.defs.add(in.obj(Xfmer.class));
+				break;
+			default:
+				System.err.println("We dont know how to read: " + declaration.name + " at offset "
+						+ Integer.toHexString(in.position()) + "; further reading is cancelled");
+				break quit_reading;
+			}
+		}
+
 	}
 
 	private void drawParsed() {
@@ -140,7 +186,15 @@ public class ObjlibDecomp {
 
 						ImGui.separator();
 						for (int itComp = 0; itComp < s.comps.size(); ++itComp) {
+							var comp = s.comps.get(itComp);
+
 							ImGui.text(s.comps.get(itComp).getClass().getName());
+
+							if (comp instanceof DrawComp c) {
+								ImGui.text(c.bucket.toString());
+								ImGui.text(c.layer.toString());
+							}
+
 						}
 
 					}
