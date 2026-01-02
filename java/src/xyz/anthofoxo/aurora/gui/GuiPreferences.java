@@ -10,11 +10,14 @@ import imgui.ImGui;
 import imgui.type.ImBoolean;
 import xyz.anthofoxo.aurora.UserConfig;
 
-public class GuiPreferences {
-	public ImBoolean visible = new ImBoolean(false);
+public final class GuiPreferences {
+	private GuiPreferences() {
+	}
+
+	public static ImBoolean visible = new ImBoolean(false);
 	public static ImBoolean unlockPractice = new ImBoolean(UserConfig.isUnlockPractice());
 
-	public void draw() {
+	public static void draw() {
 		if (!visible.get()) return;
 
 		if (!ImGui.begin("Preferences", visible)) {
@@ -50,7 +53,6 @@ public class GuiPreferences {
 				try {
 					Desktop.getDesktop().open(new File(UserConfig.modPaths.get(i)));
 				} catch (IOException e) {
-					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
 			}
@@ -79,5 +81,4 @@ public class GuiPreferences {
 
 		ImGui.end();
 	}
-
 }

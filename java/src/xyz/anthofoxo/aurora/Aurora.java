@@ -18,7 +18,6 @@ public class Aurora {
 	public static final String TITLE = "Aurora v0.2.0-a.1+WIP";
 
 	private GuiUserGuide userGuide = new GuiUserGuide();
-	private GuiPreferences preferences = new GuiPreferences();
 	private ImBoolean demo = new ImBoolean();
 	private Hasher hasher = new Hasher();
 	private ObjlibDecomp objlibDecomp = new ObjlibDecomp();
@@ -49,7 +48,7 @@ public class Aurora {
 
 			if (ImGui.beginMenu("File")) {
 
-				ImGui.menuItem("Preferences", null, preferences.visible);
+				ImGui.menuItem("Preferences", null, GuiPreferences.visible);
 
 				if (ImGui.menuItem("Quit")) {
 					EntryPoint.running = false;
@@ -90,8 +89,8 @@ public class Aurora {
 		}
 
 		if (demo.get()) ImGui.showDemoWindow(demo);
-		preferences.draw();
-		userGuide.draw(preferences);
+		GuiPreferences.draw();
+		userGuide.draw();
 		ModLauncher.draw();
 		hasher.draw();
 		objlibDecomp.draw();
