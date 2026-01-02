@@ -101,6 +101,7 @@ public final class EntryPoint {
 
 		ImGui.render();
 		imGuiGl3.renderDrawData(ImGui.getDrawData());
+		glfwSwapBuffers(window);
 	}
 
 	private static void imGuiInit() {
@@ -158,6 +159,7 @@ public final class EntryPoint {
 		});
 
 		imGuiInit();
+
 		aurora = new Aurora();
 
 		while (running) {
@@ -171,7 +173,6 @@ public final class EntryPoint {
 				glfwMakeContextCurrent(backupCurrentContext);
 			}
 
-			glfwSwapBuffers(window);
 			glfwPollEvents();
 			if (glfwWindowShouldClose(window)) running = false;
 		}
