@@ -153,7 +153,7 @@ public final class EntryPoint {
 		glfwSwapInterval(1);
 		glfwShowWindow(window);
 
-		glfwSetWindowRefreshCallback(window, (long _a) -> {
+		glfwSetWindowRefreshCallback(window, (long _) -> {
 			update();
 		});
 

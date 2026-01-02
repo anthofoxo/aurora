@@ -6,7 +6,6 @@ import java.util.HashMap;
 import java.util.Map;
 
 import imgui.ImGui;
-import imgui.ImVec2;
 import imgui.type.ImBoolean;
 import xyz.anthofoxo.aurora.gfx.Texture;
 import xyz.anthofoxo.aurora.gui.GuiPreferences;
@@ -22,7 +21,7 @@ public class Aurora {
 	private GuiPreferences preferences = new GuiPreferences();
 	private ImBoolean demo = new ImBoolean();
 	private Hasher hasher = new Hasher();
-	//private ObjlibDecomp objlibDecomp = new ObjlibDecomp();
+	private ObjlibDecomp objlibDecomp = new ObjlibDecomp();
 
 	public static Map<String, Texture> icons = new HashMap<>();
 	public static Map<String, Texture> buttonicons = new HashMap<>();
@@ -61,7 +60,7 @@ public class Aurora {
 
 			if (ImGui.beginMenu("Tools")) {
 				ImGui.menuItem("Hasher", null, hasher.visible);
-				//ImGui.menuItem("Objlib Decomp Tool", null, objlibDecomp.visible);
+				ImGui.menuItem("Objlib Decomp Tool", null, objlibDecomp.visible);
 				ImGui.separator();
 				ImGui.menuItem("Dear ImGui Demo", null, demo);
 
@@ -95,6 +94,6 @@ public class Aurora {
 		userGuide.draw(preferences);
 		ModLauncher.draw();
 		hasher.draw();
-		//objlibDecomp.draw();
+		objlibDecomp.draw();
 	}
 }
