@@ -21,7 +21,7 @@ public interface Comp extends ThumperStruct {
 	 * When this is invoked, is is guarenteed to be loading a class of *exactly*
 	 * Comp meaning the runtime type was erased
 	 */
-	public static Comp read(AuroraReader in) {
+	public static Comp in(AuroraReader in) {
 		// Read the hash header
 		var currentPos = in.position();
 		int hash = in.i32();

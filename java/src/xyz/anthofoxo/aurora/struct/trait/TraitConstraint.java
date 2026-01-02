@@ -1,25 +1,19 @@
 package xyz.anthofoxo.aurora.struct.trait;
 
+import xyz.anthofoxo.aurora.parse.AuroraReader;
+import xyz.anthofoxo.aurora.parse.AuroraWriter;
 import xyz.anthofoxo.aurora.struct.ThumperStruct;
 import xyz.anthofoxo.aurora.struct.annotation.UnknownNativeName;
 
 @UnknownNativeName
-public class TraitConstraint implements ThumperStruct {
-	public static final TraitConstraint Parent = new TraitConstraint("kConstraintParent");
-	public static final TraitConstraint Billboard = new TraitConstraint("kConstraintBillboard");
-	public static final TraitConstraint Skybox = new TraitConstraint("kConstraintSkybox");
+public enum TraitConstraint implements ThumperStruct {
+	kConstraintParent, kConstraintBillboard, kConstraintSkybox;
 
-	public String value;
-
-	public TraitConstraint() {
+	public static TraitConstraint in(AuroraReader in) {
+		return valueOf(in.cstr());
 	}
 
-	public TraitConstraint(String value) {
-		this.value = value;
-	}
-
-	@Override
-	public String toString() {
-		return value;
+	public static void out(AuroraWriter out, TraitConstraint v) {
+		out.str(v.name());
 	}
 }

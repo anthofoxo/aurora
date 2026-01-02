@@ -42,13 +42,4 @@ public enum DeclarationType implements ThumperStruct {
 	private DeclarationType(int value) {
 		this.value = value;
 	}
-
-	public static DeclarationType fromValue(int value) {
-		for (DeclarationType t : values()) {
-			if (t.value == value) {
-				return t;
-			}
-		}
-		throw new IllegalArgumentException("Unknown DeclarationType value: " + Integer.toHexString(value));
-	}
 }

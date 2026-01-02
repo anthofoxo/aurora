@@ -1,10 +1,8 @@
 package xyz.anthofoxo.aurora.parse;
 
 import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -14,7 +12,6 @@ import java.util.Stack;
 import xyz.anthofoxo.aurora.struct.ThumperStruct;
 import xyz.anthofoxo.aurora.struct.annotation.FixedSize;
 import xyz.anthofoxo.aurora.struct.annotation.RemoveFieldIfEnclosed;
-import xyz.anthofoxo.aurora.struct.comp.Comp;
 
 public class AuroraReader {
 	public byte[] bytes;
@@ -160,38 +157,6 @@ public class AuroraReader {
 					e.printStackTrace();
 				}
 			} catch (NoSuchMethodException e) {
-			}
-
-			// Is this a comp base class?
-			// We are trying to read the generic Comp superclass, the thumper binary only
-			// stores exacts and we need runtime calls for this
-			if (Comp.class.equals(clazz)) {
-				return clazz.cast(Comp.read(this)); // this cast is safe
-
-			}
-
-			// This is a 1 field enum struct
-			if (clazz.isEnum()) {
-				int count = 0;
-				Type fieldType = null;
-				for (var field : clazz.getFields()) {
-					if (Modifier.isStatic(field.getModifiers())) continue;
-					++count;
-					fieldType = field.getType();
-				}
-
-				if (count != 1) {
-					throw new IllegalStateException("enum has more than one non static field");
-				}
-
-				if (int.class.equals(fieldType)) {
-					try {
-						Method method = clazz.getMethod("fromValue", int.class);
-						return (T) method.invoke(null, i32());
-					} catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
-						e.printStackTrace();
-					}
-				}
 			}
 
 			T instance = null;

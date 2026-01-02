@@ -54,7 +54,7 @@ public final class PrecompiledBin {
 		s.comps = List.of(
 				new PollComp(0),
 				new EditStateComp(),
-				new DrawComp(8, true, TraitLayer.NumLayers, TraitBucket.Terrain),
+				new DrawComp(8, true, TraitLayer.kNumDrawLayers, TraitBucket.kBucketTerrain),
 				new XfmComp("", "kConstraintParent", Transform.identityScaled(150, 150, 150))
 			);
 		// @formatter:on
