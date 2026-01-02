@@ -54,11 +54,15 @@ public class UserConfig {
 		save();
 	}
 
+	public static boolean tinyfdOpen = false;
+
 	public static String thumperPath() {
 		var prop = properties.getProperty("thumper.path");
 		if (prop != null) return prop;
 
+		tinyfdOpen = true;
 		String v = tinyfd_openFileDialog("Select Thumper Executable", null, null, null, false);
+		tinyfdOpen = false;
 		if (v == null) return null;
 
 		v = Path.of(v).getParent().toString();

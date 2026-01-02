@@ -15,7 +15,7 @@ import xyz.anthofoxo.aurora.gui.ModLauncher;
 import xyz.anthofoxo.aurora.gui.ObjlibDecomp;
 
 public class Aurora {
-	public static final String TITLE = "Aurora v0.2.0-a.1";
+	public static final String TITLE = "Aurora v0.2.0-a.2";
 
 	private GuiUserGuide userGuide = new GuiUserGuide();
 	private ImBoolean demo = new ImBoolean();
