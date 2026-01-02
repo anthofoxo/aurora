@@ -181,10 +181,9 @@ public final class EntryPoint {
 		imGuiGlfw.shutdown();
 		ImGui.destroyContext();
 
-		// Free the textures
-		for (var icon : Aurora.icons.values()) {
-			icon.close();
-		}
+		Aurora.icons.values().forEach(e -> e.close());
+		Aurora.textures.values().forEach(e -> e.close());
+		Aurora.buttonicons.values().forEach(e -> e.close());
 
 		Callbacks.glfwFreeCallbacks(window);
 		glfwDestroyWindow(window);
