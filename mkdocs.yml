@@ -21,3 +21,6 @@ nav:
       - "What We Know about Drool's Editor": thumper/drools_editor.md
       - "Overall File Structure": thumper/overall_structure.md
       - "Objlib Structure": thumper/objlib_structure.md
+      - "Level Objlib Structure": thumper/level_objlib_structure.md
+    - Data Types:
+      - Basic Data Types: thumper/basic_types.md
