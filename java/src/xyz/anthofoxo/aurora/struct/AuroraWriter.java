@@ -1,5 +1,6 @@
 package xyz.anthofoxo.aurora.struct;
 
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
 import java.util.ArrayList;
@@ -35,6 +36,17 @@ public class AuroraWriter {
 		i8((byte) ((v >>> 24) & 0xFF));
 	}
 
+	public void i64(long v) {
+		i8((byte) (v & 0xFF));
+		i8((byte) ((v >>> 8) & 0xFF));
+		i8((byte) ((v >>> 16) & 0xFF));
+		i8((byte) ((v >>> 24) & 0xFF));
+		i8((byte) ((v >>> 32) & 0xFF));
+		i8((byte) ((v >>> 40) & 0xFF));
+		i8((byte) ((v >>> 48) & 0xFF));
+		i8((byte) ((v >>> 56) & 0xFF));
+	}
+
 	public void f32(float v) {
 		i32(Float.floatToRawIntBits(v));
 	}
@@ -66,87 +78,107 @@ public class AuroraWriter {
 
 	@SuppressWarnings("unchecked")
 	public <T extends ThumperStruct> void obj(T value) {
-
 		enclosing.push(value.getClass());
 
-		for (var field : value.getClass().getFields()) {
-			if (Modifier.isStatic(field.getModifiers())) continue;
+		try {
 
-			var removalAnnotation = field.getAnnotation(RemoveFieldIfEnclosed.class);
-			if (removalAnnotation != null) {
-				boolean ignoreField = false;
+			// Does class provide custom override?, if so then invoke it
+			try {
+				var clazz = value.getClass();
 
-				for (var itCtx : enclosing) {
-					if (itCtx.equals(removalAnnotation.clazz())) {
-						ignoreField = true;
-						break;
-					}
+				var method = clazz.getMethod("out", AuroraWriter.class, clazz);
 
+				try {
+					clazz.cast(method.invoke(null, this, value));
+					return;
+				} catch (IllegalAccessException | InvocationTargetException e) {
+					e.printStackTrace();
 				}
-
-				if (ignoreField) {
-					// If this field shouldnt be written then do not write it
-					continue;
-				}
+			} catch (NoSuchMethodException e) {
 			}
 
-			var type = field.getType();
+			for (var field : value.getClass().getFields()) {
+				if (Modifier.isStatic(field.getModifiers())) continue;
 
-			try {
-				// Generic object
-				if (Object.class.equals(type)) {
-					var fieldValue = field.get(value);
+				var removalAnnotation = field.getAnnotation(RemoveFieldIfEnclosed.class);
+				if (removalAnnotation != null) {
+					boolean ignoreField = false;
 
-					if (fieldValue instanceof Boolean b) {
-						bool(b);
-					} else if (fieldValue instanceof Integer b) {
-						i32(b);
-					} else if (fieldValue instanceof String b) {
-						str(b);
-					} else {
-						throw new IllegalStateException();
+					for (var itCtx : enclosing) {
+						if (itCtx.equals(removalAnnotation.clazz())) {
+							ignoreField = true;
+							break;
+						}
+
+					}
+
+					if (ignoreField) {
+						// If this field shouldnt be written then do not write it
+						continue;
 					}
 				}
 
-				else if (boolean.class.equals(type)) bool(field.getBoolean(value));
-				else if (Boolean.class.equals(type)) bool(Boolean.class.cast(field.getBoolean(value)));
-				else if (byte.class.equals(type)) i8(field.getByte(value));
-				else if (Byte.class.equals(type)) i8(Byte.class.cast(field.getByte(value)));
-				else if (int.class.equals(type)) i32(field.getInt(value));
-				else if (Integer.class.equals(type)) i32(Integer.class.cast(field.getInt(value)));
-				else if (float.class.equals(type)) f32(field.getFloat(value));
-				else if (Float.class.equals(type)) f32(Float.class.cast(field.get(value)));
-				else if (String.class.equals(type)) str(String.class.cast(field.get(value)));
-				else if (byte[].class.equals(type)) i8arr(byte[].class.cast(field.get(value)));
-				else if (int[].class.equals(type)) i32arr(int[].class.cast(field.get(value)));
-				else if (ThumperStruct.class.isAssignableFrom(type)) obj(ThumperStruct.class.cast(field.get(value)));
-				else if (List.class.isAssignableFrom(type)) {
-					var list = field.get(value);
-					var genericType = field.getGenericType();
+				var type = field.getType();
 
-					if (genericType instanceof ParameterizedType pt) {
-						var arg = pt.getActualTypeArguments()[0];
+				try {
+					// Generic object
+					if (Object.class.equals(type)) {
+						var fieldValue = field.get(value);
 
-						if (String.class.equals(arg)) {
-							strlist((List<String>) list);
-						} else if (arg instanceof Class<?> c && ThumperStruct.class.isAssignableFrom(c)) {
+						if (fieldValue instanceof Boolean b) {
+							bool(b);
+						} else if (fieldValue instanceof Integer b) {
+							i32(b);
+						} else if (fieldValue instanceof String b) {
+							str(b);
+						} else {
+							throw new IllegalStateException();
+						}
+					}
 
-							objlist((List<? extends ThumperStruct>) list);
+					else if (boolean.class.equals(type)) bool(field.getBoolean(value));
+					else if (Boolean.class.equals(type)) bool(Boolean.class.cast(field.getBoolean(value)));
+					else if (byte.class.equals(type)) i8(field.getByte(value));
+					else if (Byte.class.equals(type)) i8(Byte.class.cast(field.getByte(value)));
+					else if (int.class.equals(type)) i32(field.getInt(value));
+					else if (Integer.class.equals(type)) i32(Integer.class.cast(field.getInt(value)));
+					else if (float.class.equals(type)) f32(field.getFloat(value));
+					else if (long.class.equals(type)) i64(field.getLong(value));
+					else if (Float.class.equals(type)) f32(Float.class.cast(field.get(value)));
+					else if (String.class.equals(type)) str(String.class.cast(field.get(value)));
+					else if (byte[].class.equals(type)) i8arr(byte[].class.cast(field.get(value)));
+					else if (int[].class.equals(type)) i32arr(int[].class.cast(field.get(value)));
+					else if (ThumperStruct.class.isAssignableFrom(type))
+						obj(ThumperStruct.class.cast(field.get(value)));
+					else if (List.class.isAssignableFrom(type)) {
+						var list = field.get(value);
+						var genericType = field.getGenericType();
+
+						if (genericType instanceof ParameterizedType pt) {
+							var arg = pt.getActualTypeArguments()[0];
+
+							if (String.class.equals(arg)) {
+								strlist((List<String>) list);
+							} else if (arg instanceof Class<?> c && ThumperStruct.class.isAssignableFrom(c)) {
+
+								objlist((List<? extends ThumperStruct>) list);
+							} else {
+								throw new IllegalStateException("Failed to parse");
+							}
 						} else {
 							throw new IllegalStateException("Failed to parse");
 						}
 					} else {
-						throw new IllegalStateException("Failed to parse");
+						throw new IllegalStateException("Failed to parse " + value.getClass());
 					}
-				} else {
-					throw new IllegalStateException("Failed to parse " + value.getClass());
+				} catch (IllegalArgumentException | IllegalAccessException e) {
+					e.printStackTrace();
 				}
-			} catch (IllegalArgumentException | IllegalAccessException e) {
-				e.printStackTrace();
 			}
-		}
 
-		enclosing.pop();
+		} finally {
+			enclosing.pop();
+		}
 	}
 
 	public byte[] getBytes() {

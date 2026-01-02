@@ -40,6 +40,19 @@ public class AuroraReader {
 		return b0 | (b1 << 8) | (b2 << 16) | (b3 << 24);
 	}
 
+	public long i64() {
+		long b0 = i8() & 0xFFL;
+		long b1 = i8() & 0xFFL;
+		long b2 = i8() & 0xFFL;
+		long b3 = i8() & 0xFFL;
+		long b4 = i8() & 0xFFL;
+		long b5 = i8() & 0xFFL;
+		long b6 = i8() & 0xFFL;
+		long b7 = i8() & 0xFFL;
+
+		return b0 | (b1 << 8) | (b2 << 16) | (b3 << 24) | (b4 << 32) | (b5 << 40) | (b6 << 48) | (b7 << 56);
+	}
+
 	public void seek(int newPos) {
 		if (newPos < 0 || newPos > bytes.length) {
 			throw new IndexOutOfBoundsException();
@@ -212,6 +225,7 @@ public class AuroraReader {
 					else if (byte.class.equals(type)) field.setByte(instance, i8());
 					else if (int.class.equals(type)) field.setInt(instance, i32());
 					else if (float.class.equals(type)) field.setFloat(instance, f32());
+					else if (long.class.equals(type)) field.setLong(instance, i64());
 					else if (String.class.equals(type)) field.set(instance, str());
 
 					else if (byte[].class.equals(type))
@@ -238,7 +252,7 @@ public class AuroraReader {
 							throw new IllegalStateException("Failed to parse");
 						}
 					} else {
-						throw new IllegalStateException("Failed to parse");
+						throw new IllegalStateException("Failed to parse " + field.toString());
 					}
 				} catch (IllegalArgumentException | IllegalAccessException e) {
 					e.printStackTrace();
@@ -273,4 +287,10 @@ public class AuroraReader {
 	public int position() {
 		return pos;
 	}
+
+	public byte[] i8remaining() {
+		int numRemainingBytes = bytes.length - pos;
+		return i8arr(numRemainingBytes);
+	}
+
 }

@@ -114,6 +114,7 @@ public class ModLauncher {
 			if (ImGui.beginMenuBar()) {
 				if (ImGui.beginMenu("Options")) {
 
+					if (ImGui.menuItem("enableCampaignLevels", null, enableCampaignLevels)) reloadList();
 					ImGui.menuItem("Unlock All Levels", null, autoUnlockLevels);
 
 					ImGui.endMenu();

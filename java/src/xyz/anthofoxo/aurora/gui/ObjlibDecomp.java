@@ -1,10 +1,13 @@
 package xyz.anthofoxo.aurora.gui;
 
 import java.io.IOException;
+import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import imgui.ImGui;
 import imgui.type.ImBoolean;
@@ -12,11 +15,13 @@ import imgui.type.ImString;
 import xyz.anthofoxo.aurora.Hash;
 import xyz.anthofoxo.aurora.UserConfig;
 import xyz.anthofoxo.aurora.struct.AuroraReader;
+import xyz.anthofoxo.aurora.struct.AuroraWriter;
 import xyz.anthofoxo.aurora.struct.EntitySpawner;
 import xyz.anthofoxo.aurora.struct.LibraryImport;
 import xyz.anthofoxo.aurora.struct.LibraryObject;
 import xyz.anthofoxo.aurora.struct.ObjectDeclaration;
 import xyz.anthofoxo.aurora.struct.Sample;
+import xyz.anthofoxo.aurora.struct.SaveFile;
 import xyz.anthofoxo.aurora.struct.SequinDrawer;
 import xyz.anthofoxo.aurora.struct.SequinGate;
 import xyz.anthofoxo.aurora.struct.SequinGate.ParamPath;
@@ -150,7 +155,7 @@ public class ObjlibDecomp {
 			case TraitAnim:
 				level.defs.add(in.obj(TraitAnim.class));
 				break;
-				
+
 			case Path:
 				level.defs.add(in.obj(xyz.anthofoxo.aurora.struct.Path.class));
 				break;
@@ -239,6 +244,18 @@ public class ObjlibDecomp {
 
 		if (ImGui.begin("Objlib Decomp", visible)) {
 
+			if (ImGui.button("Test savefile")) {
+				try {
+					savefiletest();
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				} catch (URISyntaxException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
+
 			String prefix = UserConfig.thumperPath() + "/cache/";
 
 			if (ImGui.button("Title Screen")) {
@@ -302,5 +319,38 @@ public class ObjlibDecomp {
 
 		}
 		ImGui.end();
+	}
+
+	private void savefiletest() throws IOException, URISyntaxException {
+
+		for (var path : Files.walk(Path.of(UserConfig.thumperPath() + "/savedata/")).filter(Files::isRegularFile)
+				.collect(Collectors.toList())) {
+
+			if (!path.toString().endsWith(".sav")) continue;
+
+			byte[] bytes = Files.readAllBytes(path);
+			AuroraReader in = new AuroraReader(bytes);
+			SaveFile file = in.obj(SaveFile.class);
+
+			var now = Instant.now();
+			file.timestamp = now;
+
+			for (var entry : file.enteries) {
+				if ("RANK_NONE".equals(entry.playRank)) {
+					entry.playRank = "RANK_C";
+				}
+
+				if ("RANK_NONE".equals(entry.playRankDup)) {
+					entry.playRankDup = "RANK_C";
+				}
+			}
+
+			AuroraWriter out = new AuroraWriter();
+			out.obj(file);
+			Files.write(path, out.getBytes());
+
+			System.out.println();
+		}
+
 	}
 }
