@@ -2,34 +2,42 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://anthofoxo.xyz/aurora/</loc>
-         <lastmod>2025-12-31</lastmod>
+         <lastmod>2026-01-02</lastmod>
     </url>
     <url>
          <loc>https://anthofoxo.xyz/aurora/aurora/dev_setup_guide/</loc>
-         <lastmod>2025-12-31</lastmod>
+         <lastmod>2026-01-02</lastmod>
     </url>
     <url>
          <loc>https://anthofoxo.xyz/aurora/aurora/user_install_guide/</loc>
-         <lastmod>2025-12-31</lastmod>
+         <lastmod>2026-01-02</lastmod>
     </url>
     <url>
          <loc>https://anthofoxo.xyz/aurora/aurora/user_level_reload/</loc>
-         <lastmod>2025-12-31</lastmod>
+         <lastmod>2026-01-02</lastmod>
     </url>
     <url>
          <loc>https://anthofoxo.xyz/aurora/thumper/</loc>
-         <lastmod>2025-12-31</lastmod>
+         <lastmod>2026-01-02</lastmod>
+    </url>
+    <url>
+         <loc>https://anthofoxo.xyz/aurora/thumper/basic_types/</loc>
+         <lastmod>2026-01-02</lastmod>
     </url>
     <url>
          <loc>https://anthofoxo.xyz/aurora/thumper/drools_editor/</loc>
-         <lastmod>2025-12-31</lastmod>
+         <lastmod>2026-01-02</lastmod>
+    </url>
+    <url>
+         <loc>https://anthofoxo.xyz/aurora/thumper/level_objlib_structure/</loc>
+         <lastmod>2026-01-02</lastmod>
     </url>
     <url>
          <loc>https://anthofoxo.xyz/aurora/thumper/objlib_structure/</loc>
-         <lastmod>2025-12-31</lastmod>
+         <lastmod>2026-01-02</lastmod>
     </url>
     <url>
          <loc>https://anthofoxo.xyz/aurora/thumper/overall_structure/</loc>
-         <lastmod>2025-12-31</lastmod>
+         <lastmod>2026-01-02</lastmod>
     </url>
 </urlset>
