@@ -23,9 +23,17 @@ import xyz.anthofoxo.aurora.struct.Sample;
 import xyz.anthofoxo.aurora.struct.SectionFile;
 import xyz.anthofoxo.aurora.struct.SequinGate;
 import xyz.anthofoxo.aurora.struct.SequinGate.ParamPath;
+import xyz.anthofoxo.aurora.struct.SequinLeaf;
+import xyz.anthofoxo.aurora.struct.SequinLeaf.DataPoint;
+import xyz.anthofoxo.aurora.struct.SequinLeaf.DataPointList;
+import xyz.anthofoxo.aurora.struct.SequinLeaf.Trait;
+import xyz.anthofoxo.aurora.struct.SequinLevel;
+import xyz.anthofoxo.aurora.struct.SequinLevel.Loop;
+import xyz.anthofoxo.aurora.struct.SequinLevel.SubPath;
 import xyz.anthofoxo.aurora.struct.SequinMaster;
 import xyz.anthofoxo.aurora.struct.Transform;
 import xyz.anthofoxo.aurora.struct.Vec3f;
+import xyz.anthofoxo.aurora.struct.Vec4f;
 import xyz.anthofoxo.aurora.struct.Xfmer;
 import xyz.anthofoxo.aurora.struct.comp.AnimComp;
 import xyz.anthofoxo.aurora.struct.comp.ApproachAnimComp;
@@ -221,19 +229,9 @@ public class Tcle3 extends Target {
 		for (var obj : objs) {
 			final String objType = obj.get("obj_type").asString();
 
-			if (objType.equals("SequinLeaf")) Write_Leaf(writer, obj);
-			else if (objType.equals("SequinLevel")) {
-				writer.i32arr(51, 33, 4);
-
-				// @formatter:off
-				writer.objlist(List.of(
-						new ApproachAnimComp().withApproachBeats(obj.get("approach_beats").asInt()),
-						new EditStateComp())
-					);
-				// @formatter:on
-
-				Write_Lvl_Comp(writer, obj);
-			} else if (objType.equals("SequinGate")) writer.obj(toSequinGate(obj));
+			if (objType.equals("SequinLeaf")) writer.obj(toSequinLeaf(obj));
+			else if (objType.equals("SequinLevel")) writer.obj(toSequinLevel(obj));
+			else if (objType.equals("SequinGate")) writer.obj(toSequinGate(obj));
 			else if (objType.equals("SequinMaster")) writer.obj(toSequinMaster(obj));
 			else if (objType.equals("EntitySpawner")) writer.obj(toEntiySpawner(obj));
 			else if (objType.equals("Sample")) {
@@ -342,74 +340,6 @@ public class Tcle3 extends Target {
 			"kTraitCue", "kTraitEvent", "kTraitSym", "kTraitList", "kTraitTraitPath", "kTraitQuat", "kTraitChildLib",
 			"kTraitComponent", "kNumTraitTypes");
 
-	private static void Write_Data_Point_Value(AuroraWriter f, String val, String trait_type) {
-		if (trait_type.equals("kTraitInt")) f.i32(Integer.parseInt(val));
-		else if (trait_type.equals("kTraitBool") || trait_type.equals("kTraitAction")) {
-			f.bool(toBoolean(val));
-		} else if (trait_type.equals("kTraitFloat")) f.f32(Float.parseFloat(val));
-		else if (trait_type.equals("kTraitColor")) {
-			try {
-				Color c = new Color((int) Double.parseDouble(val), true);
-				f.f32(c.getRed() / 255f);
-				f.f32(c.getGreen() / 255f);
-				f.f32(c.getBlue() / 255f);
-				f.f32(c.getAlpha() / 255f);
-			} catch (NumberFormatException e) {
-				f.f32(1);
-				f.f32(1);
-				f.f32(1);
-				f.f32(1);
-			}
-		}
-	}
-
-	private static void Write_Sequencer_Object_v3(AuroraWriter f, JsonNode _obj, int beat_cnt) {
-		String obj_name = _obj.get("obj_name").asString();
-		f.str(obj_name);
-		f.objlist(List.of(parseParamPath(_obj.get("param_path"), _obj.get("param_path_hash"))));
-
-		// writeParamPathU(f, _obj.get("param_path"), _obj.get("param_path_hash"));
-
-		f.i32(trait_types.indexOf(_obj.get("trait_type").asString()));
-
-		String traittype = _obj.get("trait_type").asString();
-		String default_value = _obj.get("default").asString();
-
-		// Data points written different depending on STEP
-		if (asBool(_obj.get("step")) == true) {
-			/// STEP true = value updates every beat, and if no value is set for a beat,
-			/// it'll use _obj.default
-			f.i32(beat_cnt);
-			int indexofwrittenbeat = 0;
-			for (int i = 0; i < beat_cnt; i++) {
-				f.f32(i);
-				if (_obj.get("data_points").size() > indexofwrittenbeat
-						&& _obj.get("data_points").get(indexofwrittenbeat).get("beat").asInt() == i) {
-					Write_Data_Point_Value(f, _obj.get("data_points").get(indexofwrittenbeat).get("value").asString(),
-							traittype);
-					f.str(_obj.get("data_points").get(indexofwrittenbeat).get("interp").asString());
-					f.str(_obj.get("data_points").get(indexofwrittenbeat).get("ease").asString());
-					indexofwrittenbeat++;
-				} else {
-					Write_Data_Point_Value(f, default_value, traittype);
-					f.str("kTraitInterpLinear");
-					f.str("kEaseInOut");
-				}
-			}
-		} else {
-			/// STEP false = value interpolates between values set on beats. Default
-			/// is ignored.
-			f.i32(_obj.get("data_points").size());
-
-			for (var dp : _obj.get("data_points")) {
-				f.f32(dp.get("beat").asFloat());
-				Write_Data_Point_Value(f, dp.get("value").asString(), traittype);
-				f.str(dp.get("interp").asString());
-				f.str(dp.get("ease").asString());
-			}
-		}
-	}
-
 	private static boolean toBoolean(String s) {
 		try {
 			return Integer.parseInt(s) == 1;
@@ -424,27 +354,91 @@ public class Tcle3 extends Target {
 		return Boolean.parseBoolean(s);
 	}
 
-	private static void Write_Sequencer_Objects(AuroraWriter f, JsonNode obj) {
+	private static void setDataPoint(DataPoint p, String val, String trait_type) {
+
+		if (trait_type.equals("kTraitInt")) p.data = Integer.parseInt(val);
+		else if (trait_type.equals("kTraitBool") || trait_type.equals("kTraitAction")) {
+			p.data = toBoolean(val);
+		} else if (trait_type.equals("kTraitFloat")) p.data = Float.parseFloat(val);
+		else if (trait_type.equals("kTraitColor")) {
+			try {
+				Color c = new Color((int) Double.parseDouble(val), true);
+				p.data = new Vec4f(c.getRed() / 255f, c.getGreen() / 255f, c.getBlue() / 255f, c.getAlpha() / 255f);
+			} catch (NumberFormatException e) {
+				p.data = new Vec4f(1, 1, 1, 1);
+			}
+		}
+	}
+
+	private static List<Trait> toTraitList(JsonNode obj) {
 
 		int beat_cnt = 0;
 		if (obj.has("beat_cnt")) beat_cnt = obj.get("beat_cnt").asInt();
 
 		var seq_objs = obj.get("seq_objs");
 		// write amount of seq_objs (different tracks) to .pc file
-		int size = seq_objs.size();
+		// int size = seq_objs.size();
 
-		for (var _obj : seq_objs) {
-			if (_obj.get("obj_name").asString().startsWith("_")) --size;
-		}
-
-		f.i32(size);
+		List<Trait> traits = new ArrayList<>();
 
 		for (var _obj : seq_objs) {
 			String obj_name = _obj.get("obj_name").asString();
+
 			if (obj_name.startsWith("_")) continue;
 
-			Write_Sequencer_Object_v3(f, _obj, beat_cnt);
-			f.i32(0);
+			Trait trait = new Trait();
+			trait.objName = obj_name;
+			trait.params = List.of(parseParamPath(_obj.get("param_path"), _obj.get("param_path_hash")));
+
+			{
+				trait.datapoints = new DataPointList();
+				trait.datapoints.traitType = trait_types.indexOf(_obj.get("trait_type").asString());
+				trait.datapoints.editorpoints = List.of();
+				trait.datapoints.datapoints = new ArrayList<>();
+
+				String traittype = _obj.get("trait_type").asString();
+				String default_value = _obj.get("default").asString();
+
+				// Data points written different depending on STEP
+				if (asBool(_obj.get("step")) == true) {
+					/// STEP true = value updates every beat, and if no value is set for a beat,
+					/// it'll use _obj.default
+					int indexofwrittenbeat = 0;
+					for (int i = 0; i < beat_cnt; i++) {
+						DataPoint datapoint = new DataPoint();
+						datapoint.beat = i;
+
+						var node = _obj.get("data_points").get(indexofwrittenbeat);
+
+						if (_obj.get("data_points").size() > indexofwrittenbeat && node.get("beat").asInt() == i) {
+							setDataPoint(datapoint, node.get("value").asString(), traittype);
+							datapoint.interp = node.get("interp").asString();
+							datapoint.ease = node.get("ease").asString();
+							indexofwrittenbeat++;
+						} else {
+							setDataPoint(datapoint, default_value, traittype);
+							datapoint.interp = "kTraitInterpLinear";
+							datapoint.ease = "kEaseInOut";
+						}
+
+						trait.datapoints.datapoints.add(datapoint);
+					}
+				} else {
+					/// STEP false = value interpolates between values set on beats. Default
+					/// is ignored.
+
+					for (var dp : _obj.get("data_points")) {
+						DataPoint datapoint = new DataPoint();
+
+						datapoint.beat = dp.get("beat").asFloat();
+						setDataPoint(datapoint, dp.get("value").asString(), traittype);
+						datapoint.interp = dp.get("interp").asString();
+						datapoint.ease = dp.get("ease").asString();
+
+						trait.datapoints.datapoints.add(datapoint);
+					}
+				}
+			}
 
 			String[] _footer = new String[18];
 
@@ -462,93 +456,118 @@ public class Tcle3 extends Target {
 				_footer = str.split(",");
 			}
 
-			f.i32(Integer.parseInt(_footer[0]));
-			f.i32(Integer.parseInt(_footer[1]));
-			f.i32(Integer.parseInt(_footer[2]));
-			f.i32(Integer.parseInt(_footer[3]));
-			f.i32(Integer.parseInt(_footer[4]));
-			f.str(_footer[5]);
-			f.str(_footer[6]);
-			f.bool(toBoolean(_footer[7]));
-			f.bool(toBoolean(_footer[8]));
-			f.i32(Integer.parseInt(_footer[9]));
-			f.f32(Float.parseFloat(_footer[10]));
-			f.f32(Float.parseFloat(_footer[11]));
-			f.f32(Float.parseFloat(_footer[12]));
-			f.f32(Float.parseFloat(_footer[13]));
-			f.f32(Float.parseFloat(_footer[14]));
-			f.bool(toBoolean(_footer[15]));
-			f.bool(toBoolean(_footer[16]));
-			f.bool(toBoolean(_footer[17]));
+			// @formatter:off
+			trait.footer0 = new int[] {
+					Integer.parseInt(_footer[0]),
+					Integer.parseInt(_footer[1]),
+					Integer.parseInt(_footer[2]),
+					Integer.parseInt(_footer[3]),
+					Integer.parseInt(_footer[4]),
+			};
+			// @formatter:on
+
+			trait.footer1 = _footer[5];
+			trait.footer2 = _footer[6];
+			trait.footer3 = toBoolean(_footer[7]);
+			trait.footer4 = toBoolean(_footer[8]);
+			trait.footer5 = Integer.parseInt(_footer[9]);
+
+			// @formatter:off
+			trait.footer6 = new float[] {
+					Float.parseFloat(_footer[10]),
+					Float.parseFloat(_footer[11]),
+					Float.parseFloat(_footer[12]),
+					Float.parseFloat(_footer[13]),
+					Float.parseFloat(_footer[14]),
+			};
+			// @formatter:on
+
+			trait.footer7 = toBoolean(_footer[15]);
+			trait.footer8 = toBoolean(_footer[16]);
+			trait.footer9 = toBoolean(_footer[17]);
+
+			traits.add(trait);
 		}
+
+		return traits;
+
 	}
 
-	private static void Write_Leaf(AuroraWriter f, JsonNode obj) {
-		f.i32(34);
-		f.i32(33);
-		f.i32(4);
-
-		f.objlist(List.of(new AnimComp(), new EditStateComp()));
-
-		Write_Sequencer_Objects(f, obj);
-
+	private static SequinLeaf toSequinLeaf(JsonNode obj) {
+		SequinLeaf instance = new SequinLeaf();
+		instance.header = SequinLeaf.header();
+		instance.comps = List.of(new AnimComp(), new EditStateComp());
+		instance.objects = toTraitList(obj);
+		instance.unknown0 = 0;
 		int beat_cnt = obj.get("beat_cnt").asInt();
-		f.i32(0);
-		f.i32(beat_cnt);
-		for (int i = 0; i < beat_cnt * 3; i++) f.i32(0);
-		f.i32(0);
-		f.i32(0);
-		f.i32(0);
+		instance.unknownBeatFooter = new ArrayList<>(beat_cnt);
+		for (int i = 0; i < beat_cnt; i++) instance.unknownBeatFooter.add(new Vec3f());
+		instance.finalFooter = new Vec3f();
+		return instance;
 	}
 
-	private static void Write_Lvl_Comp(AuroraWriter f, JsonNode obj) {
+	public static SequinLevel toSequinLevel(JsonNode obj) {
+		SequinLevel instance = new SequinLevel();
+		instance.header = SequinLevel.header();
+		instance.comps = List.of(new ApproachAnimComp().withApproachBeats(obj.get("approach_beats").asInt()),
+				new EditStateComp());
 
-		Write_Sequencer_Objects(f, obj);
+		instance.traits = toTraitList(obj);
+		instance.unknown0 = 0;
+		instance.phase = "kMovePhaseRepeatChild";
+		instance.unknown1 = 0;
+		instance.enteries = new ArrayList<SequinLevel.Entry>();
 
-		// .leaf sequence
-		f.i32(0);
-		f.str("kMovePhaseRepeatChild");
-		f.i32(0);
 		int last_beat_cnt = 0;
-		// iterate over each leaf in the lvl file and write data to file
-		for (var leaf : obj.get("leaf_seq")) {
-			f.bool(true);
-			f.i32(0);
-			f.i32(leaf.get("beat_cnt").asInt());
-			f.bool(false);
-			f.str(leaf.get("leaf_name").asString());
-			f.str(leaf.get("main_path").asString());
-			f.i32(leaf.get("sub_paths").size());
-			for (var sub_path : leaf.get("sub_paths")) {
-				f.str(sub_path.asString());
-				f.i32(0);
-			}
-			f.str("kStepGameplay");
-			f.i32(last_beat_cnt);
 
-			f.obj(toTransform(leaf));
-			f.i8((byte) 0);
-			f.i8((byte) 0);
+		for (var leaf : obj.get("leaf_seq")) {
+			SequinLevel.Entry entry = new SequinLevel.Entry();
+
+			entry.unknown0 = 0;
+			entry.beatCount = leaf.get("beat_cnt").asInt();
+			entry.unknown1 = true;
+			entry.leafName = leaf.get("leaf_name").asString();
+			entry.mainPath = leaf.get("main_path").asString();
+
+			entry.subpaths = new ArrayList<>();
+			for (var sub_path : leaf.get("sub_paths")) {
+				SubPath path = new SubPath();
+				path.path = sub_path.asString();
+				path.unknown = 0;
+				entry.subpaths.add(path);
+			}
+
+			entry.stepGameplay = "kStepGameplay";
+			entry.totalBeatToThisPoint = last_beat_cnt;
+			entry.transform = toTransform(leaf);
+			entry.unknown2 = 0;
+			entry.unknown3 = 0;
+
+			instance.enteries.add(entry);
+
 			last_beat_cnt = leaf.get("beat_cnt").asInt();
 		}
 
-		f.bool(false);
-		// write loops
-		f.i32(obj.get("loops").size());
+		instance.loops = new ArrayList<>();
+
 		for (var loop : obj.get("loops")) {
-			f.str(loop.get("samp_name").asString());
-			f.i32(loop.get("beats_per_loop").asInt());
-			f.i32(0);
+			var obje = new Loop();
+			obje.sampName = loop.get("samp_name").asString();
+			obje.beatsPerLoop = loop.get("beats_per_loop").asInt();
+			obje.unknown = 0;
+			instance.loops.add(obje);
 		}
 
-		f.bool(false);
-		f.f32(obj.get("volume").asFloat());
-		f.i32(0);
-		f.i32(0);
-		f.str("kNumTraitTypes");
-		f.bool(asBool(obj.get("input_allowed")));
-		f.str(obj.get("tutorial_type").asString());
-		f.obj(toVec3f(obj.get("start_angle_fracs")));
+		instance.unknown4 = false;
+		instance.volume = obj.get("volume").asFloat();
+		instance.unknown2 = 0;
+		instance.unknown3 = 0;
+		instance.traitType = "kNumTraitTypes";
+		instance.inputAllowed = asBool(obj.get("input_allowed"));
+		instance.tutorialType = obj.get("tutorial_type").asString();
+		instance.startAngleFracs = toVec3f(obj.get("start_angle_fracs"));
+
+		return instance;
 	}
 
 	private static boolean asBool(JsonNode node) {
