@@ -1,6 +1,7 @@
 package xyz.anthofoxo.aurora.struct;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 
 import xyz.anthofoxo.aurora.parse.AuroraReader;
@@ -31,6 +32,33 @@ public class SaveFile implements ThumperStruct {
 		public List<RankEntry> playRanks;
 		public int unknown2;
 		public List<RankEntry> plusRanks;
+
+		public static LevelEntry ofDefault(String key, int sectionCount) {
+			var instance = new LevelEntry();
+			instance.key = key;
+			instance.playRank = "RANK_NONE";
+			instance.playScore = 0;
+			instance.playRankDup = "RANK_NONE";
+			instance.unknown0 = true;
+			instance.timestamp = Instant.EPOCH;
+			instance.plusScore = 0;
+			instance.plusRank = "RANK_NONE";
+			instance.plusRankDup = "RANK_NONE";
+			instance.unknown1 = 0;
+			instance.playRanks = new ArrayList<>();
+			instance.unknown2 = 0;
+			instance.plusRanks = new ArrayList<>();
+
+			for (int i = 0; i < sectionCount; ++i) {
+				RankEntry e = new RankEntry();
+				e.entry = "RANK_NONE";
+				e.unknown = 0;
+				instance.playRanks.add(e);
+				instance.plusRanks.add(e);
+			}
+
+			return instance;
+		}
 	}
 
 	public int fileHeader;
@@ -46,6 +74,14 @@ public class SaveFile implements ThumperStruct {
 	// We dont have the exact struct for the rest of the file
 	// simply copy these back into the output
 	public byte[] remaining;
+
+	public int getLevelSaveIndex(String levelKey) {
+		for (int i = 0; i < enteries.size(); ++i) {
+			if (enteries.get(i).key.equals(levelKey)) return i;
+		}
+
+		return -1;
+	}
 
 	public static SaveFile in(AuroraReader in) {
 		var instance = new SaveFile();

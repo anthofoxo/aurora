@@ -35,6 +35,15 @@ public class UserConfig {
 
 	}
 
+	public static boolean isUnlockPractice() {
+		return Boolean.parseBoolean(properties.getProperty("aurora.unlock_practice", Boolean.toString(true)));
+	}
+
+	public static void setUnlockPractice(boolean unlock) {
+		properties.setProperty("aurora.unlock_practice", Boolean.toString(unlock));
+		save();
+	}
+
 	public static boolean isModEnabled(String modName) {
 		return Boolean
 				.parseBoolean(properties.getProperty(String.format("mod.%s.enabled", modName), Boolean.toString(true)));

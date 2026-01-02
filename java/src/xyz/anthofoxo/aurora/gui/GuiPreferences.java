@@ -12,6 +12,7 @@ import xyz.anthofoxo.aurora.UserConfig;
 
 public class GuiPreferences {
 	public ImBoolean visible = new ImBoolean(false);
+	public static ImBoolean unlockPractice = new ImBoolean(UserConfig.isUnlockPractice());
 
 	public void draw() {
 		if (!visible.get()) return;
@@ -19,6 +20,12 @@ public class GuiPreferences {
 		if (!ImGui.begin("Preferences", visible)) {
 			ImGui.end();
 		}
+
+		if (ImGui.checkbox("Unlock Practice Mode", unlockPractice)) {
+			UserConfig.setUnlockPractice(unlockPractice.get());
+		}
+
+		ImGui.separator();
 
 		if (ImGui.smallButton("Choose New Path")) {
 			UserConfig.properties.remove("thumper.path");

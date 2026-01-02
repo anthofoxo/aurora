@@ -5,6 +5,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -31,6 +32,8 @@ import xyz.anthofoxo.aurora.gfx.Font;
 import xyz.anthofoxo.aurora.parse.AuroraReader;
 import xyz.anthofoxo.aurora.parse.AuroraWriter;
 import xyz.anthofoxo.aurora.struct.LevelListingFile;
+import xyz.anthofoxo.aurora.struct.SaveFile;
+import xyz.anthofoxo.aurora.struct.SectionFile;
 import xyz.anthofoxo.aurora.target.BuiltinNativeTarget;
 import xyz.anthofoxo.aurora.target.Target;
 import xyz.anthofoxo.aurora.target.Tcle3;
@@ -492,9 +495,7 @@ public class ModLauncher {
 						} catch (IOException e) {
 							e.printStackTrace();
 						}
-					}
 
-					if (autoUnlockLevels.get()) {
 						try {
 							String filepath = String.format(thumperpath + "/cache/%s.pc",
 									Integer.toHexString(Hash.fnv1a("Aui/thumper.levels")));
@@ -502,17 +503,81 @@ public class ModLauncher {
 							AuroraReader reader = new AuroraReader(Files.readAllBytes(Path.of(filepath)));
 							LevelListingFile listing = reader.obj(LevelListingFile.class);
 
-							for (var level : listing.enteries) {
-								level.unlocks = "";
-								level.defaultLocked = false;
+							if (autoUnlockLevels.get()) {
+								for (var level : listing.enteries) {
+									level.unlocks = "";
+									level.defaultLocked = false;
+								}
 							}
 
-							AuroraWriter out = new AuroraWriter();
-							out.obj(listing);
-							TMLBuilder.writefileBackedup(filepath, out.getBytes());
+							{
+								AuroraWriter out = new AuroraWriter();
+								out.obj(listing);
+								TMLBuilder.writefileBackedup(filepath, out.getBytes());
+							}
+
+							try {
+
+								var now = Instant.now();
+
+								for (var path : Files.walk(Path.of(UserConfig.thumperPath() + "/savedata/"))
+										.filter(Files::isRegularFile).collect(Collectors.toList())) {
+
+									if (!path.toString().endsWith(".sav")) continue;
+
+									byte[] bytes = Files.readAllBytes(path);
+									AuroraReader in = new AuroraReader(bytes);
+									SaveFile file = in.obj(SaveFile.class);
+
+									// ensure the score table has enteries for every level listed
+									if (UserConfig.isUnlockPractice()) {
+										file.timestamp = now;
+
+										for (var listingEntry : listing.enteries) {
+											int index = file.getLevelSaveIndex(listingEntry.key);
+
+											// This level isn't in our scoring table yet, add a blank one
+											if (index != -1) continue;
+
+											String filename = Integer.toHexString(
+													Hash.fnv1a("A" + changeExtension(listingEntry.path, "sec")))
+													+ ".pc";
+
+											// Read in the section file to know how many sections to add
+											byte[] bytes2 = Files.readAllBytes(
+													Path.of(UserConfig.thumperPath() + "/cache/" + filename));
+											AuroraReader r = new AuroraReader(bytes2);
+											var sectionFile = r.obj(SectionFile.class);
+											int numSections = sectionFile.sections.size();
+
+											file.enteries
+													.add(SaveFile.LevelEntry.ofDefault(listingEntry.key, numSections));
+
+										}
+
+										for (var entry : file.enteries) {
+											if ("RANK_NONE".equals(entry.playRank)) {
+												entry.playRank = "RANK_C";
+											}
+
+											if ("RANK_NONE".equals(entry.playRankDup)) {
+												entry.playRankDup = "RANK_C";
+											}
+										}
+									}
+
+									AuroraWriter out = new AuroraWriter();
+									out.obj(file);
+									Files.write(path, out.getBytes());
+								}
+
+							} catch (IOException e) {
+								e.printStackTrace();
+							}
 						} catch (IOException e) {
 							e.printStackTrace();
 						}
+
 					}
 
 				}
@@ -534,5 +599,23 @@ public class ModLauncher {
 		}
 		ImGui.popStyleVar();
 		ImGui.end();
+	}
+
+	public static String changeExtension(String filename, String newExt) {
+		// Ensure the new extension starts with a dot
+		if (!newExt.startsWith(".")) {
+			newExt = "." + newExt;
+		}
+
+		// Find the last dot in the filename
+		int lastDotIndex = filename.lastIndexOf('.');
+
+		// If there's no dot, just append the new extension
+		if (lastDotIndex == -1) {
+			return filename + newExt;
+		}
+
+		// Replace the old extension with the new one
+		return filename.substring(0, lastDotIndex) + newExt;
 	}
 }

@@ -131,8 +131,6 @@ public class BuiltinNativeTarget extends Target {
 
 		float bpm = Float.intBitsToFloat(floatBits);
 
-		System.out.println(bpm);
-
 		bpm *= speedModifier;
 		floatBits = Float.floatToRawIntBits(bpm);
 
