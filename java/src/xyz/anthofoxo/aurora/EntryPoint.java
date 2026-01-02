@@ -13,15 +13,18 @@ import java.nio.IntBuffer;
 import java.util.Objects;
 
 import org.lwjgl.glfw.Callbacks;
+import org.lwjgl.glfw.GLFW;
 import org.lwjgl.glfw.GLFWErrorCallback;
 import org.lwjgl.glfw.GLFWImage;
 import org.lwjgl.opengl.GL;
+import org.lwjgl.opengl.GL46C;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.system.MemoryUtil;
 import org.lwjgl.system.libc.LibCStdlib;
 
 import imgui.ImGui;
 import imgui.flag.ImGuiConfigFlags;
+import imgui.flag.ImGuiDockNodeFlags;
 import imgui.gl3.ImGuiImplGl3;
 import imgui.glfw.ImGuiImplGlfw;
 import xyz.anthofoxo.aurora.gfx.Font;
@@ -89,11 +92,16 @@ public final class EntryPoint {
 	}
 
 	private static void update() {
+		int[] width = new int[1];
+		int[] height = new int[1];
+		GLFW.glfwGetFramebufferSize(EntryPoint.window, width, height);
+		GL46C.glViewport(0, 0, width[0], height[0]);
+
 		imGuiGl3.newFrame();
 		imGuiGlfw.newFrame();
 		ImGui.newFrame();
 
-		ImGui.dockSpaceOverViewport();
+		ImGui.dockSpaceOverViewport(0, ImGui.getMainViewport(), ImGuiDockNodeFlags.PassthruCentralNode);
 		aurora.update();
 
 		glClearColor(0.2f, 0.2f, 0.2f, 1.0f);

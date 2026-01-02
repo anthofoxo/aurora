@@ -95,5 +95,18 @@ public class Aurora {
 		ModLauncher.draw();
 		hasher.draw();
 		objlibDecomp.draw();
+
+		drawBackgroundElement();
+	}
+
+	private void drawBackgroundElement() {
+		var drawList = ImGui.getBackgroundDrawList();
+		float viewportWidth = ImGui.getMainViewport().getSizeX();
+		float viewportHeight = ImGui.getMainViewport().getSizeY();
+		float size = Math.min(viewportWidth / 1.5f, viewportHeight / 1.5f);
+		float margin = 64.0f;
+		float x = viewportWidth - size - margin;
+		float y = viewportHeight - size - margin;
+		drawList.addImage(textures.get("aur_bg.png").getHandle(), x, y, x + size, y + size);
 	}
 }

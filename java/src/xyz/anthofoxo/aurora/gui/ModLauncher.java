@@ -319,12 +319,13 @@ public class ModLauncher {
 								if (texture != null) {
 									// ImGui.sameLine();
 									float size = ImGui.getFrameHeight();
-									float offset = ImGui.getContentRegionAvailX() - size * 8
+									float width = size * texture.getAspect();
+									float offset = ImGui.getContentRegionAvailX() - width
 											- ImGui.getStyle().getItemSpacingX() - ImGui.getStyle().getFramePaddingX();
 
 									ImGui.sameLine(ImGui.getCursorPosX() + offset, ImGui.getStyle().getItemSpacingX());
 
-									ImGui.image(texture.getHandle(), size * 8, size);
+									ImGui.image(texture.getHandle(), width, size);
 
 								}
 							}
