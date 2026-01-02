@@ -1,6 +1,6 @@
 package xyz.anthofoxo.aurora.struct.comp;
 
-import xyz.anthofoxo.aurora.struct.AuroraReader;
+import xyz.anthofoxo.aurora.parse.AuroraReader;
 import xyz.anthofoxo.aurora.struct.ThumperStruct;
 
 /**

@@ -16,7 +16,7 @@ import tools.jackson.databind.JsonNode;
 import xyz.anthofoxo.aurora.Hash;
 import xyz.anthofoxo.aurora.Util;
 import xyz.anthofoxo.aurora.gfx.Texture;
-import xyz.anthofoxo.aurora.struct.AuroraWriter;
+import xyz.anthofoxo.aurora.parse.AuroraWriter;
 import xyz.anthofoxo.aurora.struct.EntitySpawner;
 import xyz.anthofoxo.aurora.struct.PrecompiledBin;
 import xyz.anthofoxo.aurora.struct.Sample;

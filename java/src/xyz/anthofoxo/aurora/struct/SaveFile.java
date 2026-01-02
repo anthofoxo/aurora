@@ -3,6 +3,9 @@ package xyz.anthofoxo.aurora.struct;
 import java.time.Instant;
 import java.util.List;
 
+import xyz.anthofoxo.aurora.parse.AuroraReader;
+import xyz.anthofoxo.aurora.parse.AuroraWriter;
+
 public class SaveFile implements ThumperStruct {
 	public static class RankEntry implements ThumperStruct {
 		public String entry;
@@ -20,7 +23,7 @@ public class SaveFile implements ThumperStruct {
 		public int playScore;
 		public String playRankDup;
 		public boolean unknown0;
-		public long timestamp;
+		public Instant timestamp;
 		public int plusScore;
 		public String plusRank;
 		public String plusRankDup;
@@ -48,7 +51,7 @@ public class SaveFile implements ThumperStruct {
 		var instance = new SaveFile();
 		instance.fileHeader = in.i32();
 		instance.byteCount = in.i32();
-		instance.timestamp = Instant.ofEpochSecond(in.i64());
+		instance.timestamp = in.instant();
 		instance.enteries = in.objlist(LevelEntry.class);
 		instance.remaining = in.i8remaining();
 		return instance;
@@ -59,7 +62,7 @@ public class SaveFile implements ThumperStruct {
 		AuroraWriter temp = new AuroraWriter();
 		temp.i32(instance.fileHeader);
 		temp.i32(instance.byteCount);
-		temp.i64(instance.timestamp.getEpochSecond());
+		temp.instant(instance.timestamp);
 		temp.objlist(instance.enteries);
 		temp.i8arr(instance.remaining);
 		// Our new byte size is now the size of the written object

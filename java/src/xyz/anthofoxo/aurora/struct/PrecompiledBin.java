@@ -3,6 +3,7 @@ package xyz.anthofoxo.aurora.struct;
 import java.util.Arrays;
 import java.util.List;
 
+import xyz.anthofoxo.aurora.parse.AuroraWriter;
 import xyz.anthofoxo.aurora.struct.comp.DrawComp;
 import xyz.anthofoxo.aurora.struct.comp.EditStateComp;
 import xyz.anthofoxo.aurora.struct.comp.XfmComp;

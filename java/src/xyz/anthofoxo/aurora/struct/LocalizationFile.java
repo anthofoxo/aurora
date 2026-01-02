@@ -3,6 +3,9 @@ package xyz.anthofoxo.aurora.struct;
 import java.util.ArrayList;
 import java.util.List;
 
+import xyz.anthofoxo.aurora.parse.AuroraReader;
+import xyz.anthofoxo.aurora.parse.AuroraWriter;
+
 public class LocalizationFile {
 	public static class Entry {
 		public String value;

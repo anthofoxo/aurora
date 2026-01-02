@@ -1,15 +1,17 @@
-package xyz.anthofoxo.aurora.struct;
+package xyz.anthofoxo.aurora.parse;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Stack;
 
+import xyz.anthofoxo.aurora.struct.ThumperStruct;
 import xyz.anthofoxo.aurora.struct.annotation.FixedSize;
 import xyz.anthofoxo.aurora.struct.annotation.RemoveFieldIfEnclosed;
 import xyz.anthofoxo.aurora.struct.comp.Comp;
@@ -51,6 +53,10 @@ public class AuroraReader {
 		long b7 = i8() & 0xFFL;
 
 		return b0 | (b1 << 8) | (b2 << 16) | (b3 << 24) | (b4 << 32) | (b5 << 40) | (b6 << 48) | (b7 << 56);
+	}
+
+	public Instant instant() {
+		return Instant.ofEpochSecond(i64());
 	}
 
 	public void seek(int newPos) {
@@ -227,6 +233,7 @@ public class AuroraReader {
 					else if (float.class.equals(type)) field.setFloat(instance, f32());
 					else if (long.class.equals(type)) field.setLong(instance, i64());
 					else if (String.class.equals(type)) field.set(instance, str());
+					else if (Instant.class.equals(type)) field.set(instance, instant());
 
 					else if (byte[].class.equals(type))
 						field.set(instance, i8arr(field.getAnnotation(FixedSize.class).count()));

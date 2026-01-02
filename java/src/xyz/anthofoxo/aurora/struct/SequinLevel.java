@@ -3,6 +3,7 @@ package xyz.anthofoxo.aurora.struct;
 import java.util.ArrayList;
 import java.util.List;
 
+import xyz.anthofoxo.aurora.parse.AuroraReader;
 import xyz.anthofoxo.aurora.struct.SequinLeaf.Trait;
 import xyz.anthofoxo.aurora.struct.annotation.FixedSize;
 import xyz.anthofoxo.aurora.struct.comp.Comp;

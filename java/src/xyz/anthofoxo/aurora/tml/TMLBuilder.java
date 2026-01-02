@@ -13,8 +13,8 @@ import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 
 import xyz.anthofoxo.aurora.Hash;
-import xyz.anthofoxo.aurora.struct.AuroraReader;
-import xyz.anthofoxo.aurora.struct.AuroraWriter;
+import xyz.anthofoxo.aurora.parse.AuroraReader;
+import xyz.anthofoxo.aurora.parse.AuroraWriter;
 import xyz.anthofoxo.aurora.struct.LevelListingFile;
 import xyz.anthofoxo.aurora.struct.LocalizationFile;
 import xyz.anthofoxo.aurora.target.Target;

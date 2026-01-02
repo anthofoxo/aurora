@@ -1,13 +1,15 @@
-package xyz.anthofoxo.aurora.struct;
+package xyz.anthofoxo.aurora.parse;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Stack;
 
 import xyz.anthofoxo.aurora.Hash;
+import xyz.anthofoxo.aurora.struct.ThumperStruct;
 import xyz.anthofoxo.aurora.struct.annotation.RemoveFieldIfEnclosed;
 
 public class AuroraWriter {
@@ -25,8 +27,9 @@ public class AuroraWriter {
 		bytes.add(value);
 	}
 
-	public void hash(String v) {
-		i32(Hash.fnv1a(v));
+	public void i16(short v) {
+		i8((byte) (v & 0xFF));
+		i8((byte) ((v >>> 8) & 0xFF));
 	}
 
 	public void i32(int v) {
@@ -47,8 +50,21 @@ public class AuroraWriter {
 		i8((byte) ((v >>> 56) & 0xFF));
 	}
 
+	public void instant(Instant v) {
+		i64(v.getEpochSecond());
+	}
+
 	public void f32(float v) {
 		i32(Float.floatToRawIntBits(v));
+	}
+
+	public void f64(double v) {
+		i64(Double.doubleToRawLongBits(v));
+	}
+
+	@Deprecated
+	public void hash(String v) {
+		i32(Hash.fnv1a(v));
 	}
 
 	public void str(String v) {
@@ -78,6 +94,7 @@ public class AuroraWriter {
 
 	@SuppressWarnings("unchecked")
 	public <T extends ThumperStruct> void obj(T value) {
+		// Push enclosing state
 		enclosing.push(value.getClass());
 
 		try {
@@ -89,72 +106,50 @@ public class AuroraWriter {
 				var method = clazz.getMethod("out", AuroraWriter.class, clazz);
 
 				try {
-					clazz.cast(method.invoke(null, this, value));
+					method.invoke(null, this, value);
 					return;
 				} catch (IllegalAccessException | InvocationTargetException e) {
-					e.printStackTrace();
+					throw new ParseException(e);
 				}
 			} catch (NoSuchMethodException e) {
+				// Class doesn't have custom overload, we can safely ignore and parse as normal
 			}
 
+			// Iterate over fields
 			for (var field : value.getClass().getFields()) {
+				// Ignore static fields, fields with _ prefix are marked for internal use only
 				if (Modifier.isStatic(field.getModifiers())) continue;
+				if (field.getName().startsWith("_")) continue;
 
+				// Check if the field removal context is valid
 				var removalAnnotation = field.getAnnotation(RemoveFieldIfEnclosed.class);
 				if (removalAnnotation != null) {
-					boolean ignoreField = false;
-
-					for (var itCtx : enclosing) {
-						if (itCtx.equals(removalAnnotation.clazz())) {
-							ignoreField = true;
-							break;
-						}
-
-					}
-
-					if (ignoreField) {
-						// If this field shouldnt be written then do not write it
-						continue;
-					}
+					if (enclosing.contains(removalAnnotation.clazz())) continue;
 				}
 
 				var type = field.getType();
 
 				try {
-					// Generic object
-					if (Object.class.equals(type)) {
-						var fieldValue = field.get(value);
+					var fvalue = field.get(value);
 
-						if (fieldValue instanceof Boolean b) {
-							bool(b);
-						} else if (fieldValue instanceof Integer b) {
-							i32(b);
-						} else if (fieldValue instanceof String b) {
-							str(b);
-						} else {
-							throw new IllegalStateException();
-						}
-					}
-
-					else if (boolean.class.equals(type)) bool(field.getBoolean(value));
-					else if (Boolean.class.equals(type)) bool(Boolean.class.cast(field.getBoolean(value)));
-					else if (byte.class.equals(type)) i8(field.getByte(value));
-					else if (Byte.class.equals(type)) i8(Byte.class.cast(field.getByte(value)));
-					else if (int.class.equals(type)) i32(field.getInt(value));
-					else if (Integer.class.equals(type)) i32(Integer.class.cast(field.getInt(value)));
-					else if (float.class.equals(type)) f32(field.getFloat(value));
-					else if (long.class.equals(type)) i64(field.getLong(value));
-					else if (Float.class.equals(type)) f32(Float.class.cast(field.get(value)));
-					else if (String.class.equals(type)) str(String.class.cast(field.get(value)));
-					else if (byte[].class.equals(type)) i8arr(byte[].class.cast(field.get(value)));
-					else if (int[].class.equals(type)) i32arr(int[].class.cast(field.get(value)));
+					// Check basic types
+					if (fvalue instanceof Boolean v) bool(v);
+					else if (fvalue instanceof Byte v) i8(v);
+					else if (fvalue instanceof Short v) i16(v);
+					else if (fvalue instanceof Integer v) i32(v);
+					else if (fvalue instanceof Long v) i64(v);
+					else if (fvalue instanceof Float v) f32(v);
+					else if (fvalue instanceof Double v) f64(v);
+					else if (fvalue instanceof String v) str(v);
+					else if (fvalue instanceof byte[] v) i8arr(v);
+					else if (fvalue instanceof int[] v) i32arr(v);
+					else if (fvalue instanceof Instant v) instant(v);
 					else if (ThumperStruct.class.isAssignableFrom(type))
 						obj(ThumperStruct.class.cast(field.get(value)));
 					else if (List.class.isAssignableFrom(type)) {
 						var list = field.get(value);
-						var genericType = field.getGenericType();
 
-						if (genericType instanceof ParameterizedType pt) {
+						if (field.getGenericType() instanceof ParameterizedType pt) {
 							var arg = pt.getActualTypeArguments()[0];
 
 							if (String.class.equals(arg)) {
