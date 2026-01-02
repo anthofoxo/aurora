@@ -27,7 +27,7 @@ public final class Font {
 	 * @see EntryPoint#imGuiInit()
 	 */
 	public static void registerFont(String resource, String key, float size) {
-		try (var stream = Util.getResource("NotoSans-Regular.ttf")) {
+		try (var stream = Util.getResource(resource)) {
 			byte[] ttf = stream.readAllBytes();
 			ImFontConfig cfg = new ImFontConfig();
 			cfg.setFontDataOwnedByAtlas(false);
