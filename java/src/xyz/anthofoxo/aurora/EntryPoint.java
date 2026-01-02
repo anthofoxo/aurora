@@ -110,6 +110,9 @@ public final class EntryPoint {
 		ImGui.getIO().addConfigFlags(ImGuiConfigFlags.DockingEnable);
 		// The first registered font will be the default font
 		Font.registerFont("NotoSans-Regular.ttf", Font.DEFAULT_NAME, Font.DEFAULT_SIZE);
+		Font.registerFont("NotoSans-Regular.ttf", "defaultsmall", 14);
+		Font.registerFont("relay-medium.ttf", "levelfont", 20);
+		Font.registerFont("consolas.ttf", "consolas", 14);
 	}
 
 	public static void auroraMain() {
@@ -150,7 +153,7 @@ public final class EntryPoint {
 		glfwSwapInterval(1);
 		glfwShowWindow(window);
 
-		glfwSetWindowRefreshCallback(window, (long _) -> {
+		glfwSetWindowRefreshCallback(window, (long _a) -> {
 			update();
 		});
 
