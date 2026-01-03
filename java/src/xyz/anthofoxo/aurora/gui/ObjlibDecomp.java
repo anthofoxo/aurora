@@ -391,6 +391,88 @@ public class ObjlibDecomp {
 		);
 	// @formatter:on
 
+	private void calcLevelLength() {
+		if (level == null) return;
+
+		int numBeats = computeBeatLength();
+		if (level.footer != null) {
+			float numMinutes = (float) numBeats / level.footer.bpm;
+			System.out.println(minutesToMinutesSeconds(numMinutes));
+		} else {
+			System.out.println(numBeats + " beats");
+		}
+	}
+
+	public static int getLevelBeatCount(SequinLevel level) {
+		int total = 0;
+
+		for (var leafEntry : level.enteries) {
+			total += leafEntry.beatCount;
+		}
+
+		return total;
+
+	}
+
+	public static String minutesToMinutesSeconds(float minutes) {
+		int totalSeconds = Math.round(minutes * 60);
+		int mins = totalSeconds / 60;
+		int secs = totalSeconds % 60;
+		return String.format("%d:%02d", mins, secs);
+	}
+
+	public int computeBeatLength() {
+		if (level == null) return 0;
+		int total = 0;
+
+		// for each master (should be just one)
+		for (var master : level.masters.values()) {
+			for (var masterLevelEntry : master.levels) {
+				if (!masterLevelEntry.lvlName.isEmpty()) {
+					var lvl = level.levels.get(masterLevelEntry.lvlName);
+
+					if (lvl == null) {
+						System.err.println("cant find " + masterLevelEntry.lvlName);
+					} else {
+						total += getLevelBeatCount(lvl);
+					}
+
+					var lvlrest = level.levels.get(masterLevelEntry.restLvlName);
+
+					if (lvlrest == null) {
+						System.err.println("cant find " + masterLevelEntry.restLvlName);
+					} else {
+						total += getLevelBeatCount(lvlrest);
+					}
+
+				} else {
+
+					var gate = level.gates.get(masterLevelEntry.gateName);
+
+					if (gate == null) {
+						System.err.println("cant find " + masterLevelEntry.gateName);
+						continue;
+					}
+
+					for (var pattern : gate.patterns) {
+						var lvl = level.levels.get(pattern.levelName);
+
+						if (lvl == null) {
+							System.err.println("cant find gate lvl " + pattern.levelName);
+						} else {
+							total += getLevelBeatCount(lvl);
+						}
+
+					}
+
+				}
+
+			}
+		}
+
+		return total;
+	}
+
 	public void draw() {
 		if (!visible.get()) return;
 
@@ -427,6 +509,10 @@ public class ObjlibDecomp {
 				ImGui.text(error);
 			} else {
 				drawParsed();
+			}
+
+			if (ImGui.button("Calc Length")) {
+				calcLevelLength();
 			}
 
 		}
