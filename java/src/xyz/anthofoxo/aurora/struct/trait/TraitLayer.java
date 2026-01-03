@@ -10,7 +10,7 @@ public enum TraitLayer implements ThumperStruct {
 	kLayerWorld, kLayerUI, kNumDrawLayers;
 
 	public static TraitLayer in(AuroraReader in) {
-		return valueOf(in.cstr());
+		return valueOf(in.str());
 	}
 
 	public static void out(AuroraWriter out, TraitLayer v) {

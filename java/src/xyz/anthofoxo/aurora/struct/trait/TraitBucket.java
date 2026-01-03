@@ -10,7 +10,7 @@ public enum TraitBucket implements ThumperStruct {
 	kBucketTerrain, kBucketMain, kBucketEffect, kBucketPostEffect, kBucketParent;
 
 	public static TraitBucket in(AuroraReader in) {
-		return valueOf(in.cstr());
+		return valueOf(in.str());
 	}
 
 	public static void out(AuroraWriter out, TraitBucket v) {

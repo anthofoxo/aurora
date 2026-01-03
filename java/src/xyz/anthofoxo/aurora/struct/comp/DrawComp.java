@@ -1,5 +1,7 @@
 package xyz.anthofoxo.aurora.struct.comp;
 
+import java.util.List;
+
 import xyz.anthofoxo.aurora.Hash;
 import xyz.anthofoxo.aurora.struct.annotation.KnownNativeName;
 import xyz.anthofoxo.aurora.struct.annotation.RemoveFieldIfEnclosed;
@@ -22,11 +24,11 @@ public class DrawComp implements Comp {
 	public TraitBucket bucket;
 
 	/**
-	 * We arent super sure about this behavior yet, as of now it seems like only the
-	 * skybox object can skip this
+	 * This field must be removed if parsing a skybox. This field otherwise usually is empty.
+	 * In the level objlib footer this typically has 2 string pointing to a couple objects
 	 */
 	@RemoveFieldIfEnclosed(clazz = UnknownSkyboxStruct.class)
-	public int contextInt = 0;
+	public List<String> contextInt;
 
 	public DrawComp() {
 	}

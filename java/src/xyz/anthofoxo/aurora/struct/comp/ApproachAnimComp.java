@@ -5,6 +5,7 @@ import xyz.anthofoxo.aurora.struct.annotation.KnownNativeName;
 
 @KnownNativeName
 public class ApproachAnimComp implements Comp {
+	// LE: 73 33 2D 6C
 	public static final int HASH = Hash.fnv1a("ApproachAnimComp");
 
 	public int hash = HASH;

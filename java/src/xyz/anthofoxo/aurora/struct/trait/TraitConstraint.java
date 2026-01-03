@@ -10,7 +10,7 @@ public enum TraitConstraint implements ThumperStruct {
 	kConstraintParent, kConstraintBillboard, kConstraintSkybox;
 
 	public static TraitConstraint in(AuroraReader in) {
-		return valueOf(in.cstr());
+		return valueOf(in.str());
 	}
 
 	public static void out(AuroraWriter out, TraitConstraint v) {

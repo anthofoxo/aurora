@@ -49,16 +49,22 @@ public class SequinGate implements ThumperStruct {
 	public String preLevelName;
 	public String postLevelName;
 	public String restartLevelName;
-	public int unknown0; // 0
+
+	/**
+	 * In all customs and all vanilla levels this is an empty string Level 7 is the
+	 * exception, it is seen with this value set to `crakhed_pellet_trans.lvl` in
+	 * the gate `crakhed.gate`
+	 */
+	public String unknown0;
 	public String sectionType;
-	public int unknown1; // 9
+	public float unknown1; // 9
 	public String randomType;
 
 	public SequinGate withTMLDefaults() {
 		header = SequinGate.header();
 		comps = List.of(new EditStateComp());
 		patterns = new ArrayList<>();
-		unknown0 = 0;
+		unknown0 = "";
 		unknown1 = 9;
 		return this;
 	}

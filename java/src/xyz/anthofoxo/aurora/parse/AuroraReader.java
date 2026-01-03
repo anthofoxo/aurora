@@ -86,7 +86,7 @@ public class AuroraReader {
 
 		int offset = 0;
 		for (int i = 0; i < pattern.length; ++i) {
-			int val = Integer.reverseBytes(pattern[i]);
+			int val = pattern[i];
 
 			bytePattern[offset++] = (byte) (val);
 			bytePattern[offset++] = (byte) (val >>> 8);

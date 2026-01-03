@@ -6,7 +6,9 @@ import xyz.anthofoxo.aurora.struct.annotation.FixedSize;
 import xyz.anthofoxo.aurora.struct.comp.Comp;
 
 public class SequinMaster implements ThumperStruct {
-	public static final int[] HEADER = { 33, 33, 4 };
+	public static int[] header() {
+		return new int[] { 33, 33, 4 };
+	}
 
 	public static class Entry implements ThumperStruct {
 		public String lvlName;

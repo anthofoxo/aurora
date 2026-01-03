@@ -1,6 +1,7 @@
 package xyz.anthofoxo.aurora.struct;
 
 import xyz.anthofoxo.aurora.Hash;
+import xyz.anthofoxo.aurora.parse.AuroraReader;
 
 public enum DeclarationType implements ThumperStruct {
 	// @formatter:off
@@ -41,5 +42,15 @@ public enum DeclarationType implements ThumperStruct {
 
 	private DeclarationType(int value) {
 		this.value = value;
+	}
+
+	public static DeclarationType in(AuroraReader in) {
+		int hash = in.i32();
+
+		for (var v : values()) {
+			if (hash == v.value) return v;
+		}
+
+		throw new IllegalStateException("No declaration type has the value: " + Integer.toHexString(hash));
 	}
 }

@@ -267,7 +267,7 @@ public class Tcle3 extends Target {
 
 	public static SequinMaster toSequinMaster(JsonNode obj) {
 		SequinMaster master = new SequinMaster();
-		master.header = SequinMaster.HEADER.clone();
+		master.header = SequinMaster.header();
 
 		// @formatter:off
 		master.comps = List.of(
@@ -560,8 +560,8 @@ public class Tcle3 extends Target {
 
 		instance.unknown4 = false;
 		instance.volume = obj.get("volume").asFloat();
-		instance.unknown2 = 0;
-		instance.unknown3 = 0;
+		instance.startFlow = "";
+		instance.unknown3 = List.of();
 		instance.traitType = "kNumTraitTypes";
 		instance.inputAllowed = asBool(obj.get("input_allowed"));
 		instance.tutorialType = obj.get("tutorial_type").asString();

@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import xyz.anthofoxo.aurora.parse.AuroraReader;
+import xyz.anthofoxo.aurora.struct.SequinGate.ParamPath;
 import xyz.anthofoxo.aurora.struct.SequinLeaf.Trait;
 import xyz.anthofoxo.aurora.struct.annotation.FixedSize;
 import xyz.anthofoxo.aurora.struct.comp.Comp;
@@ -49,8 +50,17 @@ public class SequinLevel implements ThumperStruct {
 	public List<Loop> loops;
 	public boolean unknown4;
 	public float volume;
-	public int unknown2;
-	public int unknown3;
+
+	/**
+	 * seen used in title_screen, value was "title_init_cut.flow"
+	 */
+	public String startFlow;
+
+	/**
+	 * this is usually an empty list, in title_screen this is seen as a param list
+	 */
+	public List<ParamPath> unknown3;
+
 	public String traitType;
 	public boolean inputAllowed;
 	public String tutorialType;
@@ -74,8 +84,8 @@ public class SequinLevel implements ThumperStruct {
 		instance.loops = in.objlist(Loop.class);
 		instance.unknown4 = in.bool();
 		instance.volume = in.f32();
-		instance.unknown2 = in.i32();
-		instance.unknown3 = in.i32();
+		instance.startFlow = in.str();
+		instance.unknown3 = in.objlist(ParamPath.class);
 		instance.traitType = in.str();
 		instance.inputAllowed = in.bool();
 		instance.tutorialType = in.str();
