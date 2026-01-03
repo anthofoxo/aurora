@@ -90,6 +90,7 @@ public class ObjlibDecomp {
 		public Map<String, Vibration> vibs = new HashMap<>();
 		public Map<String, PathDecorator> decorators = new HashMap<>();
 		public Map<String, Scene> scenes = new HashMap<>();
+		public Map<String, PostProcess> postProcess = new HashMap<>();
 		public Map<String, PostProcessPass> passes = new HashMap<>();
 		public Map<String, SequinPulse> pulses = new HashMap<>();
 		public Map<String, Mat> mats = new HashMap<>();
@@ -347,6 +348,9 @@ public class ObjlibDecomp {
 				break;
 			case PostProcessPass:
 				level.passes.put(declaration.name, in.obj(PostProcessPass.class));
+				break;
+			case PostProcess:
+				level.postProcess.put(declaration.name, in.obj(PostProcess.class));
 				break;
 			case Path:
 				level.paths.put(declaration.name, in.obj(xyz.anthofoxo.aurora.struct.Path.class));
