@@ -38,6 +38,7 @@ public interface Comp extends ThumperStruct {
 		else if (hash == EditStateComp.HASH) return in.obj(EditStateComp.class);
 		else if (hash == XfmComp.HASH) return in.obj(XfmComp.class);
 		else if (hash == PollComp.HASH) return in.obj(PollComp.class);
+		else if (hash == DSPEcho.HASH) return in.obj(DSPEcho.class);
 		else throw new IllegalStateException("Unknown comp type: " + Integer.toHexString(hash) + " at offset 0x"
 				+ Integer.toHexString(in.position()));
 	}

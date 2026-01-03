@@ -113,6 +113,12 @@ public class AuroraReader {
 		return bytes;
 	}
 
+	public String[] strarr(int count) {
+		String[] arr = new String[count];
+		for (int i = 0; i < count; ++i) arr[i] = str();
+		return arr;
+	}
+
 	public int[] i32arr(int count) {
 		int[] values = new int[count];
 		for (int i = 0; i < count; ++i) values[i] = i32();
@@ -199,6 +205,9 @@ public class AuroraReader {
 					else if (long.class.equals(type)) field.setLong(instance, i64());
 					else if (String.class.equals(type)) field.set(instance, str());
 					else if (Instant.class.equals(type)) field.set(instance, instant());
+
+					else if (String[].class.equals(type))
+						field.set(instance, strarr(field.getAnnotation(FixedSize.class).count()));
 
 					else if (byte[].class.equals(type))
 						field.set(instance, i8arr(field.getAnnotation(FixedSize.class).count()));

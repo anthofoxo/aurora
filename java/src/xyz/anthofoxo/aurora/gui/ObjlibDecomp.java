@@ -16,6 +16,7 @@ import xyz.anthofoxo.aurora.UserConfig;
 import xyz.anthofoxo.aurora.parse.AuroraReader;
 import xyz.anthofoxo.aurora.struct.Bender;
 import xyz.anthofoxo.aurora.struct.ChannelGroup;
+import xyz.anthofoxo.aurora.struct.DSP;
 import xyz.anthofoxo.aurora.struct.EntitySpawner;
 import xyz.anthofoxo.aurora.struct.Env;
 import xyz.anthofoxo.aurora.struct.LibraryImport;
@@ -23,16 +24,22 @@ import xyz.anthofoxo.aurora.struct.LibraryObject;
 import xyz.anthofoxo.aurora.struct.Mat;
 import xyz.anthofoxo.aurora.struct.ObjectDeclaration;
 import xyz.anthofoxo.aurora.struct.ObjlibFooter;
+import xyz.anthofoxo.aurora.struct.Pass;
+import xyz.anthofoxo.aurora.struct.PathDecorator;
+import xyz.anthofoxo.aurora.struct.PostProcess;
 import xyz.anthofoxo.aurora.struct.Sample;
+import xyz.anthofoxo.aurora.struct.Scene;
 import xyz.anthofoxo.aurora.struct.SequinDrawer;
 import xyz.anthofoxo.aurora.struct.SequinGate;
 import xyz.anthofoxo.aurora.struct.SequinGate.ParamPath;
 import xyz.anthofoxo.aurora.struct.SequinLeaf;
 import xyz.anthofoxo.aurora.struct.SequinLevel;
 import xyz.anthofoxo.aurora.struct.SequinMaster;
+import xyz.anthofoxo.aurora.struct.SequinPulse;
 import xyz.anthofoxo.aurora.struct.Tex2D;
 import xyz.anthofoxo.aurora.struct.TraitAnim;
 import xyz.anthofoxo.aurora.struct.Vib;
+import xyz.anthofoxo.aurora.struct.VrSettings;
 import xyz.anthofoxo.aurora.struct.Xfmer;
 import xyz.anthofoxo.aurora.struct._DCH;
 import xyz.anthofoxo.aurora.struct._Mesh;
@@ -74,12 +81,19 @@ public class ObjlibDecomp {
 		public Map<String, Sample> samples = new HashMap<>();
 		public Map<String, TraitAnim> anims = new HashMap<>();
 		public Map<String, _Mesh> meshes = new HashMap<>();
+		public Map<String, VrSettings> vrsettings = new HashMap<>();
 		public Map<String, EntitySpawner> spawners = new HashMap<>();
 		public Map<String, Tex2D> tex2ds = new HashMap<>();
 		public Map<String, Xfmer> xfmers = new HashMap<>();
 		public Map<String, ChannelGroup> channelGroups = new HashMap<>();
 		public Map<String, _DCH> dchs = new HashMap<>();
 		public Map<String, Vib> vibs = new HashMap<>();
+		public Map<String, PathDecorator> decorators = new HashMap<>();
+		public Map<String, Scene> scenes = new HashMap<>();
+		public Map<String, Pass> passes = new HashMap<>();
+		public Map<String, SequinPulse> pulses = new HashMap<>();
+		public Map<String, Mat> mats = new HashMap<>();
+		public Map<String, DSP> dsps = new HashMap<>();
 
 		public ObjlibFooter footer;
 
@@ -202,11 +216,17 @@ public class ObjlibDecomp {
 				case TraitAnim:
 					ints = TraitAnim.header();
 					break;
+				case PathDecorator:
+					ints = PathDecorator.header();
+					break;
 				case _DCH:
 					ints = _DCH.header();
 					break;
 				case Path:
 					ints = xyz.anthofoxo.aurora.struct.Path.header();
+					break;
+				case SequinPulse:
+					ints = SequinPulse.header();
 					break;
 				case Mat:
 					ints = Mat.header();
@@ -216,6 +236,15 @@ public class ObjlibDecomp {
 					break;
 				case Flow:
 					ints = new int[] { 0x16, 0x04 };
+					break;
+				case Scene:
+					ints = Scene.header();
+					break;
+				case _Pp:
+					ints = PostProcess.header();
+					break;
+				case _Pass:
+					ints = Pass.header();
 					break;
 				case Bender:
 					ints = Bender.header();
@@ -233,13 +262,14 @@ public class ObjlibDecomp {
 							+ Integer.toHexString(in.position()));
 					break quit_reading;
 				} else {
-					System.out.println("Skipped 0x" + Integer.toHexString(seeked + 8)); // +8 account for initial header
-																						// skip
+					System.err.println("Skipped 0x" + Integer.toHexString(seeked + 8)); // +8 account for initial header
+
 				}
 			}
 
-			System.out.println(
-					declaration.name + "(" + declaration.type + ")" + " 0x" + Integer.toHexString(in.position()));
+			// System.out.println(
+			// declaration.name + "(" + declaration.type + ")" + " 0x" +
+			// Integer.toHexString(in.position()));
 
 			lastObjectOk = true;
 
@@ -260,11 +290,24 @@ public class ObjlibDecomp {
 			case Bender:
 				level.benders.put(declaration.name, in.obj(Bender.class));
 				break;
+			case PathDecorator:
+				level.decorators.put(declaration.name, in.obj(PathDecorator.class));
+				break;
+			case Mat:
+				level.mats.put(declaration.name, in.obj(Mat.class));
+				break;
+			case DSP:
+				System.out.println(declaration.name + " 0x" + Integer.toHexString(in.pos));
+				level.dsps.put(declaration.name, in.obj(DSP.class));
+				break;
 			case SequinDrawer:
 				level.drawers.put(declaration.name, in.obj(SequinDrawer.class));
 				break;
 			case ChannelGroup:
 				level.channelGroups.put(declaration.name, in.obj(ChannelGroup.class));
+				break;
+			case SequinPulse:
+				level.pulses.put(declaration.name, in.obj(SequinPulse.class));
 				break;
 			case SequinLevel:
 				level.levels.put(declaration.name, in.obj(SequinLevel.class));
@@ -284,8 +327,14 @@ public class ObjlibDecomp {
 			case Xfmer:
 				level.xfmers.put(declaration.name, in.obj(Xfmer.class));
 				break;
+			case Scene:
+				level.scenes.put(declaration.name, in.obj(Scene.class));
+				break;
 			case Mesh:
 				level.meshes.put(declaration.name, in.obj(_Mesh.class));
+				break;
+			case VrSettings:
+				level.vrsettings.put(declaration.name, in.obj(VrSettings.class));
 				break;
 			case TraitAnim:
 				level.anims.put(declaration.name, in.obj(TraitAnim.class));
@@ -296,14 +345,19 @@ public class ObjlibDecomp {
 			case Cam:
 				level.cams.put(declaration.name, in.obj(Cam.class));
 				break;
+			case _Pass:
+				level.passes.put(declaration.name, in.obj(Pass.class));
+				break;
 			case Path:
 				level.paths.put(declaration.name, in.obj(xyz.anthofoxo.aurora.struct.Path.class));
 				break;
 			default:
+
 				searchHeaderBytes = true;
 				lastObjectOk = false;
-				System.err.println("We dont know how to read: " + declaration.name + " at offset "
-						+ Integer.toHexString(in.position()) + "; attempting a seek for next object");
+				System.err.println("Skipping: " + declaration.name + " (" + declaration.type + ") at 0x"
+						+ Integer.toHexString(in.position()));
+
 			}
 		}
 
@@ -313,12 +367,9 @@ public class ObjlibDecomp {
 
 			level.footer = in.obj(ObjlibFooter.class);
 
-			System.out.println("Finished objlib reading at these positions:");
-			System.out.println(Integer.toHexString(in.position()));
-			System.out.println(Integer.toHexString(in.bytes.length));
+			assert (in.position() == in.bytes.length);
 		}
 
-		System.out.println();
 	}
 
 	private void drawParsed() {
