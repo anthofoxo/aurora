@@ -5,7 +5,7 @@ import java.util.List;
 import xyz.anthofoxo.aurora.struct.annotation.FixedSize;
 import xyz.anthofoxo.aurora.struct.comp.Comp;
 
-public class Pass implements ThumperStruct {
+public class PostProcessPass implements ThumperStruct {
 	public static int[] header() {
 		return new int[] { 0x05, 0x04 };
 	}

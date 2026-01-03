@@ -28,10 +28,10 @@ public enum DeclarationType implements ThumperStruct {
 	Cam("Cam"),
 	Scene("Scene"),
 	VrSettings("VrSettings"),
-	_DCH(0xac1abb2c),
-	_Vib(0x799c45a7),
-	_Pass(0x4e1efaa5),
-	_Pp(0x7c85d725);
+	DSPChain("DSPChain"),
+	Vibration("Vibration"),
+	PostProcessPass("PostProcessPass"),
+	PostProcess("PostProcess");
 	// @formatter:on
 
 	public final int value;

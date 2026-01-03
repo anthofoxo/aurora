@@ -24,7 +24,7 @@ import xyz.anthofoxo.aurora.struct.LibraryObject;
 import xyz.anthofoxo.aurora.struct.Mat;
 import xyz.anthofoxo.aurora.struct.ObjectDeclaration;
 import xyz.anthofoxo.aurora.struct.ObjlibFooter;
-import xyz.anthofoxo.aurora.struct.Pass;
+import xyz.anthofoxo.aurora.struct.PostProcessPass;
 import xyz.anthofoxo.aurora.struct.PathDecorator;
 import xyz.anthofoxo.aurora.struct.PostProcess;
 import xyz.anthofoxo.aurora.struct.Sample;
@@ -38,10 +38,10 @@ import xyz.anthofoxo.aurora.struct.SequinMaster;
 import xyz.anthofoxo.aurora.struct.SequinPulse;
 import xyz.anthofoxo.aurora.struct.Tex2D;
 import xyz.anthofoxo.aurora.struct.TraitAnim;
-import xyz.anthofoxo.aurora.struct.Vib;
+import xyz.anthofoxo.aurora.struct.Vibration;
 import xyz.anthofoxo.aurora.struct.VrSettings;
 import xyz.anthofoxo.aurora.struct.Xfmer;
-import xyz.anthofoxo.aurora.struct._DCH;
+import xyz.anthofoxo.aurora.struct.DSPChain;
 import xyz.anthofoxo.aurora.struct._Mesh;
 import xyz.anthofoxo.aurora.struct.annotation.FixedSize;
 import xyz.anthofoxo.aurora.struct.comp.Comp;
@@ -86,11 +86,11 @@ public class ObjlibDecomp {
 		public Map<String, Tex2D> tex2ds = new HashMap<>();
 		public Map<String, Xfmer> xfmers = new HashMap<>();
 		public Map<String, ChannelGroup> channelGroups = new HashMap<>();
-		public Map<String, _DCH> dchs = new HashMap<>();
-		public Map<String, Vib> vibs = new HashMap<>();
+		public Map<String, DSPChain> dchs = new HashMap<>();
+		public Map<String, Vibration> vibs = new HashMap<>();
 		public Map<String, PathDecorator> decorators = new HashMap<>();
 		public Map<String, Scene> scenes = new HashMap<>();
-		public Map<String, Pass> passes = new HashMap<>();
+		public Map<String, PostProcessPass> passes = new HashMap<>();
 		public Map<String, SequinPulse> pulses = new HashMap<>();
 		public Map<String, Mat> mats = new HashMap<>();
 		public Map<String, DSP> dsps = new HashMap<>();
@@ -183,8 +183,8 @@ public class ObjlibDecomp {
 				case SequinMaster:
 					ints = SequinMaster.header();
 					break;
-				case _Vib:
-					ints = Vib.header();
+				case Vibration:
+					ints = Vibration.header();
 					break;
 				case SequinDrawer:
 					ints = SequinDrawer.header();
@@ -219,8 +219,8 @@ public class ObjlibDecomp {
 				case PathDecorator:
 					ints = PathDecorator.header();
 					break;
-				case _DCH:
-					ints = _DCH.header();
+				case DSPChain:
+					ints = DSPChain.header();
 					break;
 				case Path:
 					ints = xyz.anthofoxo.aurora.struct.Path.header();
@@ -240,11 +240,11 @@ public class ObjlibDecomp {
 				case Scene:
 					ints = Scene.header();
 					break;
-				case _Pp:
+				case PostProcess:
 					ints = PostProcess.header();
 					break;
-				case _Pass:
-					ints = Pass.header();
+				case PostProcessPass:
+					ints = PostProcessPass.header();
 					break;
 				case Bender:
 					ints = Bender.header();
@@ -284,8 +284,8 @@ public class ObjlibDecomp {
 			case SequinMaster:
 				level.masters.put(declaration.name, in.obj(SequinMaster.class));
 				break;
-			case _Vib:
-				level.vibs.put(declaration.name, in.obj(Vib.class));
+			case Vibration:
+				level.vibs.put(declaration.name, in.obj(Vibration.class));
 				break;
 			case Bender:
 				level.benders.put(declaration.name, in.obj(Bender.class));
@@ -339,14 +339,14 @@ public class ObjlibDecomp {
 			case TraitAnim:
 				level.anims.put(declaration.name, in.obj(TraitAnim.class));
 				break;
-			case _DCH:
-				level.dchs.put(declaration.name, in.obj(_DCH.class));
+			case DSPChain:
+				level.dchs.put(declaration.name, in.obj(DSPChain.class));
 				break;
 			case Cam:
 				level.cams.put(declaration.name, in.obj(Cam.class));
 				break;
-			case _Pass:
-				level.passes.put(declaration.name, in.obj(Pass.class));
+			case PostProcessPass:
+				level.passes.put(declaration.name, in.obj(PostProcessPass.class));
 				break;
 			case Path:
 				level.paths.put(declaration.name, in.obj(xyz.anthofoxo.aurora.struct.Path.class));

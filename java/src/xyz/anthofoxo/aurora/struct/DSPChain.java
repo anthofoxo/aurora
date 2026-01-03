@@ -5,7 +5,7 @@ import java.util.List;
 import xyz.anthofoxo.aurora.struct.annotation.FixedSize;
 import xyz.anthofoxo.aurora.struct.comp.Comp;
 
-public class _DCH implements ThumperStruct {
+public class DSPChain implements ThumperStruct {
 	public static int[] header() {
 		return new int[] { 1, 4 };
 	}

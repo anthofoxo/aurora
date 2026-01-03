@@ -5,7 +5,7 @@ import java.util.List;
 import xyz.anthofoxo.aurora.struct.annotation.FixedSize;
 import xyz.anthofoxo.aurora.struct.comp.Comp;
 
-public class Vib implements ThumperStruct {
+public class Vibration implements ThumperStruct {
 	public static int[] header() {
 		return new int[] { 6, 4 };
 	}
