@@ -18,14 +18,15 @@ public class DrawComp implements Comp {
 	public static final int HASH = Hash.fnv1a("DrawComp");
 
 	public int hash = HASH;
-	public int unknown0 = 8; // might be a kTraitAction which expects a boolean after?
-	public boolean visible = true;
+	public int unknown0; // typically 8; might be a kTraitAction
+	public boolean visible;
 	public TraitLayer layer;
 	public TraitBucket bucket;
 
 	/**
-	 * This field must be removed if parsing a skybox. This field otherwise usually is empty.
-	 * In the level objlib footer this typically has 2 string pointing to a couple objects
+	 * This field must be removed if parsing a skybox. This field otherwise usually
+	 * is empty. In the level objlib footer this typically has 2 string pointing to
+	 * a couple objects
 	 */
 	@RemoveFieldIfEnclosed(clazz = UnknownSkyboxStruct.class)
 	public List<String> contextInt;
@@ -33,11 +34,12 @@ public class DrawComp implements Comp {
 	public DrawComp() {
 	}
 
-	public DrawComp(int unknown0, boolean visible, TraitLayer layer, TraitBucket bucket) {
+	public DrawComp(int unknown0, boolean visible, TraitLayer layer, TraitBucket bucket, List<String> refs) {
 		this.unknown0 = unknown0;
 		this.visible = visible;
 		this.layer = layer;
 		this.bucket = bucket;
+		this.contextInt = refs;
 	}
 
 }

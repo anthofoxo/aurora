@@ -42,7 +42,7 @@ public class SequinLeaf implements ThumperStruct {
 		}
 	}
 
-	public static class DataPoint {
+	public static class DataPoint implements ThumperStruct {
 		public float beat;
 		public Object data;
 		public String interp;

@@ -17,4 +17,13 @@ public class Cam implements ThumperStruct {
 	public List<Comp> comps;
 	public Vec3f extra;
 
+	public Cam() {
+	}
+
+	public Cam(List<Comp> comps, Vec3f extra) {
+		this.header = header();
+		this.comps = comps;
+		this.extra = extra;
+	}
+
 }

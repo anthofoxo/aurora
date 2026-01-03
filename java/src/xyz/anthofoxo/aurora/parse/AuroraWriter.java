@@ -6,10 +6,12 @@ import java.lang.reflect.ParameterizedType;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Stack;
 
 import xyz.anthofoxo.aurora.Hash;
 import xyz.anthofoxo.aurora.struct.ThumperStruct;
+import xyz.anthofoxo.aurora.struct.Vec4f;
 import xyz.anthofoxo.aurora.struct.annotation.RemoveFieldIfEnclosed;
 
 public class AuroraWriter {
@@ -80,6 +82,10 @@ public class AuroraWriter {
 		for (var value : values) i32(value);
 	}
 
+	public void f32arr(float... values) {
+		for (var value : values) f32(value);
+	}
+
 	public void strlist(List<String> values) {
 		i32(values.size());
 		for (var element : values) str(element);
@@ -130,7 +136,7 @@ public class AuroraWriter {
 				var type = field.getType();
 
 				try {
-					var fvalue = field.get(value);
+					var fvalue = Objects.requireNonNull(field.get(value));
 
 					// Check basic types
 					if (fvalue instanceof Boolean v) bool(v);
@@ -143,7 +149,9 @@ public class AuroraWriter {
 					else if (fvalue instanceof String v) str(v);
 					else if (fvalue instanceof byte[] v) i8arr(v);
 					else if (fvalue instanceof int[] v) i32arr(v);
+					else if (fvalue instanceof float[] v) f32arr(v);
 					else if (fvalue instanceof Instant v) instant(v);
+					else if (fvalue instanceof Vec4f v) f32arr(v.x, v.y, v.z, v.w);
 					else if (ThumperStruct.class.isAssignableFrom(type))
 						obj(ThumperStruct.class.cast(field.get(value)));
 					else if (List.class.isAssignableFrom(type)) {
@@ -158,13 +166,15 @@ public class AuroraWriter {
 
 								objlist((List<? extends ThumperStruct>) list);
 							} else {
-								throw new IllegalStateException("Failed to parse");
+								throw new IllegalStateException(
+										"Failed to parse list field: " + type + " in struct " + arg);
 							}
 						} else {
-							throw new IllegalStateException("Failed to parse");
+							throw new IllegalStateException("Failed to parse list, generic type not known");
 						}
 					} else {
-						throw new IllegalStateException("Failed to parse " + value.getClass());
+						throw new IllegalStateException(
+								"Failed to parse field: " + field + " isnt marked (" + value + ")");
 					}
 				} catch (IllegalArgumentException | IllegalAccessException e) {
 					e.printStackTrace();
