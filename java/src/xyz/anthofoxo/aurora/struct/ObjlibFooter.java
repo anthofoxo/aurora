@@ -54,11 +54,6 @@ public class ObjlibFooter implements ThumperStruct {
 		instance.camObject = new Cam(List.of(
 				new DrawComp(8, true, kNumDrawLayers, kBucketParent, List.of()),
 				new XfmComp(1, "", kConstraintParent, Transform.identity())
-				
-				// 0.785398185253143f
-				// pi / 4
-				// 45deg
-				// radians(45deg)
 			), new Vec3f((float) Math.toRadians(45.0), 1f, 1000f)); 
 		// @formatter:on
 
