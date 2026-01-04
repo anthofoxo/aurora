@@ -9,7 +9,7 @@ public class GuiUserGuide {
 	public static ImBoolean showUserGuideOnStartup = new ImBoolean(UserConfig.shouldShowGuide());
 	public ImBoolean visible = new ImBoolean(showUserGuideOnStartup);
 
-	public void draw(GuiPreferences prefs) {
+	public void draw() {
 		if (!visible.get()) return;
 
 		if (!ImGui.begin("New User Guide", visible)) {
@@ -49,7 +49,7 @@ public class GuiUserGuide {
 			ImGui.textWrapped("You dont have any mod paths setup, aurora wont be able to find your custom levels!");
 			ImGui.textWrapped(
 					"Open the File > Preferences panel and add some search paths. You want to add the folder containing the levels. Not the level folder itself");
-			if (ImGui.button("Open Preferences")) prefs.visible.set(true);
+			if (ImGui.button("Open Preferences")) GuiPreferences.visible.set(true);
 		}
 
 		ImGui.separator();

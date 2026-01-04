@@ -9,7 +9,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import org.lwjgl.util.tinyfd.TinyFileDialogs;
 
@@ -26,15 +25,13 @@ import xyz.anthofoxo.aurora.Aurora;
 import xyz.anthofoxo.aurora.AuroraStub;
 import xyz.anthofoxo.aurora.EntryPoint;
 import xyz.anthofoxo.aurora.Hash;
+import xyz.anthofoxo.aurora.ModBuilder;
 import xyz.anthofoxo.aurora.UserConfig;
 import xyz.anthofoxo.aurora.gfx.Font;
-import xyz.anthofoxo.aurora.struct.AuroraReader;
-import xyz.anthofoxo.aurora.struct.AuroraWriter;
+import xyz.anthofoxo.aurora.parse.AuroraReader;
+import xyz.anthofoxo.aurora.parse.AuroraWriter;
 import xyz.anthofoxo.aurora.struct.LevelListingFile;
-import xyz.anthofoxo.aurora.target.BuiltinNativeTarget;
 import xyz.anthofoxo.aurora.target.Target;
-import xyz.anthofoxo.aurora.target.Tcle3;
-import xyz.anthofoxo.aurora.target.TcleArtifact;
 import xyz.anthofoxo.aurora.tml.TMLBuilder;
 
 public class ModLauncher {
@@ -59,53 +56,8 @@ public class ModLauncher {
 	}
 
 	public static void reloadList() {
-		for (var element : customs) {
-			if (element instanceof Tcle3 target) {
-				if (target.texture != null) target.texture.close();
-			}
-		}
-
-		customs.clear();
+		ModBuilder.reloadTargetList(customs, enableCampaignLevels.get());
 		selected = null;
-
-		for (var searchPath : UserConfig.modPaths) {
-			try (var stream = Files.list(Path.of(searchPath))) {
-				for (Path path : stream.collect(Collectors.toList())) {
-					try {
-						var target = new Tcle3(path);
-						target.enabled.set(UserConfig.isModEnabled(target.tcl.levelName));
-						customs.add(target);
-						continue;
-					} catch (Exception e) {
-					}
-
-					try {
-						var target = new TcleArtifact(path);
-						target.enabled.set(UserConfig.isModEnabled(target.tcl.levelName));
-						customs.add(target);
-						continue;
-					} catch (Exception e) {
-					}
-
-					System.out.println("Failed to add target " + path);
-				}
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-		}
-
-		if (enableCampaignLevels.get()) {
-			for (int i = 0; i < 9; ++i) {
-				try {
-					BuiltinNativeTarget target = new BuiltinNativeTarget(i);
-					target.enabled.set(UserConfig.isModEnabled(target.tcl.levelName));
-					customs.add(target);
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
-			}
-
-		}
 	}
 
 	public static void draw() {
@@ -114,6 +66,7 @@ public class ModLauncher {
 			if (ImGui.beginMenuBar()) {
 				if (ImGui.beginMenu("Options")) {
 
+					if (ImGui.menuItem("enableCampaignLevels", null, enableCampaignLevels)) reloadList();
 					ImGui.menuItem("Unlock All Levels", null, autoUnlockLevels);
 
 					ImGui.endMenu();
@@ -422,12 +375,13 @@ public class ModLauncher {
 								if (texture != null) {
 									// ImGui.sameLine();
 									float size = ImGui.getFrameHeight();
-									float offset = ImGui.getContentRegionAvailX() - (100)
+									float width = size * texture.getAspect();
+									float offset = ImGui.getContentRegionAvailX() - width
 											- ImGui.getStyle().getItemSpacingX() - ImGui.getStyle().getFramePaddingX();
 
 									ImGui.sameLine(ImGui.getCursorPosX() + offset, ImGui.getStyle().getItemSpacingX());
 
-									ImGui.image(texture.getHandle(), 100, size);
+									ImGui.image(texture.getHandle(), width, size);
 
 								}
 							}
@@ -581,4 +535,5 @@ public class ModLauncher {
 		ImGui.popStyleVar();
 		ImGui.end();
 	}
+
 }

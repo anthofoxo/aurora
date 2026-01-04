@@ -13,15 +13,18 @@ import java.nio.IntBuffer;
 import java.util.Objects;
 
 import org.lwjgl.glfw.Callbacks;
+import org.lwjgl.glfw.GLFW;
 import org.lwjgl.glfw.GLFWErrorCallback;
 import org.lwjgl.glfw.GLFWImage;
 import org.lwjgl.opengl.GL;
+import org.lwjgl.opengl.GL46C;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.system.MemoryUtil;
 import org.lwjgl.system.libc.LibCStdlib;
 
 import imgui.ImGui;
 import imgui.flag.ImGuiConfigFlags;
+import imgui.flag.ImGuiDockNodeFlags;
 import imgui.gl3.ImGuiImplGl3;
 import imgui.glfw.ImGuiImplGlfw;
 import xyz.anthofoxo.aurora.gfx.Font;
@@ -89,11 +92,16 @@ public final class EntryPoint {
 	}
 
 	private static void update() {
+		int[] width = new int[1];
+		int[] height = new int[1];
+		GLFW.glfwGetFramebufferSize(EntryPoint.window, width, height);
+		GL46C.glViewport(0, 0, width[0], height[0]);
+
 		imGuiGl3.newFrame();
 		imGuiGlfw.newFrame();
 		ImGui.newFrame();
 
-		ImGui.dockSpaceOverViewport();
+		ImGui.dockSpaceOverViewport(0, ImGui.getMainViewport(), ImGuiDockNodeFlags.PassthruCentralNode);
 		aurora.update();
 
 		glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
@@ -101,6 +109,7 @@ public final class EntryPoint {
 
 		ImGui.render();
 		imGuiGl3.renderDrawData(ImGui.getDrawData());
+		glfwSwapBuffers(window);
 	}
 
 	private static void imGuiInit() {
@@ -154,10 +163,11 @@ public final class EntryPoint {
 		glfwShowWindow(window);
 
 		glfwSetWindowRefreshCallback(window, (long _) -> {
-			update();
+			if (!UserConfig.tinyfdOpen) update();
 		});
 
 		imGuiInit();
+
 		aurora = new Aurora();
 
 		while (running) {
@@ -171,7 +181,6 @@ public final class EntryPoint {
 				glfwMakeContextCurrent(backupCurrentContext);
 			}
 
-			glfwSwapBuffers(window);
 			glfwPollEvents();
 			if (glfwWindowShouldClose(window)) running = false;
 		}
@@ -180,10 +189,9 @@ public final class EntryPoint {
 		imGuiGlfw.shutdown();
 		ImGui.destroyContext();
 
-		// Free the textures
-		for (var icon : Aurora.icons.values()) {
-			icon.close();
-		}
+		Aurora.icons.values().forEach(e -> e.close());
+		Aurora.textures.values().forEach(e -> e.close());
+		Aurora.buttonicons.values().forEach(e -> e.close());
 
 		Callbacks.glfwFreeCallbacks(window);
 		glfwDestroyWindow(window);

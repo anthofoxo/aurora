@@ -35,6 +35,15 @@ public class UserConfig {
 
 	}
 
+	public static boolean isUnlockPractice() {
+		return Boolean.parseBoolean(properties.getProperty("aurora.unlock_practice", Boolean.toString(true)));
+	}
+
+	public static void setUnlockPractice(boolean unlock) {
+		properties.setProperty("aurora.unlock_practice", Boolean.toString(unlock));
+		save();
+	}
+
 	public static boolean isModEnabled(String modName) {
 		return Boolean
 				.parseBoolean(properties.getProperty(String.format("mod.%s.enabled", modName), Boolean.toString(true)));
@@ -45,11 +54,15 @@ public class UserConfig {
 		save();
 	}
 
+	public static boolean tinyfdOpen = false;
+
 	public static String thumperPath() {
 		var prop = properties.getProperty("thumper.path");
 		if (prop != null) return prop;
 
+		tinyfdOpen = true;
 		String v = tinyfd_openFileDialog("Select Thumper Executable", null, null, null, false);
+		tinyfdOpen = false;
 		if (v == null) return null;
 
 		v = Path.of(v).getParent().toString();

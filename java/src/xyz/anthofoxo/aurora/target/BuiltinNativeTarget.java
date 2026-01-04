@@ -8,8 +8,8 @@ import java.util.HashMap;
 
 import xyz.anthofoxo.aurora.Hash;
 import xyz.anthofoxo.aurora.UserConfig;
-import xyz.anthofoxo.aurora.struct.AuroraReader;
-import xyz.anthofoxo.aurora.struct.AuroraWriter;
+import xyz.anthofoxo.aurora.parse.AuroraReader;
+import xyz.anthofoxo.aurora.parse.AuroraWriter;
 import xyz.anthofoxo.aurora.struct.Sample;
 import xyz.anthofoxo.aurora.tml.TCLFile;
 
@@ -130,8 +130,6 @@ public class BuiltinNativeTarget extends Target {
 		floatBits |= (compiled.objlib[compiled.objlib.length - offset - 1] & 0xFF) << 24;
 
 		float bpm = Float.intBitsToFloat(floatBits);
-
-		System.out.println(bpm);
 
 		bpm *= speedModifier;
 		floatBits = Float.floatToRawIntBits(bpm);

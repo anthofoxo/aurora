@@ -15,31 +15,30 @@ import xyz.anthofoxo.aurora.gui.ModLauncher;
 import xyz.anthofoxo.aurora.gui.ObjlibDecomp;
 
 public class Aurora {
-	public static final String TITLE = "Aurora v0.2.0-a.1+WIP";
+	public static final String TITLE = "Aurora v0.2.0-a.2";
 
 	private GuiUserGuide userGuide = new GuiUserGuide();
-	private GuiPreferences preferences = new GuiPreferences();
 	private ImBoolean demo = new ImBoolean();
 	private Hasher hasher = new Hasher();
 	private ObjlibDecomp objlibDecomp = new ObjlibDecomp();
 
 	public static Map<String, Texture> icons = new HashMap<>();
 	public static Map<String, Texture> buttonicons = new HashMap<>();
+	public static Map<String, Texture> textures = new HashMap<>();
+
+	public static void registerTexturesFromPath(Map<String, Texture> target, String path)
+			throws URISyntaxException, IOException {
+		for (var file : Util.getAllFilesFromResourceDirectory(path)) {
+			target.put(file.getFileName().toString(), Texture.makeFromResource(file.toString()));
+		}
+	}
 
 	public Aurora() {
-
 		try {
-			var list = Util.getAllFilesFromResourceDirectory("difficulty_icons");
-
-			for (var item : list) {
-				icons.put(item.getFileName().toString(), Texture.makeFromResource(item.toString()));
-			}
-			list = Util.getAllFilesFromResourceDirectory("button_icons");
-			for (var item : list) {
-				buttonicons.put(item.getFileName().toString(), Texture.makeFromResource(item.toString()));
-			}
+			registerTexturesFromPath(icons, "difficulty_icons");
+			registerTexturesFromPath(buttonicons, "button_icons");
+			registerTexturesFromPath(textures, "textures");
 		} catch (URISyntaxException | IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
@@ -49,7 +48,7 @@ public class Aurora {
 
 			if (ImGui.beginMenu("File")) {
 
-				ImGui.menuItem("Preferences", null, preferences.visible);
+				ImGui.menuItem("Preferences", null, GuiPreferences.visible);
 
 				if (ImGui.menuItem("Quit")) {
 					EntryPoint.running = false;
@@ -90,10 +89,23 @@ public class Aurora {
 		}
 
 		if (demo.get()) ImGui.showDemoWindow(demo);
-		preferences.draw();
-		userGuide.draw(preferences);
+		GuiPreferences.draw();
+		userGuide.draw();
 		ModLauncher.draw();
 		hasher.draw();
 		objlibDecomp.draw();
+
+		drawBackgroundElement();
+	}
+
+	private void drawBackgroundElement() {
+		var drawList = ImGui.getBackgroundDrawList();
+		float viewportWidth = ImGui.getMainViewport().getSizeX();
+		float viewportHeight = ImGui.getMainViewport().getSizeY();
+		float size = Math.min(viewportWidth / 1.5f, viewportHeight / 1.5f);
+		float margin = 64.0f;
+		float x = viewportWidth - size - margin;
+		float y = viewportHeight - size - margin;
+		drawList.addImage(textures.get("aur_bg.png").getHandle(), x, y, x + size, y + size);
 	}
 }

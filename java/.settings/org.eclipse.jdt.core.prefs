@@ -8,7 +8,11 @@ org.eclipse.jdt.core.compiler.debug.localVariable=generate
 org.eclipse.jdt.core.compiler.debug.sourceFile=generate
 org.eclipse.jdt.core.compiler.problem.enablePreviewFeatures=disabled
 org.eclipse.jdt.core.compiler.problem.reportPreviewFeatures=warning
+<<<<<<< HEAD
 org.eclipse.jdt.core.compiler.release=disabled
+=======
+org.eclipse.jdt.core.compiler.release=enabled
+>>>>>>> branch 'cocoa' of https://github.com/CocoaMix86/aurora-cocoaUI
 org.eclipse.jdt.core.compiler.source=25
 org.eclipse.jdt.core.formatter.align_arrows_in_switch_on_columns=false
 org.eclipse.jdt.core.formatter.align_assignment_statements_on_columns=false

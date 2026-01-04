@@ -11,7 +11,7 @@ import imgui.type.ImBoolean;
 import imgui.type.ImString;
 import xyz.anthofoxo.aurora.Hash;
 import xyz.anthofoxo.aurora.UserConfig;
-import xyz.anthofoxo.aurora.struct.AuroraReader;
+import xyz.anthofoxo.aurora.parse.AuroraReader;
 import xyz.anthofoxo.aurora.struct.EntitySpawner;
 import xyz.anthofoxo.aurora.struct.LibraryImport;
 import xyz.anthofoxo.aurora.struct.LibraryObject;
@@ -150,7 +150,7 @@ public class ObjlibDecomp {
 			case TraitAnim:
 				level.defs.add(in.obj(TraitAnim.class));
 				break;
-				
+
 			case Path:
 				level.defs.add(in.obj(xyz.anthofoxo.aurora.struct.Path.class));
 				break;
@@ -229,6 +229,24 @@ public class ObjlibDecomp {
 
 	}
 
+	private record Listing(String name, String path) {
+	}
+
+	// @formatter:off
+	private static final List<Listing> LEVEL_LISTING = List.of(
+			new Listing("Title Screen", "Alevels/title_screen.objlib"),
+			new Listing("Level 1", "Alevels/demo.objlib"),
+			new Listing("Level 2", "Alevels/level2/level_2a.objlib"),
+			new Listing("Level 3", "Alevels/level3/level_3a.objlib"),
+			new Listing("Level 4", "Alevels/level4/level_4a.objlib"),
+			new Listing("Level 5", "Alevels/level5/level_5a.objlib"),
+			new Listing("Level 6", "Alevels/level6/level_6.objlib"),
+			new Listing("Level 7", "Alevels/level7/level_7a.objlib"),
+			new Listing("Level 8", "Alevels/level8/level_8a.objlib"),
+			new Listing("Level 9", "Alevels/level9/level_9a.objlib")
+		);
+	// @formatter:on
+
 	public void draw() {
 		if (!visible.get()) return;
 
@@ -238,49 +256,16 @@ public class ObjlibDecomp {
 		}
 
 		if (ImGui.begin("Objlib Decomp", visible)) {
-
 			String prefix = UserConfig.thumperPath() + "/cache/";
 
-			if (ImGui.button("Title Screen")) {
-				input.set(prefix + Integer.toHexString(Hash.fnv1a("Alevels/title_screen.objlib")) + ".pc");
-			}
-			ImGui.sameLine();
-			if (ImGui.button("Level 1")) {
-				input.set(prefix + Integer.toHexString(Hash.fnv1a("Alevels/demo.objlib")) + ".pc");
-			}
-			ImGui.sameLine();
-			if (ImGui.button("Level 2")) {
-				input.set(prefix + Integer.toHexString(Hash.fnv1a("Alevels/level2/level_2a.objlib")) + ".pc");
-			}
-			ImGui.sameLine();
-			if (ImGui.button("Level 3")) {
-				input.set(prefix + Integer.toHexString(Hash.fnv1a("Alevels/level3/level_3a.objlib")) + ".pc");
-			}
-			ImGui.sameLine();
-			if (ImGui.button("Level 4")) {
-				input.set(prefix + Integer.toHexString(Hash.fnv1a("Alevels/level4/level_4a.objlib")) + ".pc");
-			}
-			ImGui.sameLine();
-			if (ImGui.button("Level 5")) {
-				input.set(prefix + Integer.toHexString(Hash.fnv1a("Alevels/level5/level_5a.objlib")) + ".pc");
-			}
-			ImGui.sameLine();
-			if (ImGui.button("Level 6")) {
-				input.set(prefix + Integer.toHexString(Hash.fnv1a("Alevels/level6/level_6.objlib")) + ".pc");
-			}
-			ImGui.sameLine();
-			if (ImGui.button("Level 7")) {
-				input.set(prefix + Integer.toHexString(Hash.fnv1a("Alevels/level7/level_7a.objlib")) + ".pc");
-			}
-			ImGui.sameLine();
-			if (ImGui.button("Level 8")) {
-				input.set(prefix + Integer.toHexString(Hash.fnv1a("Alevels/level8/level_8a.objlib")) + ".pc");
-			}
-			ImGui.sameLine();
-			if (ImGui.button("Level 9")) {
-				input.set(prefix + Integer.toHexString(Hash.fnv1a("Alevels/level9/level_9a.objlib")) + ".pc");
+			for (var entry : LEVEL_LISTING) {
+				if (ImGui.button(entry.name)) {
+					input.set(prefix + Integer.toHexString(Hash.fnv1a(entry.path)) + ".pc");
+				}
+				ImGui.sameLine();
 			}
 
+			ImGui.dummy(0, 0);
 			ImGui.separator();
 
 			ImGui.inputText("Open Objlib", input);
