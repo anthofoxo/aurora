@@ -3,6 +3,8 @@ package xyz.anthofoxo.aurora.gui;
 import java.awt.Desktop;
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -22,10 +24,15 @@ import imgui.type.ImBoolean;
 import xyz.anthofoxo.aurora.Aurora;
 import xyz.anthofoxo.aurora.AuroraStub;
 import xyz.anthofoxo.aurora.EntryPoint;
+import xyz.anthofoxo.aurora.Hash;
 import xyz.anthofoxo.aurora.ModBuilder;
 import xyz.anthofoxo.aurora.UserConfig;
 import xyz.anthofoxo.aurora.gfx.Font;
+import xyz.anthofoxo.aurora.parse.AuroraReader;
+import xyz.anthofoxo.aurora.parse.AuroraWriter;
+import xyz.anthofoxo.aurora.struct.LevelListingFile;
 import xyz.anthofoxo.aurora.target.Target;
+import xyz.anthofoxo.aurora.tml.TMLBuilder;
 
 public class ModLauncher {
 
@@ -76,10 +83,106 @@ public class ModLauncher {
 				ImGui.endMenuBar();
 			}
 
+			///
+			/// 
+			if (ImGui.beginTable("modmodetable", 1)) {
+				ImGui.tableNextColumn();
+				
+				ImGui.pushStyleColor(ImGuiCol.ChildBg, new ImVec4(0.12f, 0.12f, 0.32f, 1));
+				ImGui.pushStyleVar(ImGuiStyleVar.ChildRounding, 9);
+				ImGui.beginChild("modmodesection", ImGui.getWindowWidth() - 18, 90);
+				
+				ImGui.text(" ");
+				ImGui.sameLine();
+				if (AuroraStub.integrated) {
+					ImGui.pushStyleColor(ImGuiCol.Text, new ImVec4(0, 1f, 0, 1f));
+					ImGui.text("Aurora is running in integrated mode. All features are enabled!");
+					ImGui.popStyleColor();
+				} else {
+					ImGui.pushStyleColor(ImGuiCol.Text, new ImVec4(1f, 0, 0, 1f));
+					ImGui.text("Aurora is running in standalone mode. Some features wil be disabled.");
+					ImGui.popStyleColor();
+				}
+
+				String thumperpath = UserConfig.thumperPath();
+
+				if (thumperpath == null) {
+					ImGui.textUnformatted("Thumper Directory is not specified, levels will not be built");
+				}
+
+
+				ImGui.text(" ");
+				ImGui.sameLine();
+				ImGui.pushFont(Font.getFont("levelfont"));
+				ImGui.checkbox("MOD MODE ENABLED", isModModeEnabled);
+
+				String text = AuroraStub.integrated ? "Launch Thumper" : "Build Mods";
+
+				ImGui.text(" ");
+				ImGui.sameLine();
+				if (ImGui.button(text)) {
+
+					if (buildTargets.get() && thumperpath != null) {
+						if (!isModModeEnabled.get()) {
+							try {
+								TMLBuilder.restoreBackups(Path.of(thumperpath).toString());
+							} catch (IOException e) {
+								e.printStackTrace();
+							}
+						} else {
+							try {
+								TMLBuilder.buildLevels(customs, Path.of(thumperpath).toString());
+							} catch (IOException e) {
+								e.printStackTrace();
+							}
+						}
+
+						if (autoUnlockLevels.get()) {
+							try {
+								String filepath = String.format(thumperpath + "/cache/%s.pc",
+										Integer.toHexString(Hash.fnv1a("Aui/thumper.levels")));
+
+								AuroraReader reader = new AuroraReader(Files.readAllBytes(Path.of(filepath)));
+								LevelListingFile listing = reader.obj(LevelListingFile.class);
+
+								for (var level : listing.enteries) {
+									level.unlocks = "";
+									level.defaultLocked = false;
+								}
+
+								AuroraWriter out = new AuroraWriter();
+								out.obj(listing);
+								TMLBuilder.writefileBackedup(filepath, out.getBytes());
+							} catch (IOException e) {
+								e.printStackTrace();
+							}
+						}
+
+					}
+
+					if (AuroraStub.integrated) {
+						AuroraStub.shouldLaunchThumper = true;
+						EntryPoint.running = false;
+					}
+				}
+				ImGui.popFont();
+				
+				ImGui.endChild();
+				ImGui.popStyleColor();
+				ImGui.popStyleVar();
+				
+				ImGui.endTable();
+			}
+			///
+			/// 
+			/// 
+			
+			ImGui.text(" ");
+
 			//
 			// Thumper path and mod search paths
 			//
-			if (ImGui.button("Thumper Game Location")) {
+			if (ImGui.button("Thumper Game Install Location")) {
 				UserConfig.properties.remove("thumper.path");
 				UserConfig.thumperPath();
 			}
@@ -142,7 +245,7 @@ public class ModLauncher {
 			}
 			///
 
-			ImGui.pushStyleVar(ImGuiStyleVar.ItemSpacing, new ImVec2(0, 30));
+			ImGui.pushStyleVar(ImGuiStyleVar.ItemSpacing, new ImVec2(0, 10));
 			ImGui.text(" ");
 			ImGui.popStyleVar();
 			/// Mod list and search
@@ -162,6 +265,13 @@ public class ModLauncher {
 			}
 			ImGui.popStyleColor(2);
 			ImGui.popStyleVar();
+
+			var buttonrefresh = Aurora.buttonicons.get("icon-refresh.png");
+			ImGui.pushStyleColor(ImGuiCol.Button, new ImVec4(0.2f, 0.2f, 0.2f, 1));
+			ImGui.pushStyleColor(ImGuiCol.ButtonHovered, new ImVec4(0.7f, 0.7f, 0.7f, 1));
+			if (ImGui.imageButton("Reload", buttonrefresh.getHandle(), 18, 18)) reloadList();
+			ImGui.sameLine();
+			ImGui.popStyleColor(2);
 
 			ImGui.pushStyleVar(ImGuiStyleVar.ItemSpacing, new ImVec2(3f, 3f));
 			ImGui.pushStyleColor(ImGuiCol.Button, new ImVec4(0, 0.4f, 0, 1));
@@ -208,7 +318,7 @@ public class ModLauncher {
 				});
 			}
 			ImGui.sameLine();
-			if (ImGui.button("Rank")) {
+			if (ImGui.button("Difficulty")) {
 				ranksortorder = !ranksortorder;
 				Collections.sort(customs, new Comparator<Target>() {
 					public int compare(Target obj1, Target obj2) {
@@ -222,7 +332,7 @@ public class ModLauncher {
 
 			ImGui.separator();
 
-			if (ImGui.beginChild("modview", ImGui.getWindowWidth(), ImGui.getWindowHeight() - 370)) {
+			if (ImGui.beginChild("modview")) {
 				if (UserConfig.modPaths.isEmpty()) {
 					ImGui.textUnformatted("No mod search paths are present. Add one above!");
 				}
@@ -258,7 +368,7 @@ public class ModLauncher {
 
 							if (custom.tcl.difficulty != null && !custom.tcl.difficulty.isEmpty()) {
 
-								String match = custom.tcl.difficulty.toLowerCase() + "_strip.png";
+								String match = "scaled_" + custom.tcl.difficulty.toLowerCase() + ".png";
 
 								var texture = Aurora.icons.get(match);
 
@@ -287,7 +397,7 @@ public class ModLauncher {
 					if (ImGui.beginChild("Mod Properties")) {
 						if (selected != null) {
 							ImGui.pushFont(Font.getFont("levelfont"));
-							ImGui.text(selected.tcl.levelName);
+							ImGui.text("  " + selected.tcl.levelName);
 							ImGui.popFont();
 							if (selected.tcl.difficulty != null && !selected.tcl.difficulty.isEmpty()) {
 								String match = selected.tcl.difficulty.toLowerCase() + "_large.png";
@@ -313,7 +423,7 @@ public class ModLauncher {
 							ImGui.separator();
 							ImGui.popStyleColor();
 
-							ImGui.textUnformatted("Author:");
+							ImGui.textUnformatted("  Author:");
 							String[] authors = selected.tcl.author.replace(" ", "").split(",");
 							for (var author : authors) {
 								ImGui.sameLine();
@@ -323,14 +433,27 @@ public class ModLauncher {
 								}
 							}
 
-							ImGui.text("Difficulty: " + selected.tcl.difficulty);
+							ImGui.text("  Difficulty: " + selected.tcl.difficulty);
+							ImGui.sameLine();
 
-							ImGui.text(selected.tcl.bpm + " BPM");
+							ImGui.text("||  " + selected.tcl.bpm + " BPM");
+							ImGui.sameLine();
 
-							ImGui.text(selected.tcl.sections.size() + " Sublevels");
+							ImGui.text("||  " + selected.tcl.sections.size() + " Sublevels");
+
+							ImGui.text("  Description:");
 
 							ImGui.text(" ");
-							ImGui.textWrapped("Description:\n" + selected.tcl.description);
+							ImGui.sameLine();
+							ImGui.pushStyleColor(ImGuiCol.ChildBg, new ImVec4(0.12f, 0.12f, 0.32f, 1));
+							ImGui.pushStyleVar(ImGuiStyleVar.ChildRounding, 9);
+							ImGui.beginChild("leveldesc", ImGui.getColumnWidth() - 30, 180);
+							ImGui.text(" ");
+							ImGui.sameLine();
+							ImGui.textWrapped(selected.tcl.description);
+							ImGui.endChild();
+							ImGui.popStyleVar();
+							ImGui.popStyleColor();
 
 							// separator colors to match the levels rail colors
 							ImGui.pushStyleColor(ImGuiCol.Separator, new ImVec4(selected.tcl.pathColor.w,
@@ -347,7 +470,10 @@ public class ModLauncher {
 							ImGui.separator();
 							ImGui.popStyleColor();
 
+							ImGui.pushStyleVar(ImGuiStyleVar.GrabMinSize, 20);
+							ImGui.pushStyleVar(ImGuiStyleVar.GrabRounding, 5);
 							ImGui.sliderInt("Speed Modifier", selected.speedModifier, 10, 300, "%d%%");
+							ImGui.popStyleVar(2);
 							// buttons to quick change speed modifier
 							var sizew = 48;
 							var sizeh = 25;
@@ -405,41 +531,6 @@ public class ModLauncher {
 				}
 			}
 			ImGui.endChild();
-
-			ImGui.separator();
-
-			if (UserConfig.thumperPath() == null) {
-				ImGui.textUnformatted("Thumper Directory is not specified, levels will not be built");
-			}
-
-			if (ImGui.button("Reload")) reloadList();
-			ImGui.sameLine();
-			ImGui.checkbox("Mod Mode Enabled", isModModeEnabled);
-
-			ImGui.sameLine();
-
-			String text = AuroraStub.integrated ? "Launch Thumper" : "Build Mods";
-
-			if (ImGui.button(text)) {
-
-				if (buildTargets.get()) {
-					ModBuilder.build(customs, isModModeEnabled.get(), autoUnlockLevels.get());
-				}
-
-				if (AuroraStub.integrated) {
-					AuroraStub.shouldLaunchThumper = true;
-					EntryPoint.running = false;
-				}
-			}
-
-			ImGui.sameLine();
-
-			if (AuroraStub.integrated) {
-				ImGui.text("Aurora is running in integrated mode. All features are enabled");
-			} else {
-				ImGui.text("Aurora is running in standalone mode. Some features wil be disabled");
-			}
-
 		}
 		ImGui.popStyleVar();
 		ImGui.end();
