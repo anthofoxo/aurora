@@ -4,15 +4,7 @@ import xyz.anthofoxo.aurora.Hash;
 import xyz.anthofoxo.aurora.parse.AuroraReader;
 
 public enum LibraryType implements ThumperStruct {
-	/**
-	 * LE: 9e 4d 37 0b
-	 */
-	LevelLib("LevelLib"),
-
-	/**
-	 * LE: 43 14 a5 1b
-	 */
-	GfxLib("GfxLib");
+	LevelLib("LevelLib"), GfxLib("GfxLib"), AvatarLib("AvatarLib"), SequinLib("SequinLib"), ObjLib("ObjLib");
 
 	public int value;
 

@@ -19,6 +19,7 @@ import xyz.anthofoxo.aurora.gfx.Texture;
 import xyz.anthofoxo.aurora.parse.AuroraWriter;
 import xyz.anthofoxo.aurora.parse.PrecompiledBin;
 import xyz.anthofoxo.aurora.struct.EntitySpawner;
+import xyz.anthofoxo.aurora.struct.LevelLibFooter;
 import xyz.anthofoxo.aurora.struct.ObjlibFooter;
 import xyz.anthofoxo.aurora.struct.Sample;
 import xyz.anthofoxo.aurora.struct.SectionFile;
@@ -218,8 +219,8 @@ public class Tcle3 extends Target {
 		}
 
 		writer.i8arr(PrecompiledBin.getObjDef0());
-		
-		//writer.i8arr(Util.getResourceBytes("obj_def_customlevel.objlib"));
+
+		// writer.i8arr(Util.getResourceBytes("obj_def_customlevel.objlib"));
 		writer.i8arr(PrecompiledBin.readBins());
 
 		for (var obj : objs) {
@@ -255,7 +256,8 @@ public class Tcle3 extends Target {
 			}
 		}
 
-		writer.obj(ObjlibFooter.ofTmlDefaults(tcl.bpm * speedModifier));
+		writer.obj(ObjlibFooter.ofTmlDefaults());
+		writer.obj(LevelLibFooter.ofTmlDefaults(tcl.bpm * speedModifier));
 
 		AuroraWriter sec = new AuroraWriter();
 

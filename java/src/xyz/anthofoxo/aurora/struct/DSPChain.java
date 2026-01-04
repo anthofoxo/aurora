@@ -15,6 +15,5 @@ public class DSPChain implements ThumperStruct {
 	public List<Comp> comps;
 	public boolean unknown;
 	public String channel;
-	public int unknown1;
-	public String DSPs;
+	public List<String> DSPs;
 }

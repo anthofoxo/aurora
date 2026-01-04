@@ -23,6 +23,7 @@ import xyz.anthofoxo.aurora.struct.DeclarationType;
 import xyz.anthofoxo.aurora.struct.EntitySpawner;
 import xyz.anthofoxo.aurora.struct.Env;
 import xyz.anthofoxo.aurora.struct.Flow;
+import xyz.anthofoxo.aurora.struct.LevelLibFooter;
 import xyz.anthofoxo.aurora.struct.LibraryImport;
 import xyz.anthofoxo.aurora.struct.LibraryObject;
 import xyz.anthofoxo.aurora.struct.LibraryType;
@@ -99,7 +100,8 @@ public class ObjlibDecomp {
 		public Map<String, Mat> mats = new HashMap<>();
 		public Map<String, DSP> dsps = new HashMap<>();
 
-		public ObjlibFooter footer;
+		public ObjlibFooter genericFooter;
+		public Object libraryFooter;
 
 	}
 
@@ -152,7 +154,13 @@ public class ObjlibDecomp {
 		level = new ObjlibLevel();
 		level.fileType = in.obj(FileType.class);
 		level.libraryType = in.obj(LibraryType.class);
-		level.unknownHeader = in.i32arr(4);
+
+		if (level.libraryType == LibraryType.ObjLib) {
+			level.unknownHeader = in.i32arr(2);
+		} else {
+			level.unknownHeader = in.i32arr(4);
+		}
+
 		level.libraryImports = in.objlist(LibraryImport.class);
 		level.levelPath = in.str();
 		level.libraryObjects = in.objlist(LibraryObject.class);
@@ -230,6 +238,8 @@ public class ObjlibDecomp {
 
 			lastObjectOk = true;
 
+			System.out.println(declaration.name + " 0x" + Integer.toHexString(in.pos));
+
 			switch (declaration.type) {
 
 			case SequinLeaf:
@@ -254,7 +264,7 @@ public class ObjlibDecomp {
 				level.mats.put(declaration.name, in.obj(Mat.class));
 				break;
 			case DSP:
-				System.out.println(declaration.name + " 0x" + Integer.toHexString(in.pos));
+
 				level.dsps.put(declaration.name, in.obj(DSP.class));
 				break;
 			case SequinDrawer:
@@ -327,7 +337,13 @@ public class ObjlibDecomp {
 			System.out.println(
 					"Finished reading definitions, footer offset position: 0x" + Integer.toHexString(in.position()));
 
-			level.footer = in.obj(ObjlibFooter.class);
+			level.genericFooter = in.obj(ObjlibFooter.class);
+
+			if (level.libraryType == LibraryType.LevelLib) {
+
+				level.libraryFooter = in.obj(LevelLibFooter.class);
+
+			}
 
 			assert (in.position() == in.bytes.length);
 		}
@@ -408,9 +424,14 @@ public class ObjlibDecomp {
 		if (level == null) return;
 
 		int numBeats = computeBeatLength();
-		if (level.footer != null) {
-			float numMinutes = (float) numBeats / level.footer.bpm;
-			System.out.println(minutesToMinutesSeconds(numMinutes));
+		if (level.libraryFooter != null) {
+			if (level.libraryFooter instanceof LevelLibFooter f) {
+				float numMinutes = (float) numBeats / f.bpm;
+				System.out.println(minutesToMinutesSeconds(numMinutes));
+			} else {
+				throw new IllegalStateException();
+			}
+
 		} else {
 			System.out.println(numBeats + " beats");
 		}

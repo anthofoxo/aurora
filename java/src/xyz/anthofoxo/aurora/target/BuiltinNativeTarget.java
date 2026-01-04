@@ -5,12 +5,14 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 
 import xyz.anthofoxo.aurora.Hash;
 import xyz.anthofoxo.aurora.UserConfig;
 import xyz.anthofoxo.aurora.parse.AuroraReader;
 import xyz.anthofoxo.aurora.parse.AuroraWriter;
 import xyz.anthofoxo.aurora.struct.Sample;
+import xyz.anthofoxo.aurora.struct.Vec4f;
 import xyz.anthofoxo.aurora.tml.TCLFile;
 
 public class BuiltinNativeTarget extends Target {
@@ -61,6 +63,16 @@ public class BuiltinNativeTarget extends Target {
 		tcl.description = "Builtin Thumper Level";
 		tcl.difficulty = "?";
 		tcl.levelName = String.format("Level %d", levelidx + 1);
+
+		// TODO: fetch the actual values used in thumper
+		// These are just dummy values to prevent a crash
+		tcl.joyColor = new Vec4f();
+		tcl.pathColor = new Vec4f();
+		tcl.railsColor = new Vec4f();
+		tcl.railsGlowColor = new Vec4f();
+
+		// TODO: fetch actual sublevel count, assume 0
+		tcl.sections = List.of();
 	}
 
 	@Override

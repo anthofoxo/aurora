@@ -39,7 +39,15 @@ public interface Comp extends ThumperStruct {
 		else if (hash == XfmComp.HASH) return in.obj(XfmComp.class);
 		else if (hash == PollComp.HASH) return in.obj(PollComp.class);
 		else if (hash == PPVignette.HASH) return in.obj(PPVignette.class);
+
+		// DSP Stuff
 		else if (hash == DSPEcho.HASH) return in.obj(DSPEcho.class);
+		else if (hash == DSPParamEQ.HASH) return in.obj(DSPParamEQ.class);
+		else if (hash == DSPFlange.HASH) return in.obj(DSPFlange.class);
+		else if (hash == DSPCompressor.HASH) return in.obj(DSPCompressor.class);
+		else if (hash == DSPTremolo.HASH) return in.obj(DSPTremolo.class);
+		else if (hash == DSPPitchShift.HASH) return in.obj(DSPPitchShift.class);
+
 		else throw new IllegalStateException("Unknown comp type: " + Integer.toHexString(hash) + " at offset 0x"
 				+ Integer.toHexString(in.position()));
 	}
