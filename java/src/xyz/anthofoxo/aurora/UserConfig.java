@@ -35,6 +35,15 @@ public class UserConfig {
 
 	}
 
+	public static void set(String key, String value) {
+		properties.setProperty(key, value);
+		save();
+	}
+
+	public static String get(String key, String defaultValue) {
+		return properties.getProperty(key, defaultValue);
+	}
+
 	public static boolean isUnlockPractice() {
 		return Boolean.parseBoolean(properties.getProperty("aurora.unlock_practice", Boolean.toString(true)));
 	}

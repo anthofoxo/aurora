@@ -21,6 +21,7 @@ import imgui.flag.ImGuiWindowFlags;
 import imgui.type.ImBoolean;
 import xyz.anthofoxo.aurora.Aurora;
 import xyz.anthofoxo.aurora.AuroraStub;
+import xyz.anthofoxo.aurora.BuiltinModOptions;
 import xyz.anthofoxo.aurora.EntryPoint;
 import xyz.anthofoxo.aurora.ModBuilder;
 import xyz.anthofoxo.aurora.UserConfig;
@@ -33,13 +34,18 @@ public class ModLauncher {
 
 	}
 
+	private static final String USERCONFIG_NATIVE_GAME_STR = "aurora.enable_campaign";
+
 	private static List<Target> customs = new ArrayList<>();
 	private static Target selected = null;
 	private static ImBoolean buildTargets = new ImBoolean(true);
 	private static ImBoolean isModModeEnabled = new ImBoolean(true);
 	private static ImGuiTextFilter filter = new ImGuiTextFilter();
 	private static ImBoolean autoUnlockLevels = new ImBoolean(true);
-	private static ImBoolean enableCampaignLevels = new ImBoolean(false);
+
+	private static ImBoolean enableCampaignLevels = new ImBoolean(
+			Boolean.parseBoolean(UserConfig.get(USERCONFIG_NATIVE_GAME_STR, Boolean.toString(true))));
+
 	private static Boolean showselected = false;
 	private static Boolean ranksortorder = false;
 	private static Boolean namesortorder = false;
@@ -59,8 +65,17 @@ public class ModLauncher {
 			if (ImGui.beginMenuBar()) {
 				if (ImGui.beginMenu("Options")) {
 
-					if (ImGui.menuItem("enableCampaignLevels", null, enableCampaignLevels)) reloadList();
+					if (ImGui.menuItem("Enable Campaign Levels", null, enableCampaignLevels)) {
+						UserConfig.set(USERCONFIG_NATIVE_GAME_STR, Boolean.toString(enableCampaignLevels.get()));
+						reloadList();
+					}
+
 					ImGui.menuItem("Unlock All Levels", null, autoUnlockLevels);
+
+					if (ImGui.menuItem("Apply EQ Mod", null, BuiltinModOptions.applyEqMod)) {
+						UserConfig.set(BuiltinModOptions.USERCONFIG_EQ_MOD_STR,
+								Boolean.toString(BuiltinModOptions.applyEqMod.get()));
+					}
 
 					ImGui.endMenu();
 				}
@@ -75,8 +90,6 @@ public class ModLauncher {
 
 				ImGui.endMenuBar();
 			}
-
-			///
 
 			if (ImGui.beginTable("modmodetable", 1)) {
 				ImGui.tableNextColumn();

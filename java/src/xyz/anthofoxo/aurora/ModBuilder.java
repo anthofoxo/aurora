@@ -197,5 +197,17 @@ public class ModBuilder {
 			e.printStackTrace();
 		}
 
+		try {
+			if (BuiltinModOptions.applyEqMod.get()) {
+				EqMod.apply();
+			} else {
+				EqMod.restore();
+			}
+		} catch (IOException e) {
+			// propagate and escape vm
+			throw new RuntimeException(e);
+		}
+
 	}
+
 }

@@ -14,7 +14,6 @@ import imgui.type.ImString;
 import xyz.anthofoxo.aurora.Hash;
 import xyz.anthofoxo.aurora.UserConfig;
 import xyz.anthofoxo.aurora.parse.AuroraReader;
-import xyz.anthofoxo.aurora.parse.AuroraWriter;
 import xyz.anthofoxo.aurora.struct.Bender;
 import xyz.anthofoxo.aurora.struct.Cam;
 import xyz.anthofoxo.aurora.struct.ChannelGroup;
@@ -50,13 +49,10 @@ import xyz.anthofoxo.aurora.struct.VrSettings;
 import xyz.anthofoxo.aurora.struct.Xfmer;
 import xyz.anthofoxo.aurora.struct.annotation.FixedSize;
 import xyz.anthofoxo.aurora.struct.comp.Comp;
-import xyz.anthofoxo.aurora.struct.comp.dsp.DSPParamEQ;
 import xyz.anthofoxo.aurora.struct.objlib.DeclarationType;
 import xyz.anthofoxo.aurora.struct.objlib.LibraryImport;
-import xyz.anthofoxo.aurora.struct.objlib.ObjLib;
 import xyz.anthofoxo.aurora.struct.objlib.ObjectDeclaration;
 import xyz.anthofoxo.aurora.struct.sequin.ParamPath;
-import xyz.anthofoxo.aurora.tml.TMLBuilder;
 
 public class ObjlibDecomp {
 	public ImBoolean visible = new ImBoolean(false);
@@ -359,56 +355,6 @@ public class ObjlibDecomp {
 
 	}
 
-	public void testLoad() throws IOException {
-		String inPath = UserConfig.thumperPath() + "/cache/" + Integer.toHexString(Hash.fnv1a("Achannels.objlib"))
-				+ ".pc";
-
-		System.out.println(inPath);
-
-		AuroraReader in = new AuroraReader(Files.readAllBytes(Path.of(inPath)));
-
-		ObjLib file = in.obj(ObjLib.class);
-
-		List<String> dspRemovalCandidates = new ArrayList<>();
-
-		for (int i = 0; i < file.objectDeclarations.size(); i++) {
-			var declaration = file.objectDeclarations.get(i);
-
-			if (declaration.type == DeclarationType.DSP) {
-				var object = (DSP) file.objectDefinitions.get(file.libraryObjects.size() + i);
-
-				for (var comp : object.comps) {
-					if (comp instanceof DSPParamEQ) {
-						dspRemovalCandidates.add(declaration.name);
-						break;
-					}
-				}
-			}
-		}
-
-		for (int i = 0; i < file.objectDeclarations.size(); i++) {
-			var declaration = file.objectDeclarations.get(i);
-
-			if (declaration.type == DeclarationType.DSPChain) {
-				var object = (DSPChain) file.objectDefinitions.get(file.libraryObjects.size() + i);
-
-				var iterator = object.DSPs.iterator();
-
-				while (iterator.hasNext()) {
-					var value = iterator.next();
-					if (dspRemovalCandidates.contains(value)) {
-						iterator.remove();
-					}
-				}
-			}
-		}
-
-		AuroraWriter out = new AuroraWriter();
-		out.obj(file);
-
-		TMLBuilder.writefileBackedup(inPath, out.getBytes());
-	}
-
 	private void drawParsed() {
 		if (level == null) return;
 
@@ -582,20 +528,6 @@ public class ObjlibDecomp {
 					input.set(prefix + Integer.toHexString(Hash.fnv1a(entry.path)) + ".pc");
 				}
 				ImGui.sameLine();
-			}
-
-			if (ImGui.button("Apply Channel FX Mod")) {
-				try {
-					testLoad();
-				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-			}
-
-			if (ImGui.button("global/ambient_decorators/pyramid.objlib")) {
-				input.set(
-						prefix + Integer.toHexString(Hash.fnv1a("Aglobal/ambient_decorators/pyramid.objlib")) + ".pc");
 			}
 
 			ImGui.inputText("Open Objlib", input);
