@@ -1,8 +1,10 @@
 package xyz.anthofoxo.aurora.parse;
 
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 
+import xyz.anthofoxo.aurora.Util;
 import xyz.anthofoxo.aurora.struct.DeclarationType;
 import xyz.anthofoxo.aurora.struct.LibraryImport;
 import xyz.anthofoxo.aurora.struct.LibraryObject;
@@ -83,20 +85,9 @@ public final class PrecompiledBin {
 		return 62;
 	}
 
-	/**
-	 * Generates the binary content of obj_list_2.objlib previously used by TML
-	 * There *MUST* be getObjListCount() declarations and they *CANNOT* be moved or
-	 * removed When the object declaration count is written, make sure to add
-	 * getObjListCount() additional objects to account for this table if inserted
-	 */
-	public static byte[] getObjList2Bin() {
-		// In the object declarations below, each end with a comment, 1 meaning we
-		// *think* this is required for level operation, no comment if we think this can
-		// be removed
-
-		AuroraWriter out = new AuroraWriter();
+	public static List<ObjectDeclaration> getDeclarations() {
 		// @formatter:off
-		out.objlist(Arrays.asList(
+		return Arrays.asList(
 				new ObjectDeclaration(DeclarationType.Mesh,          "web_points.mesh"),
 				new ObjectDeclaration(DeclarationType.SequinDrawer,  "sequin.drawer"), // 1?
 				new ObjectDeclaration(DeclarationType.TraitAnim,     "gamma_modulation.anim"),
@@ -158,15 +149,42 @@ public final class PrecompiledBin {
 				new ObjectDeclaration(DeclarationType.Mesh,          "web.mesh"),
 				new ObjectDeclaration(DeclarationType.Path,          "web.path"),
 				new ObjectDeclaration(DeclarationType.Path,          "web_points.path"),
-				new ObjectDeclaration(DeclarationType.Flow,          "boss_frac_pulse.flow"))
+				new ObjectDeclaration(DeclarationType.Flow,          "boss_frac_pulse.flow")
 			);
 		// @formatter:on
+	}
+
+	/**
+	 * Generates the binary content of obj_list_2.objlib previously used by TML
+	 * There *MUST* be getObjListCount() declarations and they *CANNOT* be moved or
+	 * removed When the object declaration count is written, make sure to add
+	 * getObjListCount() additional objects to account for this table if inserted
+	 */
+	public static byte[] getObjList2Bin() {
+		// In the object declarations below, each end with a comment, 1 meaning we
+		// *think* this is required for level operation, no comment if we think this can
+		// be removed
+
+		AuroraWriter out = new AuroraWriter();
+		out.objlist(getDeclarations());
 
 		// Remove first 4 bytes, tcle expects this bin dump without the list size
 		out.removei8(0);
 		out.removei8(0);
 		out.removei8(0);
 		out.removei8(0);
+
+		return out.getBytes();
+	}
+
+	public static byte[] readBins() throws IOException {
+		var decls = getDeclarations();
+
+		AuroraWriter out = new AuroraWriter();
+
+		for (var decl : decls) {
+			out.i8arr(Util.getResourceBytes("bins/" + decl.name));
+		}
 
 		return out.getBytes();
 	}

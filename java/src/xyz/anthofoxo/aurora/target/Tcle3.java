@@ -218,7 +218,9 @@ public class Tcle3 extends Target {
 		}
 
 		writer.i8arr(PrecompiledBin.getObjDef0());
-		writer.i8arr(Util.getResourceBytes("obj_def_customlevel.objlib"));
+		
+		//writer.i8arr(Util.getResourceBytes("obj_def_customlevel.objlib"));
+		writer.i8arr(PrecompiledBin.readBins());
 
 		for (var obj : objs) {
 			final String objType = obj.get("obj_type").asString();

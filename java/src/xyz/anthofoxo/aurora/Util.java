@@ -30,7 +30,7 @@ public class Util {
 
 	public static byte[] getResourceBytes(String resource) throws IOException {
 		try (var stream = getResource(resource)) {
-			if (stream == null) throw new IOException("Resource not found");
+			if (stream == null) throw new IOException("Resource not found: " + resource);
 			return stream.readAllBytes();
 		}
 	}
