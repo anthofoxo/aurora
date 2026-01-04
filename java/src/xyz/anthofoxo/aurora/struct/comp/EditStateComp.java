@@ -1,9 +1,7 @@
 package xyz.anthofoxo.aurora.struct.comp;
 
 import xyz.anthofoxo.aurora.Hash;
-import xyz.anthofoxo.aurora.struct.annotation.KnownNativeName;
 
-@KnownNativeName
 public class EditStateComp implements Comp {
 	/**
 	 * LE: 12 FB 8E 3C<br>

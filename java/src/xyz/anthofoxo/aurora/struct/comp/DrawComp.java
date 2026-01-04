@@ -3,13 +3,11 @@ package xyz.anthofoxo.aurora.struct.comp;
 import java.util.List;
 
 import xyz.anthofoxo.aurora.Hash;
-import xyz.anthofoxo.aurora.struct.annotation.KnownNativeName;
+import xyz.anthofoxo.aurora.struct.UnknownSkyboxStruct;
 import xyz.anthofoxo.aurora.struct.annotation.RemoveFieldIfEnclosed;
-import xyz.anthofoxo.aurora.struct.experimental.UnknownSkyboxStruct;
 import xyz.anthofoxo.aurora.struct.trait.TraitBucket;
 import xyz.anthofoxo.aurora.struct.trait.TraitLayer;
 
-@KnownNativeName
 public class DrawComp implements Comp {
 	/**
 	 * LE: EE 19 27 F9 <br>

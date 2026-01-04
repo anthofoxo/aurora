@@ -11,7 +11,6 @@ import xyz.anthofoxo.aurora.struct.comp.DrawComp;
 import xyz.anthofoxo.aurora.struct.comp.EditStateComp;
 import xyz.anthofoxo.aurora.struct.comp.PollComp;
 import xyz.anthofoxo.aurora.struct.comp.XfmComp;
-import xyz.anthofoxo.aurora.struct.experimental.Cam;
 
 public class ObjlibFooter implements ThumperStruct {
 	public int unknown0;

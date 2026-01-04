@@ -4,7 +4,9 @@ import xyz.anthofoxo.aurora.parse.AuroraReader;
 import xyz.anthofoxo.aurora.struct.ThumperStruct;
 import xyz.anthofoxo.aurora.struct.Vec3f;
 import xyz.anthofoxo.aurora.struct.Vec4f;
+import xyz.anthofoxo.aurora.struct.annotation.UnknownNativeName;
 
+@UnknownNativeName
 public class DataPoint implements ThumperStruct {
 	public float beat;
 	public Object data;

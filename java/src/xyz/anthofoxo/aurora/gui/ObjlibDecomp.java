@@ -15,14 +15,19 @@ import xyz.anthofoxo.aurora.Hash;
 import xyz.anthofoxo.aurora.UserConfig;
 import xyz.anthofoxo.aurora.parse.AuroraReader;
 import xyz.anthofoxo.aurora.struct.Bender;
+import xyz.anthofoxo.aurora.struct.Cam;
 import xyz.anthofoxo.aurora.struct.ChannelGroup;
 import xyz.anthofoxo.aurora.struct.DSP;
 import xyz.anthofoxo.aurora.struct.DSPChain;
+import xyz.anthofoxo.aurora.struct.DeclarationType;
 import xyz.anthofoxo.aurora.struct.EntitySpawner;
 import xyz.anthofoxo.aurora.struct.Env;
+import xyz.anthofoxo.aurora.struct.Flow;
 import xyz.anthofoxo.aurora.struct.LibraryImport;
 import xyz.anthofoxo.aurora.struct.LibraryObject;
+import xyz.anthofoxo.aurora.struct.LibraryType;
 import xyz.anthofoxo.aurora.struct.Mat;
+import xyz.anthofoxo.aurora.struct.Mesh;
 import xyz.anthofoxo.aurora.struct.ObjectDeclaration;
 import xyz.anthofoxo.aurora.struct.ObjlibFooter;
 import xyz.anthofoxo.aurora.struct.PathDecorator;
@@ -38,15 +43,13 @@ import xyz.anthofoxo.aurora.struct.SequinMaster;
 import xyz.anthofoxo.aurora.struct.SequinPulse;
 import xyz.anthofoxo.aurora.struct.Tex2D;
 import xyz.anthofoxo.aurora.struct.TraitAnim;
+import xyz.anthofoxo.aurora.struct.UnknownSkyboxStruct;
+import xyz.anthofoxo.aurora.struct.UnknownSkyboxStruct.Grouping;
 import xyz.anthofoxo.aurora.struct.Vibration;
 import xyz.anthofoxo.aurora.struct.VrSettings;
 import xyz.anthofoxo.aurora.struct.Xfmer;
-import xyz.anthofoxo.aurora.struct._Mesh;
 import xyz.anthofoxo.aurora.struct.annotation.FixedSize;
 import xyz.anthofoxo.aurora.struct.comp.Comp;
-import xyz.anthofoxo.aurora.struct.experimental.Cam;
-import xyz.anthofoxo.aurora.struct.experimental.UnknownSkyboxStruct;
-import xyz.anthofoxo.aurora.struct.experimental.UnknownSkyboxStruct.Grouping;
 import xyz.anthofoxo.aurora.struct.sequin.ParamPath;
 
 public class ObjlibDecomp {
@@ -56,8 +59,8 @@ public class ObjlibDecomp {
 	private String error = "";
 
 	public static class ObjlibLevel {
-		public int fileType;
-		public int objlibType;
+		public FileType fileType;
+		public LibraryType libraryType;
 		@FixedSize(count = 4)
 		public int[] unknownHeader;
 		public List<LibraryImport> libraryImports;
@@ -80,7 +83,7 @@ public class ObjlibDecomp {
 		public Map<String, SequinDrawer> drawers = new HashMap<>();
 		public Map<String, Sample> samples = new HashMap<>();
 		public Map<String, TraitAnim> anims = new HashMap<>();
-		public Map<String, _Mesh> meshes = new HashMap<>();
+		public Map<String, Mesh> meshes = new HashMap<>();
 		public Map<String, VrSettings> vrsettings = new HashMap<>();
 		public Map<String, EntitySpawner> spawners = new HashMap<>();
 		public Map<String, Tex2D> tex2ds = new HashMap<>();
@@ -102,6 +105,35 @@ public class ObjlibDecomp {
 
 	private ObjlibLevel level = null;
 
+	private static Map<DeclarationType, int[]> objectHeaders = new HashMap<>();
+
+	static {
+		objectHeaders.put(DeclarationType.SequinLeaf, SequinLeaf.header());
+		objectHeaders.put(DeclarationType.SequinMaster, SequinMaster.header());
+		objectHeaders.put(DeclarationType.Vibration, Vibration.header());
+		objectHeaders.put(DeclarationType.SequinDrawer, SequinDrawer.header());
+		objectHeaders.put(DeclarationType.SequinLevel, SequinLevel.header());
+		objectHeaders.put(DeclarationType.Sample, Sample.header());
+		objectHeaders.put(DeclarationType.EntitySpawner, EntitySpawner.header());
+		objectHeaders.put(DeclarationType.SequinGate, SequinGate.header());
+		objectHeaders.put(DeclarationType.Tex2D, Tex2D.header());
+		objectHeaders.put(DeclarationType.Xfmer, Xfmer.header());
+		objectHeaders.put(DeclarationType.Cam, Cam.header());
+		objectHeaders.put(DeclarationType.Mesh, Mesh.header());
+		objectHeaders.put(DeclarationType.TraitAnim, TraitAnim.header());
+		objectHeaders.put(DeclarationType.PathDecorator, PathDecorator.header());
+		objectHeaders.put(DeclarationType.DSPChain, DSPChain.header());
+		objectHeaders.put(DeclarationType.Path, xyz.anthofoxo.aurora.struct.Path.header());
+		objectHeaders.put(DeclarationType.SequinPulse, SequinPulse.header());
+		objectHeaders.put(DeclarationType.Mat, Mat.header());
+		objectHeaders.put(DeclarationType.ChannelGroup, ChannelGroup.header());
+		objectHeaders.put(DeclarationType.Flow, Flow.header());
+		objectHeaders.put(DeclarationType.Scene, Scene.header());
+		objectHeaders.put(DeclarationType.PostProcess, PostProcess.header());
+		objectHeaders.put(DeclarationType.PostProcessPass, PostProcessPass.header());
+		objectHeaders.put(DeclarationType.Bender, Bender.header());
+	}
+
 	private void parse() throws IOException {
 		byte[] bytes = null;
 		level = null;
@@ -118,8 +150,8 @@ public class ObjlibDecomp {
 
 		AuroraReader in = new AuroraReader(bytes);
 		level = new ObjlibLevel();
-		level.fileType = in.i32();
-		level.objlibType = in.i32();
+		level.fileType = in.obj(FileType.class);
+		level.libraryType = in.obj(LibraryType.class);
 		level.unknownHeader = in.i32arr(4);
 		level.libraryImports = in.objlist(LibraryImport.class);
 		level.levelPath = in.str();
@@ -128,7 +160,7 @@ public class ObjlibDecomp {
 		level._startcontentoffset = in.pos;
 
 		for (var importObj : level.libraryObjects) {
-			if (importObj.type == 0x1BA51443) { // gfx import
+			if (importObj.libType == LibraryType.GfxLib) {
 
 				UnknownSkyboxStruct s = new UnknownSkyboxStruct();
 				s.header = in.i32arr(2);
@@ -175,82 +207,10 @@ public class ObjlibDecomp {
 				in.i32arr(2); // skip the typical 2 int header to allow proper seek
 
 				searchHeaderBytes = false;
-				int[] ints = null;
 
-				switch (declaration.type) {
-				case SequinLeaf:
-					ints = SequinLeaf.header();
-					break;
-				case SequinMaster:
-					ints = SequinMaster.header();
-					break;
-				case Vibration:
-					ints = Vibration.header();
-					break;
-				case SequinDrawer:
-					ints = SequinDrawer.header();
-					break;
-				case SequinLevel:
-					ints = SequinLevel.header();
-					break;
-				case Sample:
-					ints = Sample.header();
-					break;
-				case EntitySpawner:
-					ints = EntitySpawner.header();
-					break;
-				case SequinGate:
-					ints = SequinGate.header();
-					break;
-				case Tex2D:
-					ints = Tex2D.header();
-					break;
-				case Xfmer:
-					ints = Xfmer.header();
-					break;
-				case Cam:
-					ints = Cam.header();
-					break;
-				case Mesh:
-					ints = _Mesh.header();
-					break;
-				case TraitAnim:
-					ints = TraitAnim.header();
-					break;
-				case PathDecorator:
-					ints = PathDecorator.header();
-					break;
-				case DSPChain:
-					ints = DSPChain.header();
-					break;
-				case Path:
-					ints = xyz.anthofoxo.aurora.struct.Path.header();
-					break;
-				case SequinPulse:
-					ints = SequinPulse.header();
-					break;
-				case Mat:
-					ints = Mat.header();
-					break;
-				case ChannelGroup:
-					ints = ChannelGroup.header();
-					break;
-				case Flow:
-					ints = new int[] { 0x16, 0x04 };
-					break;
-				case Scene:
-					ints = Scene.header();
-					break;
-				case PostProcess:
-					ints = PostProcess.header();
-					break;
-				case PostProcessPass:
-					ints = PostProcessPass.header();
-					break;
-				case Bender:
-					ints = Bender.header();
-					break;
-				default:
+				int[] ints = objectHeaders.get(declaration.type);
+
+				if (ints == null) {
 					System.err.println(
 							"The last object had unknown structure and we don't this object header, reading cancelled."
 									+ declaration.name);
@@ -267,10 +227,6 @@ public class ObjlibDecomp {
 
 				}
 			}
-
-			// System.out.println(
-			// declaration.name + "(" + declaration.type + ")" + " 0x" +
-			// Integer.toHexString(in.position()));
 
 			lastObjectOk = true;
 
@@ -332,7 +288,7 @@ public class ObjlibDecomp {
 				level.scenes.put(declaration.name, in.obj(Scene.class));
 				break;
 			case Mesh:
-				level.meshes.put(declaration.name, in.obj(_Mesh.class));
+				level.meshes.put(declaration.name, in.obj(Mesh.class));
 				break;
 			case VrSettings:
 				level.vrsettings.put(declaration.name, in.obj(VrSettings.class));
@@ -365,7 +321,9 @@ public class ObjlibDecomp {
 			}
 		}
 
-		if (lastObjectOk) {
+		if (lastObjectOk)
+
+		{
 			System.out.println(
 					"Finished reading definitions, footer offset position: 0x" + Integer.toHexString(in.position()));
 
@@ -410,7 +368,7 @@ public class ObjlibDecomp {
 				if (ImGui.treeNode(entry.name)) {
 					ImGui.labelText("unknown", entry.objlibType + "");
 					ImGui.labelText("path", entry.path + "");
-					ImGui.labelText("type", entry.type + "");
+					ImGui.labelText("type", entry.libType + "");
 
 					ImGui.treePop();
 				}

@@ -1,7 +1,9 @@
 package xyz.anthofoxo.aurora.struct.sequin;
 
 import xyz.anthofoxo.aurora.struct.ThumperStruct;
+import xyz.anthofoxo.aurora.struct.annotation.UnknownNativeName;
 
+@UnknownNativeName
 public class ParamPath implements ThumperStruct {
 	public int paramHash;
 	public int paramIdx; // typically -1

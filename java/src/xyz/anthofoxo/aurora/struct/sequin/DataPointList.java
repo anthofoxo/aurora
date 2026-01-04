@@ -5,7 +5,9 @@ import java.util.List;
 
 import xyz.anthofoxo.aurora.parse.AuroraReader;
 import xyz.anthofoxo.aurora.struct.ThumperStruct;
+import xyz.anthofoxo.aurora.struct.annotation.UnknownNativeName;
 
+@UnknownNativeName
 public class DataPointList implements ThumperStruct {
 	public int traitType;
 	public List<DataPoint> datapoints;

@@ -1,9 +1,7 @@
-package xyz.anthofoxo.aurora.struct.experimental;
+package xyz.anthofoxo.aurora.struct;
 
 import java.util.List;
 
-import xyz.anthofoxo.aurora.struct.ThumperStruct;
-import xyz.anthofoxo.aurora.struct.Vec3f;
 import xyz.anthofoxo.aurora.struct.annotation.FixedSize;
 import xyz.anthofoxo.aurora.struct.comp.Comp;
 

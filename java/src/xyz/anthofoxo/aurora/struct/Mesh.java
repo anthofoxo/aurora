@@ -7,7 +7,7 @@ import xyz.anthofoxo.aurora.struct.annotation.UnknownNativeName;
 import xyz.anthofoxo.aurora.struct.comp.Comp;
 
 @UnknownNativeName
-public class _Mesh implements ThumperStruct {
+public class Mesh implements ThumperStruct {
 	public static int[] header() {
 		return new int[] { 0x0F, 0x04 };
 	}

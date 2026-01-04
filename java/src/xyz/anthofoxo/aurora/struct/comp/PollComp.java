@@ -1,9 +1,7 @@
 package xyz.anthofoxo.aurora.struct.comp;
 
 import xyz.anthofoxo.aurora.Hash;
-import xyz.anthofoxo.aurora.struct.annotation.KnownNativeName;
 
-@KnownNativeName
 public class PollComp implements Comp {
 
 	/**

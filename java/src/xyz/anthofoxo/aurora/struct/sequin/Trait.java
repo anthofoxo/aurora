@@ -4,7 +4,9 @@ import java.util.List;
 
 import xyz.anthofoxo.aurora.struct.ThumperStruct;
 import xyz.anthofoxo.aurora.struct.annotation.FixedSize;
+import xyz.anthofoxo.aurora.struct.annotation.UnknownNativeName;
 
+@UnknownNativeName
 public class Trait implements ThumperStruct {
 	public String objName;
 	public List<ParamPath> params;

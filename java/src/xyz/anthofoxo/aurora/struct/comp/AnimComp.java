@@ -1,10 +1,8 @@
 package xyz.anthofoxo.aurora.struct.comp;
 
 import xyz.anthofoxo.aurora.Hash;
-import xyz.anthofoxo.aurora.struct.annotation.KnownNativeName;
 import xyz.anthofoxo.aurora.struct.trait.Time;
 
-@KnownNativeName
 public class AnimComp implements Comp {
 	/**
 	 * LE: 0A 9F 25 63
