@@ -4,8 +4,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 import xyz.anthofoxo.aurora.parse.AuroraReader;
+import xyz.anthofoxo.aurora.struct.ThumperStruct;
 
-public class DataPointList {
+public class DataPointList implements ThumperStruct {
 	public int traitType;
 	public List<DataPoint> datapoints;
 	public List<DataPoint> editorpoints;
