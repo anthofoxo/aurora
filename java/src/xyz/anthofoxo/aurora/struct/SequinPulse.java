@@ -2,9 +2,9 @@ package xyz.anthofoxo.aurora.struct;
 
 import java.util.List;
 
-import xyz.anthofoxo.aurora.struct.SequinLeaf.Trait;
 import xyz.anthofoxo.aurora.struct.annotation.FixedSize;
 import xyz.anthofoxo.aurora.struct.comp.Comp;
+import xyz.anthofoxo.aurora.struct.sequin.Trait;
 
 public class SequinPulse implements ThumperStruct {
 	public static int[] header() {

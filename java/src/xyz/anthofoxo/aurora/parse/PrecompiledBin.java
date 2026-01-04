@@ -1,15 +1,20 @@
-package xyz.anthofoxo.aurora.struct;
+package xyz.anthofoxo.aurora.parse;
 
 import java.util.Arrays;
 import java.util.List;
 
-import xyz.anthofoxo.aurora.parse.AuroraWriter;
+import xyz.anthofoxo.aurora.struct.DeclarationType;
+import xyz.anthofoxo.aurora.struct.LibraryImport;
+import xyz.anthofoxo.aurora.struct.LibraryObject;
+import xyz.anthofoxo.aurora.struct.ObjectDeclaration;
+import xyz.anthofoxo.aurora.struct.Transform;
 import xyz.anthofoxo.aurora.struct.comp.DrawComp;
 import xyz.anthofoxo.aurora.struct.comp.EditStateComp;
-import xyz.anthofoxo.aurora.struct.comp.XfmComp;
 import xyz.anthofoxo.aurora.struct.comp.PollComp;
+import xyz.anthofoxo.aurora.struct.comp.XfmComp;
 import xyz.anthofoxo.aurora.struct.experimental.UnknownSkyboxStruct;
 import xyz.anthofoxo.aurora.struct.experimental.UnknownSkyboxStruct.Grouping;
+import xyz.anthofoxo.aurora.struct.sequin.ParamPath;
 import xyz.anthofoxo.aurora.struct.trait.TraitBucket;
 import xyz.anthofoxo.aurora.struct.trait.TraitConstraint;
 import xyz.anthofoxo.aurora.struct.trait.TraitLayer;
@@ -48,9 +53,9 @@ public final class PrecompiledBin {
 		s.unknown0 = true;
 		// @formatter:off
 		s.groupings = List.of(
-				new Grouping(List.of(new SequinGate.ParamPath(0xF04BF1D9, -1)), "kTraitObj", "skybox_src.mat"),
-				new Grouping(List.of(new SequinGate.ParamPath(0xE92ABC92, -1)), "kTraitObj", "skybox_subtract.mat"),
-				new Grouping(List.of(new SequinGate.ParamPath(0xC8FD3CD7, -1)), "kTraitBool", true)
+				new Grouping(List.of(new ParamPath(0xF04BF1D9, -1)), "kTraitObj", "skybox_src.mat"),
+				new Grouping(List.of(new ParamPath(0xE92ABC92, -1)), "kTraitObj", "skybox_subtract.mat"),
+				new Grouping(List.of(new ParamPath(0xC8FD3CD7, -1)), "kTraitBool", true)
 			);
 		s.comps = List.of(
 				new PollComp(0),

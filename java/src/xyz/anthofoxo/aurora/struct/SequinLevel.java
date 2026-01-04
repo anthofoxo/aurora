@@ -4,10 +4,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 import xyz.anthofoxo.aurora.parse.AuroraReader;
-import xyz.anthofoxo.aurora.struct.SequinGate.ParamPath;
-import xyz.anthofoxo.aurora.struct.SequinLeaf.Trait;
 import xyz.anthofoxo.aurora.struct.annotation.FixedSize;
 import xyz.anthofoxo.aurora.struct.comp.Comp;
+import xyz.anthofoxo.aurora.struct.sequin.ParamPath;
+import xyz.anthofoxo.aurora.struct.sequin.Trait;
 
 public class SequinLevel implements ThumperStruct {
 	public static int[] header() {

@@ -6,21 +6,9 @@ import java.util.List;
 import xyz.anthofoxo.aurora.struct.annotation.FixedSize;
 import xyz.anthofoxo.aurora.struct.comp.Comp;
 import xyz.anthofoxo.aurora.struct.comp.EditStateComp;
+import xyz.anthofoxo.aurora.struct.sequin.ParamPath;
 
 public class SequinGate implements ThumperStruct {
-	public static class ParamPath implements ThumperStruct {
-		public int paramHash;
-		public int paramIdx; // typically -1
-
-		public ParamPath() {
-		}
-
-		public ParamPath(int paramHash, int paramIdx) {
-			this.paramHash = paramHash;
-			this.paramIdx = paramIdx;
-		}
-	}
-
 	public static class BossPattern implements ThumperStruct {
 		public int nodeHash;
 		public String levelName;
