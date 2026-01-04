@@ -1,7 +1,8 @@
-package xyz.anthofoxo.aurora.struct.comp;
+package xyz.anthofoxo.aurora.struct.comp.dsp;
 
 import xyz.anthofoxo.aurora.Hash;
 import xyz.anthofoxo.aurora.struct.annotation.FixedSize;
+import xyz.anthofoxo.aurora.struct.comp.Comp;
 
 public class DSPTremolo implements Comp {
 	public static final int HASH = Hash.fnv1a("DSPTremolo");

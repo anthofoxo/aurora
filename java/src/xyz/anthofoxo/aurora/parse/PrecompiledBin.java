@@ -5,18 +5,18 @@ import java.util.Arrays;
 import java.util.List;
 
 import xyz.anthofoxo.aurora.Util;
-import xyz.anthofoxo.aurora.struct.DeclarationType;
-import xyz.anthofoxo.aurora.struct.LibraryImport;
 import xyz.anthofoxo.aurora.struct.LibraryObject;
 import xyz.anthofoxo.aurora.struct.LibraryType;
-import xyz.anthofoxo.aurora.struct.ObjectDeclaration;
 import xyz.anthofoxo.aurora.struct.Transform;
-import xyz.anthofoxo.aurora.struct.UnknownSkyboxStruct;
-import xyz.anthofoxo.aurora.struct.UnknownSkyboxStruct.Grouping;
+import xyz.anthofoxo.aurora.struct.GfxLibImport;
+import xyz.anthofoxo.aurora.struct.GfxLibImport.Grouping;
 import xyz.anthofoxo.aurora.struct.comp.DrawComp;
 import xyz.anthofoxo.aurora.struct.comp.EditStateComp;
 import xyz.anthofoxo.aurora.struct.comp.PollComp;
 import xyz.anthofoxo.aurora.struct.comp.XfmComp;
+import xyz.anthofoxo.aurora.struct.objlib.DeclarationType;
+import xyz.anthofoxo.aurora.struct.objlib.LibraryImport;
+import xyz.anthofoxo.aurora.struct.objlib.ObjectDeclaration;
 import xyz.anthofoxo.aurora.struct.sequin.ParamPath;
 import xyz.anthofoxo.aurora.struct.trait.TraitBucket;
 import xyz.anthofoxo.aurora.struct.trait.TraitConstraint;
@@ -51,8 +51,8 @@ public final class PrecompiledBin {
 
 	public static byte[] getObjDef0() {
 		AuroraWriter out = new AuroraWriter();
-		UnknownSkyboxStruct s = new UnknownSkyboxStruct();
-		s.header = UnknownSkyboxStruct.header();
+		GfxLibImport s = new GfxLibImport();
+		s.header = GfxLibImport.header();
 		s.unknown0 = true;
 		// @formatter:off
 		s.groupings = List.of(

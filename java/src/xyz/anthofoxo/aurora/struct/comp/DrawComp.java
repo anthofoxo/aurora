@@ -3,7 +3,7 @@ package xyz.anthofoxo.aurora.struct.comp;
 import java.util.List;
 
 import xyz.anthofoxo.aurora.Hash;
-import xyz.anthofoxo.aurora.struct.UnknownSkyboxStruct;
+import xyz.anthofoxo.aurora.struct.GfxLibImport;
 import xyz.anthofoxo.aurora.struct.annotation.RemoveFieldIfEnclosed;
 import xyz.anthofoxo.aurora.struct.trait.TraitBucket;
 import xyz.anthofoxo.aurora.struct.trait.TraitLayer;
@@ -26,7 +26,7 @@ public class DrawComp implements Comp {
 	 * is empty. In the level objlib footer this typically has 2 string pointing to
 	 * a couple objects
 	 */
-	@RemoveFieldIfEnclosed(clazz = UnknownSkyboxStruct.class)
+	@RemoveFieldIfEnclosed(clazz = GfxLibImport.class)
 	public List<String> contextInt;
 
 	public DrawComp() {

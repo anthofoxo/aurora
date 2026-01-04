@@ -3,8 +3,6 @@ package xyz.anthofoxo.aurora.gui;
 import java.awt.Desktop;
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -24,15 +22,10 @@ import imgui.type.ImBoolean;
 import xyz.anthofoxo.aurora.Aurora;
 import xyz.anthofoxo.aurora.AuroraStub;
 import xyz.anthofoxo.aurora.EntryPoint;
-import xyz.anthofoxo.aurora.Hash;
 import xyz.anthofoxo.aurora.ModBuilder;
 import xyz.anthofoxo.aurora.UserConfig;
 import xyz.anthofoxo.aurora.gfx.Font;
-import xyz.anthofoxo.aurora.parse.AuroraReader;
-import xyz.anthofoxo.aurora.parse.AuroraWriter;
-import xyz.anthofoxo.aurora.struct.LevelListingFile;
 import xyz.anthofoxo.aurora.target.Target;
-import xyz.anthofoxo.aurora.tml.TMLBuilder;
 
 public class ModLauncher {
 
@@ -84,14 +77,14 @@ public class ModLauncher {
 			}
 
 			///
-			/// 
+
 			if (ImGui.beginTable("modmodetable", 1)) {
 				ImGui.tableNextColumn();
-				
+
 				ImGui.pushStyleColor(ImGuiCol.ChildBg, new ImVec4(0.12f, 0.12f, 0.32f, 1));
 				ImGui.pushStyleVar(ImGuiStyleVar.ChildRounding, 9);
 				ImGui.beginChild("modmodesection", ImGui.getWindowWidth() - 18, 90);
-				
+
 				ImGui.text(" ");
 				ImGui.sameLine();
 				if (AuroraStub.integrated) {
@@ -110,7 +103,6 @@ public class ModLauncher {
 					ImGui.textUnformatted("Thumper Directory is not specified, levels will not be built");
 				}
 
-
 				ImGui.text(" ");
 				ImGui.sameLine();
 				ImGui.pushFont(Font.getFont("levelfont"));
@@ -122,42 +114,8 @@ public class ModLauncher {
 				ImGui.sameLine();
 				if (ImGui.button(text)) {
 
-					if (buildTargets.get() && thumperpath != null) {
-						if (!isModModeEnabled.get()) {
-							try {
-								TMLBuilder.restoreBackups(Path.of(thumperpath).toString());
-							} catch (IOException e) {
-								e.printStackTrace();
-							}
-						} else {
-							try {
-								TMLBuilder.buildLevels(customs, Path.of(thumperpath).toString());
-							} catch (IOException e) {
-								e.printStackTrace();
-							}
-						}
-
-						if (autoUnlockLevels.get()) {
-							try {
-								String filepath = String.format(thumperpath + "/cache/%s.pc",
-										Integer.toHexString(Hash.fnv1a("Aui/thumper.levels")));
-
-								AuroraReader reader = new AuroraReader(Files.readAllBytes(Path.of(filepath)));
-								LevelListingFile listing = reader.obj(LevelListingFile.class);
-
-								for (var level : listing.enteries) {
-									level.unlocks = "";
-									level.defaultLocked = false;
-								}
-
-								AuroraWriter out = new AuroraWriter();
-								out.obj(listing);
-								TMLBuilder.writefileBackedup(filepath, out.getBytes());
-							} catch (IOException e) {
-								e.printStackTrace();
-							}
-						}
-
+					if (buildTargets.get()) {
+						ModBuilder.build(customs, isModModeEnabled.get(), autoUnlockLevels.get());
 					}
 
 					if (AuroraStub.integrated) {
@@ -166,17 +124,15 @@ public class ModLauncher {
 					}
 				}
 				ImGui.popFont();
-				
+
 				ImGui.endChild();
 				ImGui.popStyleColor();
 				ImGui.popStyleVar();
-				
+
 				ImGui.endTable();
 			}
 			///
-			/// 
-			/// 
-			
+
 			ImGui.text(" ");
 
 			//

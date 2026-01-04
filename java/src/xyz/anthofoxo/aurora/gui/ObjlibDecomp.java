@@ -14,22 +14,23 @@ import imgui.type.ImString;
 import xyz.anthofoxo.aurora.Hash;
 import xyz.anthofoxo.aurora.UserConfig;
 import xyz.anthofoxo.aurora.parse.AuroraReader;
+import xyz.anthofoxo.aurora.parse.AuroraWriter;
 import xyz.anthofoxo.aurora.struct.Bender;
 import xyz.anthofoxo.aurora.struct.Cam;
 import xyz.anthofoxo.aurora.struct.ChannelGroup;
 import xyz.anthofoxo.aurora.struct.DSP;
 import xyz.anthofoxo.aurora.struct.DSPChain;
-import xyz.anthofoxo.aurora.struct.DeclarationType;
+import xyz.anthofoxo.aurora.struct.DrawGroup;
 import xyz.anthofoxo.aurora.struct.EntitySpawner;
 import xyz.anthofoxo.aurora.struct.Env;
 import xyz.anthofoxo.aurora.struct.Flow;
+import xyz.anthofoxo.aurora.struct.GfxLibImport;
+import xyz.anthofoxo.aurora.struct.GfxLibImport.Grouping;
 import xyz.anthofoxo.aurora.struct.LevelLibFooter;
-import xyz.anthofoxo.aurora.struct.LibraryImport;
 import xyz.anthofoxo.aurora.struct.LibraryObject;
 import xyz.anthofoxo.aurora.struct.LibraryType;
 import xyz.anthofoxo.aurora.struct.Mat;
 import xyz.anthofoxo.aurora.struct.Mesh;
-import xyz.anthofoxo.aurora.struct.ObjectDeclaration;
 import xyz.anthofoxo.aurora.struct.ObjlibFooter;
 import xyz.anthofoxo.aurora.struct.PathDecorator;
 import xyz.anthofoxo.aurora.struct.PostProcess;
@@ -44,19 +45,22 @@ import xyz.anthofoxo.aurora.struct.SequinMaster;
 import xyz.anthofoxo.aurora.struct.SequinPulse;
 import xyz.anthofoxo.aurora.struct.Tex2D;
 import xyz.anthofoxo.aurora.struct.TraitAnim;
-import xyz.anthofoxo.aurora.struct.UnknownSkyboxStruct;
-import xyz.anthofoxo.aurora.struct.UnknownSkyboxStruct.Grouping;
 import xyz.anthofoxo.aurora.struct.Vibration;
 import xyz.anthofoxo.aurora.struct.VrSettings;
 import xyz.anthofoxo.aurora.struct.Xfmer;
 import xyz.anthofoxo.aurora.struct.annotation.FixedSize;
 import xyz.anthofoxo.aurora.struct.comp.Comp;
+import xyz.anthofoxo.aurora.struct.comp.dsp.DSPParamEQ;
+import xyz.anthofoxo.aurora.struct.objlib.DeclarationType;
+import xyz.anthofoxo.aurora.struct.objlib.LibraryImport;
+import xyz.anthofoxo.aurora.struct.objlib.ObjLib;
+import xyz.anthofoxo.aurora.struct.objlib.ObjectDeclaration;
 import xyz.anthofoxo.aurora.struct.sequin.ParamPath;
+import xyz.anthofoxo.aurora.tml.TMLBuilder;
 
 public class ObjlibDecomp {
 	public ImBoolean visible = new ImBoolean(false);
-	// C:\Program Files (x86)\Steam\steamapps\common\Thumper/cache/b2455736.pc
-	private ImString input = new ImString(UserConfig.thumperPath() + "/cache/b2455736.pc", 512);
+	private ImString input = new ImString("", 512);
 	private String error = "";
 
 	public static class ObjlibLevel {
@@ -71,7 +75,7 @@ public class ObjlibDecomp {
 		public int _startcontentoffset;
 		public int _endskyboxoffset;
 
-		public List<UnknownSkyboxStruct> skyboxes = new ArrayList<>();
+		public List<GfxLibImport> gfxImports = new ArrayList<>();
 
 		public Map<String, xyz.anthofoxo.aurora.struct.Path> paths = new HashMap<>();
 		public Map<String, SequinLeaf> leafs = new HashMap<>();
@@ -99,10 +103,10 @@ public class ObjlibDecomp {
 		public Map<String, SequinPulse> pulses = new HashMap<>();
 		public Map<String, Mat> mats = new HashMap<>();
 		public Map<String, DSP> dsps = new HashMap<>();
+		public Map<String, DrawGroup> drawGroups = new HashMap<>();
 
 		public ObjlibFooter genericFooter;
 		public Object libraryFooter;
-
 	}
 
 	private ObjlibLevel level = null;
@@ -134,6 +138,7 @@ public class ObjlibDecomp {
 		objectHeaders.put(DeclarationType.PostProcess, PostProcess.header());
 		objectHeaders.put(DeclarationType.PostProcessPass, PostProcessPass.header());
 		objectHeaders.put(DeclarationType.Bender, Bender.header());
+		objectHeaders.put(DeclarationType.DrawGroup, DrawGroup.header());
 	}
 
 	private void parse() throws IOException {
@@ -155,10 +160,12 @@ public class ObjlibDecomp {
 		level.fileType = in.obj(FileType.class);
 		level.libraryType = in.obj(LibraryType.class);
 
-		if (level.libraryType == LibraryType.ObjLib) {
-			level.unknownHeader = in.i32arr(2);
-		} else {
+		if (level.libraryType == LibraryType.LevelLib) {
 			level.unknownHeader = in.i32arr(4);
+		} else if (level.libraryType == LibraryType.GfxLib) {
+			level.unknownHeader = in.i32arr(3);
+		} else {
+			level.unknownHeader = in.i32arr(2);
 		}
 
 		level.libraryImports = in.objlist(LibraryImport.class);
@@ -170,7 +177,7 @@ public class ObjlibDecomp {
 		for (var importObj : level.libraryObjects) {
 			if (importObj.libType == LibraryType.GfxLib) {
 
-				UnknownSkyboxStruct s = new UnknownSkyboxStruct();
+				GfxLibImport s = new GfxLibImport();
 				s.header = in.i32arr(2);
 				s.unknown0 = in.bool();
 				s.groupings = new ArrayList<>();
@@ -193,11 +200,11 @@ public class ObjlibDecomp {
 
 				// when parsing a skybox, drawcomp needs one field stripped, ensure the parser
 				// knows this dependency
-				in.enclosing.push(UnknownSkyboxStruct.class);
+				in.enclosing.push(GfxLibImport.class);
 				s.comps = in.objlist(Comp.class);
 				in.enclosing.pop();
 
-				level.skyboxes.add(s);
+				level.gfxImports.add(s);
 
 			} else throw new IllegalStateException();
 		}
@@ -251,6 +258,9 @@ public class ObjlibDecomp {
 			case SequinMaster:
 				level.masters.put(declaration.name, in.obj(SequinMaster.class));
 				break;
+			case DrawGroup:
+				level.drawGroups.put(declaration.name, in.obj(DrawGroup.class));
+				break;
 			case Vibration:
 				level.vibs.put(declaration.name, in.obj(Vibration.class));
 				break;
@@ -264,7 +274,6 @@ public class ObjlibDecomp {
 				level.mats.put(declaration.name, in.obj(Mat.class));
 				break;
 			case DSP:
-
 				level.dsps.put(declaration.name, in.obj(DSP.class));
 				break;
 			case SequinDrawer:
@@ -348,6 +357,56 @@ public class ObjlibDecomp {
 			assert (in.position() == in.bytes.length);
 		}
 
+	}
+
+	public void testLoad() throws IOException {
+		String inPath = UserConfig.thumperPath() + "/cache/" + Integer.toHexString(Hash.fnv1a("Achannels.objlib"))
+				+ ".pc";
+
+		System.out.println(inPath);
+
+		AuroraReader in = new AuroraReader(Files.readAllBytes(Path.of(inPath)));
+
+		ObjLib file = in.obj(ObjLib.class);
+
+		List<String> dspRemovalCandidates = new ArrayList<>();
+
+		for (int i = 0; i < file.objectDeclarations.size(); i++) {
+			var declaration = file.objectDeclarations.get(i);
+
+			if (declaration.type == DeclarationType.DSP) {
+				var object = (DSP) file.objectDefinitions.get(file.libraryObjects.size() + i);
+
+				for (var comp : object.comps) {
+					if (comp instanceof DSPParamEQ) {
+						dspRemovalCandidates.add(declaration.name);
+						break;
+					}
+				}
+			}
+		}
+
+		for (int i = 0; i < file.objectDeclarations.size(); i++) {
+			var declaration = file.objectDeclarations.get(i);
+
+			if (declaration.type == DeclarationType.DSPChain) {
+				var object = (DSPChain) file.objectDefinitions.get(file.libraryObjects.size() + i);
+
+				var iterator = object.DSPs.iterator();
+
+				while (iterator.hasNext()) {
+					var value = iterator.next();
+					if (dspRemovalCandidates.contains(value)) {
+						iterator.remove();
+					}
+				}
+			}
+		}
+
+		AuroraWriter out = new AuroraWriter();
+		out.obj(file);
+
+		TMLBuilder.writefileBackedup(inPath, out.getBytes());
 	}
 
 	private void drawParsed() {
@@ -525,8 +584,19 @@ public class ObjlibDecomp {
 				ImGui.sameLine();
 			}
 
-			ImGui.dummy(0, 0);
-			ImGui.separator();
+			if (ImGui.button("Apply Channel FX Mod")) {
+				try {
+					testLoad();
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
+
+			if (ImGui.button("global/ambient_decorators/pyramid.objlib")) {
+				input.set(
+						prefix + Integer.toHexString(Hash.fnv1a("Aglobal/ambient_decorators/pyramid.objlib")) + ".pc");
+			}
 
 			ImGui.inputText("Open Objlib", input);
 			ImGui.sameLine();

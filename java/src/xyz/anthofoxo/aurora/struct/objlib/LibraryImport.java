@@ -1,4 +1,6 @@
-package xyz.anthofoxo.aurora.struct;
+package xyz.anthofoxo.aurora.struct.objlib;
+
+import xyz.anthofoxo.aurora.struct.ThumperStruct;
 
 public class LibraryImport implements ThumperStruct {
 	public int unknown;

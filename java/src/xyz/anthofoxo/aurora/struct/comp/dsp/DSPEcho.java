@@ -1,6 +1,7 @@
-package xyz.anthofoxo.aurora.struct.comp;
+package xyz.anthofoxo.aurora.struct.comp.dsp;
 
 import xyz.anthofoxo.aurora.Hash;
+import xyz.anthofoxo.aurora.struct.comp.Comp;
 
 /**
  * LE: 8A 28 DC B5

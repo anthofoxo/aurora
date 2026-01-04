@@ -10,7 +10,7 @@ import xyz.anthofoxo.aurora.struct.comp.PollComp;
 import xyz.anthofoxo.aurora.struct.comp.XfmComp;
 import xyz.anthofoxo.aurora.struct.sequin.ParamPath;
 
-public class UnknownSkyboxStruct implements ThumperStruct {
+public class GfxLibImport implements ThumperStruct {
 
 	public static class Grouping implements ThumperStruct {
 		public List<ParamPath> params;

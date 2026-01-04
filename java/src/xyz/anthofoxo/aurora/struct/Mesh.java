@@ -16,8 +16,13 @@ public class Mesh implements ThumperStruct {
 	public int[] header;
 	public List<Comp> comps;
 	public String material;
-	public int unknown0;
-	public boolean unknown1;
+	public boolean unknown0;
+	
+	// list?
+	public int unknown1;
+	
+	
+	
 	public String mesh;
 	@FixedSize(count = 17)
 	public byte[] hashdata;

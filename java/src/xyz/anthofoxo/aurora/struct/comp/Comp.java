@@ -1,7 +1,14 @@
 package xyz.anthofoxo.aurora.struct.comp;
 
 import xyz.anthofoxo.aurora.parse.AuroraReader;
+import xyz.anthofoxo.aurora.parse.AuroraWriter;
 import xyz.anthofoxo.aurora.struct.ThumperStruct;
+import xyz.anthofoxo.aurora.struct.comp.dsp.DSPCompressor;
+import xyz.anthofoxo.aurora.struct.comp.dsp.DSPEcho;
+import xyz.anthofoxo.aurora.struct.comp.dsp.DSPFlange;
+import xyz.anthofoxo.aurora.struct.comp.dsp.DSPParamEQ;
+import xyz.anthofoxo.aurora.struct.comp.dsp.DSPPitchShift;
+import xyz.anthofoxo.aurora.struct.comp.dsp.DSPTremolo;
 
 /**
  * This is the base class for thumper components, many subtypes of comp are only
@@ -52,4 +59,7 @@ public interface Comp extends ThumperStruct {
 				+ Integer.toHexString(in.position()));
 	}
 
+	public static void out(AuroraWriter out, Comp comp) {
+		throw new IllegalStateException("Comp is not writable");
+	}
 }

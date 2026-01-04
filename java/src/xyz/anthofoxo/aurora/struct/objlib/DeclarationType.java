@@ -1,7 +1,8 @@
-package xyz.anthofoxo.aurora.struct;
+package xyz.anthofoxo.aurora.struct.objlib;
 
 import xyz.anthofoxo.aurora.Hash;
 import xyz.anthofoxo.aurora.parse.AuroraReader;
+import xyz.anthofoxo.aurora.struct.ThumperStruct;
 
 public enum DeclarationType implements ThumperStruct {
 	// @formatter:off
@@ -31,6 +32,10 @@ public enum DeclarationType implements ThumperStruct {
 	DSPChain("DSPChain"),
 	Vibration("Vibration"),
 	PostProcessPass("PostProcessPass"),
+	DrawGroup("DrawGroup"),
+	UICanvas("UICanvas"),
+	Entity("Entity"),
+	EntityAnim("EntityAnim"),
 	PostProcess("PostProcess");
 	// @formatter:on
 
