@@ -50,6 +50,7 @@ import xyz.anthofoxo.aurora.struct.Xfmer;
 import xyz.anthofoxo.aurora.struct.annotation.FixedSize;
 import xyz.anthofoxo.aurora.struct.comp.Comp;
 import xyz.anthofoxo.aurora.struct.objlib.DeclarationType;
+import xyz.anthofoxo.aurora.struct.objlib.FileType;
 import xyz.anthofoxo.aurora.struct.objlib.LibraryImport;
 import xyz.anthofoxo.aurora.struct.objlib.ObjectDeclaration;
 import xyz.anthofoxo.aurora.struct.sequin.ParamPath;

@@ -1,4 +1,4 @@
-package xyz.anthofoxo.aurora.gui;
+package xyz.anthofoxo.aurora.struct.objlib;
 
 import xyz.anthofoxo.aurora.parse.AuroraReader;
 import xyz.anthofoxo.aurora.struct.ThumperStruct;
