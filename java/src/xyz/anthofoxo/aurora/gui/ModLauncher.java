@@ -46,9 +46,9 @@ public class ModLauncher {
 	private static ImBoolean enableCampaignLevels = new ImBoolean(
 			Boolean.parseBoolean(UserConfig.get(USERCONFIG_NATIVE_GAME_STR, Boolean.toString(true))));
 
-	private static Boolean showselected = false;
-	private static Boolean ranksortorder = false;
-	private static Boolean namesortorder = false;
+	private static boolean showselected = false;
+	private static boolean ranksortorder = false;
+	private static boolean namesortorder = false;
 
 	static {
 		reloadList();
@@ -378,19 +378,13 @@ public class ModLauncher {
 								}
 							}
 							// separator colors to match the levels rail colors
-							ImGui.pushStyleColor(ImGuiCol.Separator,
-									new ImVec4(selected.tcl.railsGlowColor.w, selected.tcl.railsGlowColor.x,
-											selected.tcl.railsGlowColor.y, selected.tcl.railsGlowColor.z));
+							ImGui.pushStyleColor(ImGuiCol.Separator, selected.tcl.railsGlowColor.toImVec4wxyz(null));
 							ImGui.separator();
-							ImGui.popStyleColor();
-							ImGui.pushStyleColor(ImGuiCol.Separator, new ImVec4(selected.tcl.railsColor.w,
-									selected.tcl.railsColor.x, selected.tcl.railsColor.y, selected.tcl.railsColor.z));
+							ImGui.pushStyleColor(ImGuiCol.Separator, selected.tcl.railsColor.toImVec4wxyz(null));
 							ImGui.separator();
-							ImGui.popStyleColor();
-							ImGui.pushStyleColor(ImGuiCol.Separator, new ImVec4(selected.tcl.pathColor.w,
-									selected.tcl.pathColor.x, selected.tcl.pathColor.y, selected.tcl.pathColor.z));
+							ImGui.pushStyleColor(ImGuiCol.Separator, selected.tcl.railsGlowColor.toImVec4wxyz(null));
 							ImGui.separator();
-							ImGui.popStyleColor();
+							ImGui.popStyleColor(3);
 
 							ImGui.textUnformatted("  Author:");
 							String[] authors = selected.tcl.author.replace(" ", "").split(",");
@@ -425,19 +419,13 @@ public class ModLauncher {
 							ImGui.popStyleColor();
 
 							// separator colors to match the levels rail colors
-							ImGui.pushStyleColor(ImGuiCol.Separator, new ImVec4(selected.tcl.pathColor.w,
-									selected.tcl.pathColor.x, selected.tcl.pathColor.y, selected.tcl.pathColor.z));
+							ImGui.pushStyleColor(ImGuiCol.Separator, selected.tcl.pathColor.toImVec4wxyz(null));
 							ImGui.separator();
-							ImGui.popStyleColor();
-							ImGui.pushStyleColor(ImGuiCol.Separator, new ImVec4(selected.tcl.railsColor.w,
-									selected.tcl.railsColor.x, selected.tcl.railsColor.y, selected.tcl.railsColor.z));
+							ImGui.pushStyleColor(ImGuiCol.Separator, selected.tcl.railsColor.toImVec4wxyz(null));
 							ImGui.separator();
-							ImGui.popStyleColor();
-							ImGui.pushStyleColor(ImGuiCol.Separator,
-									new ImVec4(selected.tcl.railsGlowColor.w, selected.tcl.railsGlowColor.x,
-											selected.tcl.railsGlowColor.y, selected.tcl.railsGlowColor.z));
+							ImGui.pushStyleColor(ImGuiCol.Separator, selected.tcl.railsGlowColor.toImVec4wxyz(null));
 							ImGui.separator();
-							ImGui.popStyleColor();
+							ImGui.popStyleColor(3);
 
 							ImGui.pushStyleVar(ImGuiStyleVar.GrabMinSize, 20);
 							ImGui.pushStyleVar(ImGuiStyleVar.GrabRounding, 5);
