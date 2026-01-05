@@ -443,54 +443,24 @@ public class ModLauncher {
 							ImGui.pushStyleVar(ImGuiStyleVar.GrabRounding, 5);
 							ImGui.sliderInt("Speed Modifier", selected.speedModifier, 10, 300, "%d%%");
 							ImGui.popStyleVar(2);
-							// buttons to quick change speed modifier
-							var sizew = 48;
-							var sizeh = 25;
-							ImGui.pushStyleVar(ImGuiStyleVar.ItemSpacing, new ImVec2(3f, 3f));
 
-							ImGui.pushStyleColor(ImGuiCol.Button, new ImVec4(0, 0.4f, 0, 1));
-							ImGui.pushStyleColor(ImGuiCol.ButtonHovered, new ImVec4(0, 1f, 0, 1));
-							if (ImGui.button("0.25x", sizew, sizeh)) {
-								selected.speedModifier[0] = 25;
+							// Speed modifier buttons
+							{
+								ImGui.pushStyleVar(ImGuiStyleVar.ItemSpacing, new ImVec2(3f, 3f));
+								ImGui.pushStyleColor(ImGuiCol.Button, new ImVec4(0, 0.4f, 0, 1));
+								ImGui.pushStyleColor(ImGuiCol.ButtonHovered, new ImVec4(0, 1f, 0, 1));
+								int[] speedChoices = new int[] { 50, 75, 90, 100, 110, 125, 150 };
+								for (var value : speedChoices) {
+									if (ImGui.button(Float.toString(value / 100.0f) + "x", 48, 25)) {
+										selected.speedModifier[0] = value;
+									}
+									ImGui.sameLine();
+								}
+								ImGui.popStyleColor(2);
+								ImGui.popStyleVar();
+								ImGui.dummy(0, 0);
 							}
-							ImGui.popStyleColor(2);
-							ImGui.sameLine();
-							ImGui.pushStyleColor(ImGuiCol.Button, new ImVec4(0, 0.4f, 0, 1));
-							ImGui.pushStyleColor(ImGuiCol.ButtonHovered, new ImVec4(0, 1f, 0, 1));
-							if (ImGui.button("0.5x", sizew, sizeh)) {
-								selected.speedModifier[0] = 50;
-							}
-							ImGui.popStyleColor(2);
-							ImGui.sameLine();
-							ImGui.pushStyleColor(ImGuiCol.Button, new ImVec4(0, 0.4f, 0, 1));
-							ImGui.pushStyleColor(ImGuiCol.ButtonHovered, new ImVec4(0, 1f, 0, 1));
-							if (ImGui.button("1x", sizew, sizeh)) {
-								selected.speedModifier[0] = 100;
-							}
-							ImGui.popStyleColor(2);
-							ImGui.sameLine();
-							ImGui.pushStyleColor(ImGuiCol.Button, new ImVec4(0, 0.4f, 0, 1));
-							ImGui.pushStyleColor(ImGuiCol.ButtonHovered, new ImVec4(0, 1f, 0, 1));
-							if (ImGui.button("1.5x", sizew, sizeh)) {
-								selected.speedModifier[0] = 150;
-							}
-							ImGui.popStyleColor(2);
-							ImGui.sameLine();
-							ImGui.pushStyleColor(ImGuiCol.Button, new ImVec4(0, 0.4f, 0, 1));
-							ImGui.pushStyleColor(ImGuiCol.ButtonHovered, new ImVec4(0, 1f, 0, 1));
-							if (ImGui.button("2x", sizew, sizeh)) {
-								selected.speedModifier[0] = 200;
-							}
-							ImGui.popStyleColor(2);
-							ImGui.sameLine();
-							ImGui.pushStyleColor(ImGuiCol.Button, new ImVec4(0, 0.4f, 0, 1));
-							ImGui.pushStyleColor(ImGuiCol.ButtonHovered, new ImVec4(0, 1f, 0, 1));
-							if (ImGui.button("3x", sizew, sizeh)) {
-								selected.speedModifier[0] = 300;
-							}
-							ImGui.popStyleColor(2);
 
-							ImGui.popStyleVar();
 						}
 					}
 					ImGui.endChild();
