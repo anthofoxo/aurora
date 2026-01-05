@@ -1,22 +1,28 @@
 package xyz.anthofoxo.aurora.gui;
 
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+
+import org.lwjgl.glfw.GLFW;
 
 import imgui.ImGui;
 import imgui.ImGuiTextFilter;
 import imgui.ImVec2;
 import imgui.ImVec4;
 import imgui.flag.ImGuiCol;
+import imgui.flag.ImGuiCond;
+import imgui.flag.ImGuiPopupFlags;
 import imgui.flag.ImGuiStyleVar;
 import imgui.flag.ImGuiTableFlags;
 import imgui.flag.ImGuiWindowFlags;
 import imgui.type.ImBoolean;
 import xyz.anthofoxo.aurora.AuroraStub;
 import xyz.anthofoxo.aurora.BuiltinModOptions;
-import xyz.anthofoxo.aurora.EntryPoint;
 import xyz.anthofoxo.aurora.ModBuilder;
 import xyz.anthofoxo.aurora.TextureRegistry;
 import xyz.anthofoxo.aurora.UserConfig;
@@ -41,9 +47,10 @@ public class ModLauncher {
 	private static ImBoolean enableCampaignLevels = new ImBoolean(
 			Boolean.parseBoolean(UserConfig.get(USERCONFIG_NATIVE_GAME_STR, Boolean.toString(true))));
 
-	private static Boolean showselected = false;
-	private static Boolean ranksortorder = false;
-	private static Boolean namesortorder = false;
+	private static boolean showselected = false;
+	private static boolean ranksortorder = false;
+	private static boolean namesortorder = false;
+	private static String buildText;
 
 	static {
 		reloadList();
@@ -55,6 +62,8 @@ public class ModLauncher {
 	}
 
 	public static void draw() {
+		boolean tryBuildMods = false;
+
 		ImGui.pushStyleVar(ImGuiStyleVar.FrameRounding, 6);
 		if (ImGui.begin("Launcher", ImGuiWindowFlags.MenuBar)) {
 			if (ImGui.beginMenuBar()) {
@@ -105,9 +114,7 @@ public class ModLauncher {
 					ImGui.popStyleColor();
 				}
 
-				String thumperpath = UserConfig.thumperPath();
-
-				if (thumperpath == null) {
+				if (UserConfig.thumperPath() == null) {
 					ImGui.textUnformatted("Thumper Directory is not specified, levels will not be built");
 				}
 
@@ -120,17 +127,7 @@ public class ModLauncher {
 
 				ImGui.text(" ");
 				ImGui.sameLine();
-				if (ImGui.button(text)) {
-
-					if (buildTargets.get()) {
-						ModBuilder.build(customs, isModModeEnabled.get(), autoUnlockLevels.get());
-					}
-
-					if (AuroraStub.integrated) {
-						AuroraStub.shouldLaunchThumper = true;
-						EntryPoint.running = false;
-					}
-				}
+				if (ImGui.button(text)) tryBuildMods = true;
 				ImGui.popFont();
 
 				ImGui.endChild();
@@ -373,27 +370,7 @@ public class ModLauncher {
 							ImGui.separator();
 							ImGui.popStyleColor(3);
 
-							// Speed modifiers
-							{
-								ImGui.pushStyleVar(ImGuiStyleVar.GrabMinSize, 20);
-								ImGui.pushStyleVar(ImGuiStyleVar.GrabRounding, 5);
-								ImGui.sliderInt("Speed Modifier", selected.speedModifier, 10, 300, "%d%%");
-								ImGui.popStyleVar(2);
-
-								ImGui.pushStyleVar(ImGuiStyleVar.ItemSpacing, new ImVec2(3f, 3f));
-								ImGui.pushStyleColor(ImGuiCol.Button, new ImVec4(0, 0.4f, 0, 1));
-								ImGui.pushStyleColor(ImGuiCol.ButtonHovered, new ImVec4(0, 1f, 0, 1));
-								for (var speed : new int[] { 50, 75, 90, 100, 110, 125, 150 }) {
-									if (ImGui.button(Float.toString(speed / 100.0f) + "x", 48, 25)) {
-										selected.speedModifier[0] = speed;
-									}
-									ImGui.sameLine();
-								}
-								ImGui.popStyleColor(2);
-								ImGui.popStyleVar();
-								ImGui.dummy(0, 0);
-							}
-
+							drawSpeedMod();
 						}
 					}
 					ImGui.endChild();
@@ -406,6 +383,73 @@ public class ModLauncher {
 		}
 		ImGui.popStyleVar();
 		ImGui.end();
+
+		if (tryBuildMods) {
+			ImGui.openPopup("aur_building");
+			buildProgress = buildModsAsync();
+		}
+
+		if (ImGui.isPopupOpen("aur_building", ImGuiPopupFlags.AnyPopupId)) {
+			ImGui.setNextWindowPos(ImGui.getMainViewport().getCenterX(), ImGui.getMainViewport().getCenterY(),
+					ImGuiCond.Appearing, 0.5f, 0.5f);
+		}
+
+		if (ImGui.beginPopupModal("aur_building", ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoTitleBar)) {
+			if (!buildProgress.isDone()) {
+				ImGui.text("Building targets...");
+				ImGui.progressBar(-1.0f * (float) GLFW.glfwGetTime());
+			} else {
+				if (buildText != null) {
+					ImGui.text("Targets Failed, Thumper cache may be in an invalid state");
+					ImGui.separator();
+					ImGui.text(buildText);
+
+					if (ImGui.button("Copy Error Message")) {
+						ImGui.setClipboardText(buildText);
+					}
+					ImGui.sameLine();
+				} else {
+					ImGui.text("Targets Built Successfully");
+				}
+
+				if (ImGui.button("Close")) ImGui.closeCurrentPopup();
+			}
+
+			ImGui.endPopup();
+		}
 	}
 
+	private static void drawSpeedMod() {
+		ImGui.pushStyleVar(ImGuiStyleVar.GrabMinSize, 20);
+		ImGui.pushStyleVar(ImGuiStyleVar.GrabRounding, 5);
+		ImGui.sliderInt("Speed Modifier", selected.speedModifier, 10, 300, "%d%%");
+		ImGui.popStyleVar(2);
+
+		ImGui.pushStyleVar(ImGuiStyleVar.ItemSpacing, 3f, 3f);
+		ImGui.pushStyleColor(ImGuiCol.Button, 0f, 0.4f, 0f, 1f);
+		ImGui.pushStyleColor(ImGuiCol.ButtonHovered, 0f, 1f, 0f, 1f);
+		for (var speed : new int[] { 50, 75, 90, 100, 110, 125, 150 }) {
+			if (ImGui.button(Float.toString(speed / 100.0f) + "x", 48f, 25f)) selected.speedModifier[0] = speed;
+			ImGui.sameLine();
+		}
+		ImGui.popStyleColor(2);
+		ImGui.popStyleVar();
+		ImGui.dummy(0, 0);
+	}
+
+	private static CompletableFuture<Void> buildProgress;
+
+	private static CompletableFuture<Void> buildModsAsync() {
+		return CompletableFuture.runAsync(() -> {
+			try {
+				buildText = null;
+				ModBuilder.build(customs, isModModeEnabled.get(), autoUnlockLevels.get());
+			} catch (Throwable e) {
+				StringWriter sw = new StringWriter();
+				PrintWriter pw = new PrintWriter(sw);
+				e.printStackTrace(pw);
+				buildText = sw.toString();
+			}
+		});
+	}
 }
