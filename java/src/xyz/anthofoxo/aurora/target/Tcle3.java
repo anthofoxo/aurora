@@ -58,6 +58,8 @@ public class Tcle3 extends Target {
 	private List<Path> paths = new ArrayList<>();
 
 	public Tcle3(Path path) throws IOException {
+		super(path.toString());
+
 		try (var stream = Files.walk(path)) {
 			for (var entry : stream.collect(Collectors.toList())) {
 				if (Files.isDirectory(entry)) continue;

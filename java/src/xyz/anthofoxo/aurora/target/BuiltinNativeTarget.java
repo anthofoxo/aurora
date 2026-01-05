@@ -44,6 +44,7 @@ public class BuiltinNativeTarget extends Target {
 	public int footerOffset = 0x5F;
 
 	public BuiltinNativeTarget(int levelidx) throws IOException {
+		super("campaign");
 
 		// Level 1 has a slightly different footer offset
 		if (levelidx == 0) {

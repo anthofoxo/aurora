@@ -271,6 +271,8 @@ public class ModLauncher {
 
 							ImGui.sameLine();
 							ImGui.selectable(custom.tcl.levelName, custom == selected);
+							ImGui.setItemTooltip(custom.origin);
+
 							if (ImGui.isItemHovered() && ImGui.isMouseDoubleClicked(0)) {
 								custom.enabled.set(!custom.enabled.get());
 								UserConfig.setModEnabled(custom.tcl.levelName, custom.enabled.get());
