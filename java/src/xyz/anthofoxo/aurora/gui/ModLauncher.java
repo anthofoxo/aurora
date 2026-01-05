@@ -19,11 +19,11 @@ import imgui.flag.ImGuiStyleVar;
 import imgui.flag.ImGuiTableFlags;
 import imgui.flag.ImGuiWindowFlags;
 import imgui.type.ImBoolean;
-import xyz.anthofoxo.aurora.Aurora;
 import xyz.anthofoxo.aurora.AuroraStub;
 import xyz.anthofoxo.aurora.BuiltinModOptions;
 import xyz.anthofoxo.aurora.EntryPoint;
 import xyz.anthofoxo.aurora.ModBuilder;
+import xyz.anthofoxo.aurora.TextureRegistry;
 import xyz.anthofoxo.aurora.UserConfig;
 import xyz.anthofoxo.aurora.gfx.Font;
 import xyz.anthofoxo.aurora.target.Target;
@@ -181,7 +181,7 @@ public class ModLauncher {
 
 			for (int i = 0; i < UserConfig.modPaths.size(); ++i) {
 				ImGui.pushStyleVar(ImGuiStyleVar.ItemSpacing, new ImVec2(3f, 3f));
-				var buttonremove = Aurora.buttonicons.get("icon-remove.png");
+				var buttonremove = TextureRegistry.get("button_icons/icon-remove.png");
 				ImGui.pushID(i);
 				ImGui.pushStyleColor(ImGuiCol.Button, new ImVec4(0.4f, 0, 0, 1));
 				ImGui.pushStyleColor(ImGuiCol.ButtonHovered, new ImVec4(1f, 0, 0, 1));
@@ -190,7 +190,7 @@ public class ModLauncher {
 
 				ImGui.sameLine();
 
-				var buttonfolder = Aurora.buttonicons.get("icon-openfolder.png");
+				var buttonfolder = TextureRegistry.get("button_icons/icon-openfolder.png");
 				if (ImGui.imageButton("buttonfolder", buttonfolder.getHandle(), 16, 16)) {
 					try {
 						Desktop.getDesktop().open(new File(UserConfig.modPaths.get(i)));
@@ -235,7 +235,7 @@ public class ModLauncher {
 			ImGui.popStyleColor(2);
 			ImGui.popStyleVar();
 
-			var buttonrefresh = Aurora.buttonicons.get("icon-refresh.png");
+			var buttonrefresh = TextureRegistry.get("button_icons/icon-refresh.png");
 			ImGui.pushStyleColor(ImGuiCol.Button, new ImVec4(0.2f, 0.2f, 0.2f, 1));
 			ImGui.pushStyleColor(ImGuiCol.ButtonHovered, new ImVec4(0.7f, 0.7f, 0.7f, 1));
 			if (ImGui.imageButton("Reload", buttonrefresh.getHandle(), 18, 18)) reloadList();
@@ -339,7 +339,7 @@ public class ModLauncher {
 
 								String match = "scaled_" + custom.tcl.difficulty.toLowerCase() + ".png";
 
-								var texture = Aurora.icons.get(match);
+								var texture = TextureRegistry.get("difficulty_icons/" + match);
 
 								if (texture != null) {
 									// ImGui.sameLine();
@@ -370,7 +370,7 @@ public class ModLauncher {
 							ImGui.popFont();
 							if (selected.tcl.difficulty != null && !selected.tcl.difficulty.isEmpty()) {
 								String match = selected.tcl.difficulty.toLowerCase() + "_large.png";
-								var texture = Aurora.icons.get(match);
+								var texture = TextureRegistry.get("difficulty_icons/" + match);
 								if (texture != null) {
 									// float size = ImGui.getFrameHeight();
 									ImGui.sameLine(ImGui.getCursorPosX(), ImGui.getStyle().getItemSpacingX());

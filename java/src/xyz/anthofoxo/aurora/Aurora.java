@@ -1,13 +1,7 @@
 package xyz.anthofoxo.aurora;
 
-import java.io.IOException;
-import java.net.URISyntaxException;
-import java.util.HashMap;
-import java.util.Map;
-
 import imgui.ImGui;
 import imgui.type.ImBoolean;
-import xyz.anthofoxo.aurora.gfx.Texture;
 import xyz.anthofoxo.aurora.gui.GuiPreferences;
 import xyz.anthofoxo.aurora.gui.GuiUserGuide;
 import xyz.anthofoxo.aurora.gui.Hasher;
@@ -22,25 +16,7 @@ public class Aurora {
 	private Hasher hasher = new Hasher();
 	private ObjlibDecomp objlibDecomp = new ObjlibDecomp();
 
-	public static Map<String, Texture> icons = new HashMap<>();
-	public static Map<String, Texture> buttonicons = new HashMap<>();
-	public static Map<String, Texture> textures = new HashMap<>();
-
-	public static void registerTexturesFromPath(Map<String, Texture> target, String path)
-			throws URISyntaxException, IOException {
-		for (var file : Util.getAllFilesFromResourceDirectory(path)) {
-			target.put(file.getFileName().toString(), Texture.makeFromResource(file.toString()));
-		}
-	}
-
 	public Aurora() {
-		try {
-			registerTexturesFromPath(icons, "difficulty_icons");
-			registerTexturesFromPath(buttonicons, "button_icons");
-			registerTexturesFromPath(textures, "textures");
-		} catch (URISyntaxException | IOException e) {
-			e.printStackTrace();
-		}
 	}
 
 	public void update() {
@@ -106,6 +82,6 @@ public class Aurora {
 		float margin = 64.0f;
 		float x = viewportWidth - size - margin;
 		float y = viewportHeight - size - margin;
-		drawList.addImage(textures.get("aur_bg.png").getHandle(), x, y, x + size, y + size);
+		drawList.addImage(TextureRegistry.get("aur_bg.png").getHandle(), x, y, x + size, y + size);
 	}
 }

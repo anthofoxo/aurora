@@ -189,9 +189,7 @@ public final class EntryPoint {
 		imGuiGlfw.shutdown();
 		ImGui.destroyContext();
 
-		Aurora.icons.values().forEach(e -> e.close());
-		Aurora.textures.values().forEach(e -> e.close());
-		Aurora.buttonicons.values().forEach(e -> e.close());
+		TextureRegistry.close();
 
 		Callbacks.glfwFreeCallbacks(window);
 		glfwDestroyWindow(window);
