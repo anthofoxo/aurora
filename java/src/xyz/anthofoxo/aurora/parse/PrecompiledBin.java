@@ -82,7 +82,7 @@ public final class PrecompiledBin {
 	}
 
 	public static int getObjListCount() {
-		return 62;
+		return getDeclarations().size();
 	}
 
 	public static List<ObjectDeclaration> getDeclarations() {
