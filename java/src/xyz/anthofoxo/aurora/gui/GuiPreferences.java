@@ -23,7 +23,8 @@ public final class GuiPreferences {
 	public static ImBoolean visible = new ImBoolean(false);
 	public static ImBoolean unlockPractice = new ImBoolean(UserConfig.isUnlockPractice());
 
-	public static void modSearchPathsPanel() {
+	public static void modSearchPathPanel() {
+
 		if (ImGui.button("Add Search Path")) {
 			String path = TinyFileDialogs.tinyfd_selectFolderDialog("Mod Search Path", null);
 
@@ -32,6 +33,7 @@ public final class GuiPreferences {
 				UserConfig.save();
 				ModLauncher.reloadList();
 			}
+
 		}
 
 		ImGui.sameLine();
@@ -99,8 +101,7 @@ public final class GuiPreferences {
 		ImGui.textUnformatted(UserConfig.thumperPath());
 
 		ImGui.separatorText("Mod Search Paths");
-
-		modSearchPathsPanel();
+		modSearchPathPanel();
 
 		ImGui.end();
 	}

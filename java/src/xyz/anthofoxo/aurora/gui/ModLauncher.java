@@ -41,9 +41,9 @@ public class ModLauncher {
 	private static ImBoolean enableCampaignLevels = new ImBoolean(
 			Boolean.parseBoolean(UserConfig.get(USERCONFIG_NATIVE_GAME_STR, Boolean.toString(true))));
 
-	private static boolean showselected = false;
-	private static boolean ranksortorder = false;
-	private static boolean namesortorder = false;
+	private static Boolean showselected = false;
+	private static Boolean ranksortorder = false;
+	private static Boolean namesortorder = false;
 
 	static {
 		reloadList();
@@ -156,7 +156,7 @@ public class ModLauncher {
 			ImGui.textUnformatted(UserConfig.thumperPath());
 
 			ImGui.separatorText("Mod Search Paths");
-			GuiPreferences.modSearchPathsPanel();
+			GuiPreferences.modSearchPathPanel();
 
 			ImGui.pushStyleVar(ImGuiStyleVar.ItemSpacing, new ImVec2(0, 10));
 			ImGui.text(" ");
@@ -322,13 +322,19 @@ public class ModLauncher {
 								}
 							}
 							// separator colors to match the levels rail colors
-							ImGui.pushStyleColor(ImGuiCol.Separator, selected.tcl.railsGlowColor.toImVec4wxyz(null));
+							ImGui.pushStyleColor(ImGuiCol.Separator,
+									new ImVec4(selected.tcl.railsGlowColor.w, selected.tcl.railsGlowColor.x,
+											selected.tcl.railsGlowColor.y, selected.tcl.railsGlowColor.z));
 							ImGui.separator();
-							ImGui.pushStyleColor(ImGuiCol.Separator, selected.tcl.railsColor.toImVec4wxyz(null));
+							ImGui.popStyleColor();
+							ImGui.pushStyleColor(ImGuiCol.Separator, new ImVec4(selected.tcl.railsColor.w,
+									selected.tcl.railsColor.x, selected.tcl.railsColor.y, selected.tcl.railsColor.z));
 							ImGui.separator();
-							ImGui.pushStyleColor(ImGuiCol.Separator, selected.tcl.pathColor.toImVec4wxyz(null));
+							ImGui.popStyleColor();
+							ImGui.pushStyleColor(ImGuiCol.Separator, new ImVec4(selected.tcl.pathColor.w,
+									selected.tcl.pathColor.x, selected.tcl.pathColor.y, selected.tcl.pathColor.z));
 							ImGui.separator();
-							ImGui.popStyleColor(3);
+							ImGui.popStyleColor();
 
 							ImGui.textUnformatted("  Author:");
 							String[] authors = selected.tcl.author.replace(" ", "").split(",");
@@ -363,28 +369,33 @@ public class ModLauncher {
 							ImGui.popStyleColor();
 
 							// separator colors to match the levels rail colors
-							ImGui.pushStyleColor(ImGuiCol.Separator, selected.tcl.pathColor.toImVec4wxyz(null));
+							ImGui.pushStyleColor(ImGuiCol.Separator, new ImVec4(selected.tcl.pathColor.w,
+									selected.tcl.pathColor.x, selected.tcl.pathColor.y, selected.tcl.pathColor.z));
 							ImGui.separator();
-							ImGui.pushStyleColor(ImGuiCol.Separator, selected.tcl.railsColor.toImVec4wxyz(null));
+							ImGui.popStyleColor();
+							ImGui.pushStyleColor(ImGuiCol.Separator, new ImVec4(selected.tcl.railsColor.w,
+									selected.tcl.railsColor.x, selected.tcl.railsColor.y, selected.tcl.railsColor.z));
 							ImGui.separator();
-							ImGui.pushStyleColor(ImGuiCol.Separator, selected.tcl.railsGlowColor.toImVec4wxyz(null));
+							ImGui.popStyleColor();
+							ImGui.pushStyleColor(ImGuiCol.Separator,
+									new ImVec4(selected.tcl.railsGlowColor.w, selected.tcl.railsGlowColor.x,
+											selected.tcl.railsGlowColor.y, selected.tcl.railsGlowColor.z));
 							ImGui.separator();
-							ImGui.popStyleColor(3);
+							ImGui.popStyleColor();
 
-							ImGui.pushStyleVar(ImGuiStyleVar.GrabMinSize, 20);
-							ImGui.pushStyleVar(ImGuiStyleVar.GrabRounding, 5);
-							ImGui.sliderInt("Speed Modifier", selected.speedModifier, 10, 300, "%d%%");
-							ImGui.popStyleVar(2);
-
-							// Speed modifier buttons
+							// Speed modifiers
 							{
+								ImGui.pushStyleVar(ImGuiStyleVar.GrabMinSize, 20);
+								ImGui.pushStyleVar(ImGuiStyleVar.GrabRounding, 5);
+								ImGui.sliderInt("Speed Modifier", selected.speedModifier, 10, 300, "%d%%");
+								ImGui.popStyleVar(2);
+
 								ImGui.pushStyleVar(ImGuiStyleVar.ItemSpacing, new ImVec2(3f, 3f));
 								ImGui.pushStyleColor(ImGuiCol.Button, new ImVec4(0, 0.4f, 0, 1));
 								ImGui.pushStyleColor(ImGuiCol.ButtonHovered, new ImVec4(0, 1f, 0, 1));
-								int[] speedChoices = new int[] { 50, 75, 90, 100, 110, 125, 150 };
-								for (var value : speedChoices) {
-									if (ImGui.button(Float.toString(value / 100.0f) + "x", 48, 25)) {
-										selected.speedModifier[0] = value;
+								for (var speed : new int[] { 50, 75, 90, 100, 110, 125, 150 }) {
+									if (ImGui.button(Float.toString(speed / 100.0f) + "x", 48, 25)) {
+										selected.speedModifier[0] = speed;
 									}
 									ImGui.sameLine();
 								}
