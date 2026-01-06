@@ -1,26 +1,20 @@
 package xyz.anthofoxo.aurora.gui;
 
-import java.io.PrintWriter;
-import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
-
-import org.lwjgl.glfw.GLFW;
 
 import imgui.ImGui;
 import imgui.ImGuiTextFilter;
 import imgui.ImVec2;
 import imgui.ImVec4;
 import imgui.flag.ImGuiCol;
-import imgui.flag.ImGuiCond;
-import imgui.flag.ImGuiPopupFlags;
 import imgui.flag.ImGuiStyleVar;
 import imgui.flag.ImGuiTableFlags;
 import imgui.flag.ImGuiWindowFlags;
 import imgui.type.ImBoolean;
+import xyz.anthofoxo.aurora.Aurora;
 import xyz.anthofoxo.aurora.AuroraStub;
 import xyz.anthofoxo.aurora.BuiltinModOptions;
 import xyz.anthofoxo.aurora.ModBuilder;
@@ -50,7 +44,6 @@ public class ModLauncher {
 	private static boolean showselected = false;
 	private static boolean ranksortorder = false;
 	private static boolean namesortorder = false;
-	private static String buildText;
 
 	static {
 		reloadList();
@@ -62,8 +55,6 @@ public class ModLauncher {
 	}
 
 	public static void draw() {
-		boolean tryBuildMods = false;
-
 		ImGui.pushStyleVar(ImGuiStyleVar.FrameRounding, 6);
 		if (ImGui.begin("Launcher", ImGuiWindowFlags.MenuBar)) {
 			if (ImGui.beginMenuBar()) {
@@ -127,7 +118,11 @@ public class ModLauncher {
 
 				ImGui.text(" ");
 				ImGui.sameLine();
-				if (ImGui.button(text)) tryBuildMods = true;
+				if (ImGui.button(text)) {
+					if (buildTargets.get()) {
+						Aurora.buildAndLaunch(customs, isModModeEnabled.get(), autoUnlockLevels.get());
+					}
+				}
 				ImGui.popFont();
 
 				ImGui.endChild();
@@ -383,40 +378,6 @@ public class ModLauncher {
 		}
 		ImGui.popStyleVar();
 		ImGui.end();
-
-		if (tryBuildMods) {
-			ImGui.openPopup("aur_building");
-			buildProgress = buildModsAsync();
-		}
-
-		if (ImGui.isPopupOpen("aur_building", ImGuiPopupFlags.AnyPopupId)) {
-			ImGui.setNextWindowPos(ImGui.getMainViewport().getCenterX(), ImGui.getMainViewport().getCenterY(),
-					ImGuiCond.Appearing, 0.5f, 0.5f);
-		}
-
-		if (ImGui.beginPopupModal("aur_building", ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoTitleBar)) {
-			if (!buildProgress.isDone()) {
-				ImGui.text("Building targets...");
-				ImGui.progressBar(-1.0f * (float) GLFW.glfwGetTime());
-			} else {
-				if (buildText != null) {
-					ImGui.text("Targets Failed, Thumper cache may be in an invalid state");
-					ImGui.separator();
-					ImGui.text(buildText);
-
-					if (ImGui.button("Copy Error Message")) {
-						ImGui.setClipboardText(buildText);
-					}
-					ImGui.sameLine();
-				} else {
-					ImGui.text("Targets Built Successfully");
-				}
-
-				if (ImGui.button("Close")) ImGui.closeCurrentPopup();
-			}
-
-			ImGui.endPopup();
-		}
 	}
 
 	private static void drawSpeedMod() {
@@ -437,19 +398,4 @@ public class ModLauncher {
 		ImGui.dummy(0, 0);
 	}
 
-	private static CompletableFuture<Void> buildProgress;
-
-	private static CompletableFuture<Void> buildModsAsync() {
-		return CompletableFuture.runAsync(() -> {
-			try {
-				buildText = null;
-				ModBuilder.build(customs, isModModeEnabled.get(), autoUnlockLevels.get());
-			} catch (Throwable e) {
-				StringWriter sw = new StringWriter();
-				PrintWriter pw = new PrintWriter(sw);
-				e.printStackTrace(pw);
-				buildText = sw.toString();
-			}
-		});
-	}
 }

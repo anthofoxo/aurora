@@ -153,6 +153,12 @@ public class ModBuilder {
 		}
 	}
 
+	/**
+	 * DO NOT DIRECTLY CALL THIS FUNCTION
+	 * 
+	 * Instead invoke this function:
+	 * {@link Aurora#buildAndLaunch(List, boolean, boolean)}
+	 */
 	public static void build(List<Target> targets, boolean modModeEnabled, boolean unlockLevels) {
 		// If the thumper path is not specified then we cannot build mods
 		var thumperPath = UserConfig.thumperPath();

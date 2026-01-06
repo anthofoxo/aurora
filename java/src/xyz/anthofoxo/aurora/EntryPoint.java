@@ -124,7 +124,7 @@ public final class EntryPoint {
 		Font.registerFont("consolas.ttf", "consolas", 14);
 	}
 
-	public static void auroraMain() {
+	private static long createWindow() {
 		GLFWErrorCallback.createPrint(System.err).set();
 
 		if (!glfwInit()) {
@@ -136,18 +136,13 @@ public final class EntryPoint {
 		glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
 		glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 		glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE);
-		window = glfwCreateWindow(1600, 900, Aurora.TITLE, MemoryUtil.NULL, MemoryUtil.NULL);
+		long window = glfwCreateWindow(1600, 900, Aurora.TITLE, MemoryUtil.NULL, MemoryUtil.NULL);
 
 		if (window == MemoryUtil.NULL) {
 			throw new RuntimeException("Failed to create the GLFW window");
 		}
 
-		try {
-			setIcons();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-
+		// Center the window on the primary display
 		try (MemoryStack stack = MemoryStack.stackPush()) {
 			var pWidth = stack.mallocInt(1);
 			var pHeight = stack.mallocInt(1);
@@ -157,44 +152,73 @@ public final class EntryPoint {
 			glfwSetWindowPos(window, (vidmode.width() - pWidth.get(0)) / 2, (vidmode.height() - pHeight.get(0)) / 2);
 		}
 
-		glfwMakeContextCurrent(window);
-		GL.createCapabilities(true);
-		glfwSwapInterval(1);
-		glfwShowWindow(window);
+		return window;
+	}
 
-		glfwSetWindowRefreshCallback(window, (long _) -> {
-			if (!UserConfig.tinyfdOpen) update();
-		});
+	public static void auroraMain() {
+		Aurora.hasSessionLock = SessionLock.obtainLock();
+		System.out.println("Obtained Session Lock? " + Aurora.hasSessionLock);
 
-		imGuiInit();
-
-		aurora = new Aurora();
-
-		while (running) {
-
-			update();
-
-			if (ImGui.getIO().hasConfigFlags(ImGuiConfigFlags.ViewportsEnable)) {
-				final long backupCurrentContext = glfwGetCurrentContext();
-				ImGui.updatePlatformWindows();
-				ImGui.renderPlatformWindowsDefault();
-				glfwMakeContextCurrent(backupCurrentContext);
-			}
-
-			glfwPollEvents();
-			if (glfwWindowShouldClose(window)) running = false;
+		// Aurora failed to obtain the lock, meaning another instance has it.
+		// In that case the stand-alone should build the targets, here we just exit
+		// aurora and proceed
+		if (!Aurora.hasSessionLock && AuroraStub.integrated) {
+			System.out.println("The session failed to lock, launching thumper without building targets");
+			EntryPoint.running = false;
+			AuroraStub.shouldLaunchThumper = true;
+			return;
 		}
 
-		imGuiGl3.shutdown();
-		imGuiGlfw.shutdown();
-		ImGui.destroyContext();
+		try {
+			window = createWindow();
 
-		TextureRegistry.close();
+			try {
+				setIcons();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
 
-		Callbacks.glfwFreeCallbacks(window);
-		glfwDestroyWindow(window);
-		glfwTerminate();
-		Objects.requireNonNull(glfwSetErrorCallback(null)).free();
+			glfwMakeContextCurrent(window);
+			GL.createCapabilities(true);
+			glfwSwapInterval(1);
+			glfwShowWindow(window);
+
+			glfwSetWindowRefreshCallback(window, (long _) -> {
+				if (!UserConfig.tinyfdOpen) update();
+			});
+
+			imGuiInit();
+
+			aurora = new Aurora();
+
+			while (running) {
+
+				update();
+
+				if (ImGui.getIO().hasConfigFlags(ImGuiConfigFlags.ViewportsEnable)) {
+					final long backupCurrentContext = glfwGetCurrentContext();
+					ImGui.updatePlatformWindows();
+					ImGui.renderPlatformWindowsDefault();
+					glfwMakeContextCurrent(backupCurrentContext);
+				}
+
+				glfwPollEvents();
+				if (glfwWindowShouldClose(window)) running = false;
+			}
+
+			imGuiGl3.shutdown();
+			imGuiGlfw.shutdown();
+			ImGui.destroyContext();
+
+			TextureRegistry.close();
+
+			Callbacks.glfwFreeCallbacks(window);
+			glfwDestroyWindow(window);
+			glfwTerminate();
+			Objects.requireNonNull(glfwSetErrorCallback(null)).free();
+		} finally {
+			SessionLock.freeLock();
+		}
 	}
 
 	public static void main(String[] args) {
