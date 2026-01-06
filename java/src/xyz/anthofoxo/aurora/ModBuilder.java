@@ -1,12 +1,22 @@
 package xyz.anthofoxo.aurora;
 
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
+import org.lwjgl.glfw.GLFW;
+
+import imgui.ImGui;
+import imgui.flag.ImGuiCond;
+import imgui.flag.ImGuiPopupFlags;
+import imgui.flag.ImGuiWindowFlags;
 import xyz.anthofoxo.aurora.parse.AuroraReader;
 import xyz.anthofoxo.aurora.parse.AuroraWriter;
 import xyz.anthofoxo.aurora.struct.LevelListingFile;
@@ -52,7 +62,56 @@ public class ModBuilder {
 		return filename.substring(0, lastDotIndex) + newExt;
 	}
 
+	public static void gui() {
+		if (buildProgress != null) {
+			ImGui.openPopup("aur_building");
+		}
+
+		if (ImGui.isPopupOpen("aur_building", ImGuiPopupFlags.AnyPopupId)) {
+			ImGui.setNextWindowPos(ImGui.getMainViewport().getCenterX(), ImGui.getMainViewport().getCenterY(),
+					ImGuiCond.Appearing, 0.5f, 0.5f);
+		}
+
+		if (ImGui.beginPopupModal("aur_building", ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoTitleBar)) {
+			if (!buildProgress.isDone()) {
+				ImGui.text("Building targets...");
+				ImGui.progressBar(-1.0f * (float) GLFW.glfwGetTime());
+			} else {
+
+				var buildText = ModBuilder.getBuildText();
+
+				if (buildText != null) {
+					ImGui.text("Targets Failed, Thumper cache may be in an invalid state");
+					ImGui.separator();
+					ImGui.text(buildText);
+
+					if (ImGui.button("Copy Error Message")) {
+						ImGui.setClipboardText(buildText);
+					}
+					ImGui.sameLine();
+				} else {
+					ImGui.text("Targets Built Successfully");
+
+					if (AuroraStub.integrated) {
+						EntryPoint.running = false;
+						AuroraStub.shouldLaunchThumper = true;
+					}
+
+				}
+
+				if (ImGui.button("Close")) {
+					ImGui.closeCurrentPopup();
+					buildProgress = null;
+
+				}
+			}
+
+			ImGui.endPopup();
+		}
+	}
+
 	private static void updateSaveFiles(LevelListingFile listing) throws IOException {
+
 		var now = Instant.now();
 
 		for (var path : Files.walk(Path.of(UserConfig.thumperPath() + "/savedata/")).filter(Files::isRegularFile)
@@ -66,12 +125,16 @@ public class ModBuilder {
 			if (UserConfig.isUnlockPractice()) {
 				file.timestamp = now;
 
+				List<SaveFile.LevelEntry> toAdd = new ArrayList<>();
+
 				// ensure the score table has enteries for every level listed
 				for (var listingEntry : listing.enteries) {
 					int index = file.getLevelSaveIndex(listingEntry.key);
 
 					// This level isn't in our scoring table yet, add a blank one
 					if (index != -1) continue;
+
+					System.out.println("No userdata for " + listingEntry.key);
 
 					String filename = Integer.toHexString(Hash.fnv1a("A" + changeExtension(listingEntry.path, "sec")))
 							+ ".pc";
@@ -82,9 +145,10 @@ public class ModBuilder {
 					var sectionFile = r.obj(SectionFile.class);
 					int numSections = sectionFile.sections.size();
 
-					file.enteries.add(SaveFile.LevelEntry.ofDefault(listingEntry.key, numSections));
-
+					toAdd.add(SaveFile.LevelEntry.ofDefault(listingEntry.key, numSections));
 				}
+
+				file.enteries.addAll(toAdd);
 
 				// Proceed to force practice unlocks
 				for (var entry : file.enteries) {
@@ -153,13 +217,34 @@ public class ModBuilder {
 		}
 	}
 
-	/**
-	 * DO NOT DIRECTLY CALL THIS FUNCTION
-	 * 
-	 * Instead invoke this function:
-	 * {@link Aurora#buildAndLaunch(List, boolean, boolean)}
-	 */
-	public static void build(List<Target> targets, boolean modModeEnabled, boolean unlockLevels) {
+	private static String buildText = null;
+
+	public static String getBuildText() {
+		return buildText;
+	}
+
+	private static CompletableFuture<Void> buildProgress;
+
+	public static void buildModsAsync(List<Target> targets, boolean modModeEnabled, boolean unlockLevels) {
+		if (buildProgress != null) {
+			System.err.println("Building already in progress, ignoring request");
+			return;
+		}
+
+		buildProgress = CompletableFuture.runAsync(() -> {
+			try {
+				buildText = null;
+				ModBuilder.build(targets, modModeEnabled, unlockLevels);
+			} catch (Throwable e) {
+				StringWriter sw = new StringWriter();
+				PrintWriter pw = new PrintWriter(sw);
+				e.printStackTrace(pw);
+				buildText += "\n" + sw.toString();
+			}
+		});
+	}
+
+	private static void build(List<Target> targets, boolean modModeEnabled, boolean unlockLevels) {
 		// If the thumper path is not specified then we cannot build mods
 		var thumperPath = UserConfig.thumperPath();
 		if (thumperPath == null) return;

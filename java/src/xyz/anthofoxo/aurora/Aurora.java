@@ -1,23 +1,12 @@
 package xyz.anthofoxo.aurora;
 
-import java.io.PrintWriter;
-import java.io.StringWriter;
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
-
-import org.lwjgl.glfw.GLFW;
-
 import imgui.ImGui;
-import imgui.flag.ImGuiCond;
-import imgui.flag.ImGuiPopupFlags;
-import imgui.flag.ImGuiWindowFlags;
 import imgui.type.ImBoolean;
 import xyz.anthofoxo.aurora.gui.GuiPreferences;
 import xyz.anthofoxo.aurora.gui.GuiUserGuide;
 import xyz.anthofoxo.aurora.gui.Hasher;
 import xyz.anthofoxo.aurora.gui.ModLauncher;
 import xyz.anthofoxo.aurora.gui.ObjlibDecomp;
-import xyz.anthofoxo.aurora.target.Target;
 
 public class Aurora {
 	public static final String TITLE = "Aurora v0.2.0-a.4+WIP";
@@ -84,52 +73,7 @@ public class Aurora {
 		hasher.draw();
 		objlibDecomp.draw();
 
-		// We are building, ensure the popup is visible
-		if (buildProgress != null) {
-			// if (!ImGui.isPopupOpen("aur_building", ImGuiPopupFlags.AnyPopupId)) {
-			ImGui.openPopup("aur_building");
-			// }
-		}
-
-		if (ImGui.isPopupOpen("aur_building", ImGuiPopupFlags.AnyPopupId)) {
-			ImGui.setNextWindowPos(ImGui.getMainViewport().getCenterX(), ImGui.getMainViewport().getCenterY(),
-					ImGuiCond.Appearing, 0.5f, 0.5f);
-		}
-
-		if (ImGui.beginPopupModal("aur_building", ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoTitleBar)) {
-			if (!buildProgress.isDone()) {
-				ImGui.text("Building targets...");
-				ImGui.progressBar(-1.0f * (float) GLFW.glfwGetTime());
-			} else {
-
-				if (buildText != null) {
-					ImGui.text("Targets Failed, Thumper cache may be in an invalid state");
-					ImGui.separator();
-					ImGui.text(buildText);
-
-					if (ImGui.button("Copy Error Message")) {
-						ImGui.setClipboardText(buildText);
-					}
-					ImGui.sameLine();
-				} else {
-					ImGui.text("Targets Built Successfully");
-
-					if (AuroraStub.integrated) {
-						EntryPoint.running = false;
-						AuroraStub.shouldLaunchThumper = true;
-					}
-
-				}
-
-				if (ImGui.button("Close")) {
-					ImGui.closeCurrentPopup();
-					buildProgress = null;
-
-				}
-			}
-
-			ImGui.endPopup();
-		}
+		ModBuilder.gui();
 
 		drawBackgroundElement();
 	}
@@ -143,27 +87,5 @@ public class Aurora {
 		float x = viewportWidth - size - margin;
 		float y = viewportHeight - size - margin;
 		drawList.addImage(TextureRegistry.get("aur_bg.png").getHandle(), x, y, x + size, y + size);
-	}
-
-	private static String buildText;
-	private static CompletableFuture<Void> buildProgress;
-
-	private static CompletableFuture<Void> buildModsAsync(List<Target> targets, boolean modModeEnabled,
-			boolean unlockLevels) {
-		return CompletableFuture.runAsync(() -> {
-			try {
-				buildText = null;
-				ModBuilder.build(targets, modModeEnabled, unlockLevels);
-			} catch (Throwable e) {
-				StringWriter sw = new StringWriter();
-				PrintWriter pw = new PrintWriter(sw);
-				e.printStackTrace(pw);
-				buildText = sw.toString();
-			}
-		});
-	}
-
-	public static void buildAndLaunch(List<Target> targets, boolean modModeEnabled, boolean unlockLevels) {
-		buildProgress = buildModsAsync(targets, modModeEnabled, unlockLevels);
 	}
 }

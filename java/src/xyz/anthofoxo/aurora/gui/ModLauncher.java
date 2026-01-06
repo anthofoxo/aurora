@@ -14,7 +14,6 @@ import imgui.flag.ImGuiStyleVar;
 import imgui.flag.ImGuiTableFlags;
 import imgui.flag.ImGuiWindowFlags;
 import imgui.type.ImBoolean;
-import xyz.anthofoxo.aurora.Aurora;
 import xyz.anthofoxo.aurora.AuroraStub;
 import xyz.anthofoxo.aurora.BuiltinModOptions;
 import xyz.anthofoxo.aurora.ModBuilder;
@@ -120,7 +119,7 @@ public class ModLauncher {
 				ImGui.sameLine();
 				if (ImGui.button(text)) {
 					if (buildTargets.get()) {
-						Aurora.buildAndLaunch(customs, isModModeEnabled.get(), autoUnlockLevels.get());
+						ModBuilder.buildModsAsync(customs, isModModeEnabled.get(), autoUnlockLevels.get());
 					}
 				}
 				ImGui.popFont();
