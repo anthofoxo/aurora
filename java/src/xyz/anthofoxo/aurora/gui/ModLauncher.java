@@ -1,8 +1,6 @@
 package xyz.anthofoxo.aurora.gui;
 
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 
 import imgui.ImGui;
@@ -113,11 +111,9 @@ public class ModLauncher {
 				ImGui.pushFont(Font.getFont("levelfont"));
 				ImGui.checkbox("MOD MODE ENABLED", isModModeEnabled);
 
-				String text = AuroraStub.integrated ? "Launch Thumper" : "Build Mods";
-
 				ImGui.text(" ");
 				ImGui.sameLine();
-				if (ImGui.button(text)) {
+				if (ImGui.button(AuroraStub.integrated ? "Launch Thumper" : "Build Mods")) {
 					if (buildTargets.get()) {
 						ModBuilder.buildModsAsync(customs, isModModeEnabled.get(), autoUnlockLevels.get());
 					}
@@ -213,22 +209,20 @@ public class ModLauncher {
 			ImGui.pushStyleColor(ImGuiCol.ButtonHovered, new ImVec4(1f, 0, 1f, 1));
 			if (ImGui.button("Name")) {
 				namesortorder = !namesortorder;
-				Collections.sort(customs, new Comparator<Target>() {
-					public int compare(Target obj1, Target obj2) {
-						if (namesortorder)
-							return obj1.tcl.levelName.toUpperCase().compareTo(obj2.tcl.levelName.toUpperCase());
-						else return obj2.tcl.levelName.toUpperCase().compareTo(obj1.tcl.levelName.toUpperCase());
-					}
+
+				customs.sort((obj1, obj2) -> {
+					if (namesortorder)
+						return obj1.tcl.levelName.toUpperCase().compareTo(obj2.tcl.levelName.toUpperCase());
+					return obj2.tcl.levelName.toUpperCase().compareTo(obj1.tcl.levelName.toUpperCase());
 				});
 			}
 			ImGui.sameLine();
 			if (ImGui.button("Difficulty")) {
 				ranksortorder = !ranksortorder;
-				Collections.sort(customs, new Comparator<Target>() {
-					public int compare(Target obj1, Target obj2) {
-						if (ranksortorder) return obj1.tcl.difficulty.compareTo(obj2.tcl.difficulty);
-						else return obj2.tcl.difficulty.compareTo(obj1.tcl.difficulty);
-					}
+
+				customs.sort((obj1, obj2) -> {
+					if (ranksortorder) return obj1.tcl.difficulty.compareTo(obj2.tcl.difficulty);
+					return obj2.tcl.difficulty.compareTo(obj1.tcl.difficulty);
 				});
 			}
 			ImGui.popStyleColor(2);
@@ -314,14 +308,7 @@ public class ModLauncher {
 									ImGui.image(texture.getHandle(), 50, 50);
 								}
 							}
-							// separator colors to match the levels rail colors
-							ImGui.pushStyleColor(ImGuiCol.Separator, selected.tcl.railsGlowColor.toImVec4wxyz(null));
-							ImGui.separator();
-							ImGui.pushStyleColor(ImGuiCol.Separator, selected.tcl.railsColor.toImVec4wxyz(null));
-							ImGui.separator();
-							ImGui.pushStyleColor(ImGuiCol.Separator, selected.tcl.pathColor.toImVec4wxyz(null));
-							ImGui.separator();
-							ImGui.popStyleColor(3);
+							railColorsTop();
 
 							ImGui.textUnformatted("  Author:");
 							String[] authors = selected.tcl.author.replace(" ", "").split(",");
@@ -355,14 +342,7 @@ public class ModLauncher {
 							ImGui.popStyleVar();
 							ImGui.popStyleColor();
 
-							// separator colors to match the levels rail colors
-							ImGui.pushStyleColor(ImGuiCol.Separator, selected.tcl.pathColor.toImVec4wxyz(null));
-							ImGui.separator();
-							ImGui.pushStyleColor(ImGuiCol.Separator, selected.tcl.railsColor.toImVec4wxyz(null));
-							ImGui.separator();
-							ImGui.pushStyleColor(ImGuiCol.Separator, selected.tcl.railsGlowColor.toImVec4wxyz(null));
-							ImGui.separator();
-							ImGui.popStyleColor(3);
+							railColorsBottom();
 
 							drawSpeedMod();
 						}
@@ -377,6 +357,26 @@ public class ModLauncher {
 		}
 		ImGui.popStyleVar();
 		ImGui.end();
+	}
+
+	private static void railColorsTop() {
+		ImGui.pushStyleColor(ImGuiCol.Separator, selected.tcl.railsGlowColor.toImVec4wxyz(null));
+		ImGui.separator();
+		ImGui.pushStyleColor(ImGuiCol.Separator, selected.tcl.railsColor.toImVec4wxyz(null));
+		ImGui.separator();
+		ImGui.pushStyleColor(ImGuiCol.Separator, selected.tcl.pathColor.toImVec4wxyz(null));
+		ImGui.separator();
+		ImGui.popStyleColor(3);
+	}
+
+	private static void railColorsBottom() {
+		ImGui.pushStyleColor(ImGuiCol.Separator, selected.tcl.pathColor.toImVec4wxyz(null));
+		ImGui.separator();
+		ImGui.pushStyleColor(ImGuiCol.Separator, selected.tcl.railsColor.toImVec4wxyz(null));
+		ImGui.separator();
+		ImGui.pushStyleColor(ImGuiCol.Separator, selected.tcl.railsGlowColor.toImVec4wxyz(null));
+		ImGui.separator();
+		ImGui.popStyleColor(3);
 	}
 
 	private static void drawSpeedMod() {

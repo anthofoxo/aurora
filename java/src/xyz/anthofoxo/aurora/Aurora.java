@@ -44,14 +44,6 @@ public class Aurora {
 				ImGui.endMenu();
 			}
 
-			if (ImGui.beginMenu("Tests")) {
-				if (ImGui.menuItem("Throw Exception")) {
-					throw new RuntimeException("WHAT DID YOU THINK WAS GOING TO HAPPEN?????");
-				}
-
-				ImGui.endMenu();
-			}
-
 			if (ImGui.beginMenu("Help")) {
 
 				if (ImGui.menuItem("Thumper / Aurora Documentation")) {
