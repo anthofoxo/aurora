@@ -9,7 +9,7 @@ import xyz.anthofoxo.aurora.gui.ModLauncher;
 import xyz.anthofoxo.aurora.gui.ObjlibDecomp;
 
 public class Aurora {
-	public static final String TITLE = "Aurora v0.2.0-a.4+WIP";
+	public static final String TITLE = "Aurora v0.2.0-a.4";
 
 	public static boolean hasSessionLock = false;
 
