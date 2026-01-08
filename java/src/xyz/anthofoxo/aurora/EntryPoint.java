@@ -220,4 +220,8 @@ public final class EntryPoint {
 			SessionLock.freeLock();
 		}
 	}
+
+	public static void main(String[] args) {
+		auroraMain();
+	}
 }

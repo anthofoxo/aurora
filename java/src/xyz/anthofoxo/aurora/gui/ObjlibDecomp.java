@@ -353,6 +353,7 @@ public class ObjlibDecomp {
 
 			assert (in.position() == in.bytes.length);
 		}
+
 	}
 
 	private void drawParsed() {
@@ -531,7 +532,7 @@ public class ObjlibDecomp {
 			}
 
 			ImGui.inputText("Open Objlib", input);
-
+			ImGui.sameLine();
 			if (ImGui.button("Parse")) {
 				error = "";
 				try {
