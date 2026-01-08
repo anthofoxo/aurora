@@ -13,6 +13,8 @@ import java.util.stream.Collectors;
 import org.lwjgl.system.MemoryUtil;
 
 import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.node.ArrayNode;
 import xyz.anthofoxo.aurora.Hash;
 import xyz.anthofoxo.aurora.Util;
 import xyz.anthofoxo.aurora.gfx.Texture;
@@ -138,36 +140,6 @@ public class Tcle3 extends Target {
 		return bytes;
 	}
 
-	public static SequinGate toSequinGate(JsonNode obj) {
-		SequinGate gate = new SequinGate().withTMLDefaults();
-		gate.entitySpawnerName = obj.get("spn_name").asString();
-		gate.params = List.of(parseParamPath(obj.get("param_path"), obj.get("param_path_hash")));
-
-		for (var boss_pattern : obj.get("boss_patterns")) {
-			var pattern = new SequinGate.BossPattern().withTMLDefaults();
-
-			var nodeName = boss_pattern.get("node_name");
-			int hash;
-
-			if (nodeName != null) hash = Hash.fnv1a(nodeName.asString());
-			else hash = Integer.reverse(Hash.fnv1a(boss_pattern.get("node_name_hash").asString()));
-
-			pattern.nodeHash = hash;
-			pattern.levelName = boss_pattern.get("lvl_name").asString();
-			pattern.sentryType = boss_pattern.get("sentry_type").asString();
-			pattern.bucketNum = boss_pattern.get("bucket_num").asInt();
-			gate.patterns.add(pattern);
-		}
-
-		gate.preLevelName = obj.get("pre_lvl_name").asString();
-		gate.postLevelName = obj.get("post_lvl_name").asString();
-		gate.restartLevelName = obj.get("restart_lvl_name").asString();
-		gate.sectionType = obj.get("section_type").asString();
-		gate.randomType = obj.get("random_type").asString();
-
-		return gate;
-	}
-
 	@Override
 	public CompiledTarget build(float speedModifier) throws IOException {
 		CompiledTarget compiled = new CompiledTarget();
@@ -240,8 +212,8 @@ public class Tcle3 extends Target {
 				// @formatter:on
 
 				Write_Lvl_Comp(writer, obj);
-			} else if (objType.equals("SequinGate")) writer.obj(toSequinGate(obj));
-			else if (objType.equals("SequinMaster")) writer.obj(toSequinMaster(obj));
+			} else if (objType.equals("SequinGate")) writer.obj(SequinGate.fromTcle3(obj));
+			else if (objType.equals("SequinMaster")) writer.obj(SequinMaster.fromTcle3(obj));
 			else if (objType.equals("EntitySpawner")) writer.obj(toEntiySpawner(obj));
 			else if (objType.equals("Sample")) {
 				var sample = toSample(obj);
@@ -271,60 +243,6 @@ public class Tcle3 extends Target {
 		compiled.localizationValue = tcl.levelName;
 
 		return compiled;
-	}
-
-	public static SequinMaster toSequinMaster(JsonNode obj) {
-		SequinMaster master = new SequinMaster();
-		master.header = SequinMaster.header();
-
-		// @formatter:off
-		master.comps = List.of(
-				new AnimComp(),
-				new EditStateComp()
-			);
-		// @formatter:on
-
-		master.unknown4 = 0;
-		master.unknown5 = 300.0f;
-		master.skybox = obj.get("skybox_name").asString();
-		master.introLevel = obj.get("intro_lvl_name").asString();
-		master.levels = new ArrayList<>();
-
-		final var tmlMasterIsolate = asBool(obj.get("isolate_tracks"));
-
-		for (var grouping : obj.get("groupings")) {
-			// If track isolation is enabled, only add the isolated tracks to the level.
-			// If it's off, isolate_tracks will be False, and so will all instances
-			// grouping["isolate"]
-			if (asBool(grouping.get("isolate")) == tmlMasterIsolate) {
-				var entry = new SequinMaster.Entry();
-				entry.lvlName = grouping.get("lvl_name").asString();
-				entry.gateName = grouping.get("gate_name").asString();
-				entry.hasCheckpoint = asBool(grouping.get("checkpoint"));
-				entry.checkpointLeaderLvlName = grouping.get("checkpoint_leader_lvl_name").asString();
-				entry.restLvlName = grouping.get("rest_lvl_name").asString();
-				entry.unknownBool0 = true;
-				entry.unknownBool1 = false;
-				entry.unknown0 = 1;
-				entry.unknownBool2 = true;
-				entry.playPlus = asBool(grouping.get("play_plus"));
-				master.levels.add(entry);
-			}
-		}
-
-		master.footer1 = false;
-		master.footer2 = true;
-		master.footer3 = 3;
-		master.footer4 = 50;
-		master.footer5 = 8;
-		master.footer6 = 1;
-		master.footer7 = 0.6f;
-		master.footer8 = 0.5f;
-		master.footer9 = 0.5f;
-		master.checkpointLvl = obj.get("checkpoint_lvl_name").asString();
-		master.pathGameplay = "path.gameplay";
-
-		return master;
 	}
 
 	private static boolean isNullOrEmpty(String str) {
@@ -557,7 +475,7 @@ public class Tcle3 extends Target {
 		f.obj(toVec3f(obj.get("start_angle_fracs")));
 	}
 
-	private static boolean asBool(JsonNode node) {
+	public static boolean asBool(JsonNode node) {
 		if (node == null || node.isNull()) return false;
 		if (node.isBoolean()) return node.asBoolean();
 		return Boolean.parseBoolean(node.asString());
@@ -565,6 +483,15 @@ public class Tcle3 extends Target {
 
 	private static Vec3f toVec3f(JsonNode obj) {
 		return new Vec3f(obj.get(0).asFloat(), obj.get(1).asFloat(), obj.get(2).asFloat());
+	}
+
+	public static ArrayNode fromVec3f(Vec3f v) {
+		var mapper = new JsonMapper();
+		var node = mapper.createArrayNode();
+		node.add(v.x);
+		node.add(v.y);
+		node.add(v.z);
+		return node;
 	}
 
 	private static Transform toTransform(JsonNode obj) {

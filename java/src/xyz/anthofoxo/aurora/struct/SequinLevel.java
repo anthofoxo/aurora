@@ -3,11 +3,17 @@ package xyz.anthofoxo.aurora.struct;
 import java.util.ArrayList;
 import java.util.List;
 
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.node.ObjectNode;
 import xyz.anthofoxo.aurora.parse.AuroraReader;
 import xyz.anthofoxo.aurora.struct.annotation.FixedSize;
+import xyz.anthofoxo.aurora.struct.comp.ApproachAnimComp;
 import xyz.anthofoxo.aurora.struct.comp.Comp;
 import xyz.anthofoxo.aurora.struct.sequin.ParamPath;
 import xyz.anthofoxo.aurora.struct.sequin.Trait;
+import xyz.anthofoxo.aurora.target.Tcle3;
 
 public class SequinLevel implements ThumperStruct {
 	public static int[] header() {
@@ -93,5 +99,70 @@ public class SequinLevel implements ThumperStruct {
 
 		return instance;
 
+	}
+
+	public JsonNode toTcle3(String declarationName) {
+		ObjectMapper mapper = new ObjectMapper();
+		ObjectNode node = mapper.createObjectNode();
+
+		node.put("obj_type", "SequinLevel");
+		node.put("obj_name", declarationName);
+
+		node.set("seq_objs", mapper.createArrayNode());
+
+		int approachBeats = 0;
+
+		for (var comp : comps) {
+			if (comp instanceof ApproachAnimComp c) {
+				approachBeats = c.approachBeats;
+			}
+		}
+
+		node.put("approach_beats", approachBeats);
+		node.put("volume", volume);
+		node.put("input_allowed", inputAllowed);
+		node.put("tutorial_type", tutorialType);
+		node.set("start_angle_fracs", Tcle3.fromVec3f(startAngleFracs));
+
+		ArrayNode nLoops = mapper.createArrayNode();
+
+		for (var loop : loops) {
+			var nLoop = mapper.createObjectNode();
+			nLoop.put("samp_name", loop.sampName);
+			nLoop.put("beats_per_loop", loop.beatsPerLoop);
+			nLoops.add(nLoop);
+		}
+
+		node.set("loops", nLoops);
+
+		ArrayNode nLeafs = mapper.createArrayNode();
+
+		for (var leaf : enteries) {
+			var nLeaf = mapper.createObjectNode();
+
+			nLeaf.put("beat_cnt", leaf.beatCount);
+			nLeaf.put("leaf_name", leaf.leafName);
+			nLeaf.put("main_path", leaf.mainPath);
+
+			nLeaf.set("pos", Tcle3.fromVec3f(leaf.transform.pos));
+			nLeaf.set("rot_x", Tcle3.fromVec3f(leaf.transform.rotx));
+			nLeaf.set("rot_y", Tcle3.fromVec3f(leaf.transform.roty));
+			nLeaf.set("rot_z", Tcle3.fromVec3f(leaf.transform.rotz));
+			nLeaf.set("scale", Tcle3.fromVec3f(leaf.transform.scale));
+
+			var nSubpaths = mapper.createArrayNode();
+
+			for (var path : leaf.subpaths) {
+				nSubpaths.add(path.path);
+			}
+
+			nLeaf.set("sub_paths", nSubpaths);
+
+			nLeafs.add(nLeaf);
+		}
+
+		node.set("leaf_seq", nLeafs);
+
+		return node;
 	}
 }
