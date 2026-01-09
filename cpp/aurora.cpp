@@ -285,8 +285,6 @@ S_API void S_CALLTYPE SteamAPI_Shutdown() {
 }
 
 S_API void S_CALLTYPE SteamAPI_RunCallbacks() {
-	return STEAM_FORWARD(SteamAPI_RunCallbacks);
-
 	bool shouldDetach = false;
 	JNIEnv* env = gJava.getEnv(shouldDetach);
 	
@@ -299,6 +297,8 @@ S_API void S_CALLTYPE SteamAPI_RunCallbacks() {
 	}
 
 	if (shouldDetach) gJava.jvm->DetachCurrentThread();
+
+	return STEAM_FORWARD(SteamAPI_RunCallbacks);
 }
 
 S_API void* S_CALLTYPE SteamInternal_FindOrCreateUserInterface(HSteamUser hSteamUser, const char* pszVersion) {

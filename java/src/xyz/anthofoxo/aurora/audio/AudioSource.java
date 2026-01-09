@@ -36,6 +36,13 @@ public class AudioSource implements AutoCloseable {
 		AudioUtil.checkALError();
 	}
 
+	public void setBuffer(AudioBuffer buffer) {
+		Objects.requireNonNull(buffer);
+		alGetError();
+		alSourcei(handle, AL_BUFFER, buffer.getHandle());
+		AudioUtil.checkALError();
+	}
+
 	public void queueBuffers(AudioBuffer buffer) {
 		Objects.requireNonNull(buffer);
 		alGetError();

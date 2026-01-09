@@ -74,6 +74,8 @@ public class Tcle3Watcher {
 				LibCStdlib.free(pcm);
 			}
 		}
+
+		source.setBuffer(buffer);
 	}
 
 	public static void update() {
@@ -126,7 +128,6 @@ public class Tcle3Watcher {
 		}
 
 		if (rebuiltAny) {
-			source.queueBuffers(buffer);
 			source.play();
 		}
 	}

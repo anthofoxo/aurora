@@ -32,6 +32,7 @@ public final class AuroraStub {
 	 */
 	public static void main(String[] args) {
 		init();
+		shutdown();
 	}
 
 	/**
@@ -45,11 +46,13 @@ public final class AuroraStub {
 	 * Invoked by the Aurora stub during steam event updates.
 	 */
 	public static void update() {
+		Tcle3Watcher.update();
 	}
 
 	/**
 	 * Invoked by the Aurora stub during steam shutdown.
 	 */
 	public static void shutdown() {
+		EntryPoint.auroraShutdown();
 	}
 }

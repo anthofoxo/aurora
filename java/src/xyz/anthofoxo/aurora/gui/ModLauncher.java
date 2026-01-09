@@ -1,5 +1,6 @@
 package xyz.anthofoxo.aurora.gui;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -15,6 +16,7 @@ import imgui.type.ImBoolean;
 import xyz.anthofoxo.aurora.AuroraStub;
 import xyz.anthofoxo.aurora.BuiltinModOptions;
 import xyz.anthofoxo.aurora.ModBuilder;
+import xyz.anthofoxo.aurora.Tcle3Watcher;
 import xyz.anthofoxo.aurora.TextureRegistry;
 import xyz.anthofoxo.aurora.UserConfig;
 import xyz.anthofoxo.aurora.gfx.Font;
@@ -116,6 +118,15 @@ public class ModLauncher {
 				if (ImGui.button(AuroraStub.integrated ? "Launch Thumper" : "Build Mods")) {
 					if (buildTargets.get()) {
 						ModBuilder.buildModsAsync(customs, isModModeEnabled.get(), autoUnlockLevels.get());
+					}
+
+					if (AuroraStub.integrated) {
+						try {
+							Tcle3Watcher.setup(customs);
+						} catch (IOException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						}
 					}
 				}
 				ImGui.popFont();

@@ -27,6 +27,7 @@ import imgui.flag.ImGuiConfigFlags;
 import imgui.flag.ImGuiDockNodeFlags;
 import imgui.gl3.ImGuiImplGl3;
 import imgui.glfw.ImGuiImplGlfw;
+import xyz.anthofoxo.aurora.audio.AudioEngine;
 import xyz.anthofoxo.aurora.gfx.Font;
 
 public final class EntryPoint {
@@ -36,6 +37,7 @@ public final class EntryPoint {
 	private static ImGuiImplGl3 imGuiGl3 = new ImGuiImplGl3();
 
 	private static Aurora aurora;
+	private static AudioEngine audioEngine;
 
 	private EntryPoint() {
 	}
@@ -159,6 +161,8 @@ public final class EntryPoint {
 		Aurora.hasSessionLock = SessionLock.obtainLock();
 		System.out.println("Obtained Session Lock? " + Aurora.hasSessionLock);
 
+		audioEngine = new AudioEngine();
+
 		// Aurora failed to obtain the lock, meaning another instance has it.
 		// In that case the stand-alone should build the targets, here we just exit
 		// aurora and proceed
@@ -221,7 +225,9 @@ public final class EntryPoint {
 		}
 	}
 
-	public static void main(String[] args) {
-		auroraMain();
+	public static void auroraShutdown() {
+		if (Tcle3Watcher.buffer != null) Tcle3Watcher.buffer.close();
+		if (Tcle3Watcher.source != null) Tcle3Watcher.source.close();
+		audioEngine.close();
 	}
 }
