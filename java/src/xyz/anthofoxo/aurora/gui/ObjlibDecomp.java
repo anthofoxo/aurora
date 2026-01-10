@@ -44,6 +44,7 @@ import xyz.anthofoxo.aurora.struct.SequinMaster;
 import xyz.anthofoxo.aurora.struct.SequinPulse;
 import xyz.anthofoxo.aurora.struct.Tex2D;
 import xyz.anthofoxo.aurora.struct.TraitAnim;
+import xyz.anthofoxo.aurora.struct.Vec4f;
 import xyz.anthofoxo.aurora.struct.Vibration;
 import xyz.anthofoxo.aurora.struct.VrSettings;
 import xyz.anthofoxo.aurora.struct.Xfmer;
@@ -190,7 +191,11 @@ public class ObjlibDecomp {
 						g.value = in.str();
 					} else if (g.type.equals("kTraitBool")) {
 						g.value = in.bool();
-					} else throw new IllegalStateException();
+					} else if (g.type.equals("kTraitAction")) {
+						in.enclosing.push(GfxLibImport.class);
+						in.objlist(Comp.class);
+						in.enclosing.pop();
+					} else throw new IllegalStateException(g.type + " not supported");
 
 					s.groupings.add(g);
 				}
@@ -203,7 +208,34 @@ public class ObjlibDecomp {
 
 				level.gfxImports.add(s);
 
-			} else throw new IllegalStateException();
+			} else if (importObj.libType == LibraryType.AvatarLib) {
+
+				in.i32arr(3);
+				in.bool();
+				int groupNum = in.i32(); // groups num
+
+				for (int i = 0; i < groupNum; ++i) {
+
+					in.objlist(ParamPath.class); // param paths
+					String traittype = in.str(); // traittype
+
+					if (traittype.equals("kTraitObj")) {
+						in.str();
+					} else if (traittype.equals("kTraitBool")) {
+						in.bool();
+					} else if (traittype.equals("kTraitColor")) {
+						in.obj(Vec4f.class);
+					} else if (traittype.equals("kTraitFloat")) {
+						in.f32();
+					} else if (traittype.equals("kTraitAction")) {
+						in.enclosing.push(GfxLibImport.class);
+						in.objlist(Comp.class);
+						in.enclosing.pop();
+					} else throw new IllegalStateException(traittype + " not supported");
+
+				}
+
+			} else throw new IllegalStateException("unknown import type " + importObj.libType);
 		}
 		level._endskyboxoffset = in.position();
 
