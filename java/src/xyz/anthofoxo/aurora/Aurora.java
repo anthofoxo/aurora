@@ -2,6 +2,7 @@ package xyz.anthofoxo.aurora;
 
 import imgui.ImGui;
 import imgui.type.ImBoolean;
+import xyz.anthofoxo.aurora.gui.GuiCredits;
 import xyz.anthofoxo.aurora.gui.GuiPreferences;
 import xyz.anthofoxo.aurora.gui.GuiUserGuide;
 import xyz.anthofoxo.aurora.gui.Hasher;
@@ -54,6 +55,10 @@ public class Aurora {
 
 				ImGui.menuItem("New User Guide", null, userGuide.visible);
 
+				ImGui.separator();
+
+				ImGui.menuItem("Credits", null, GuiCredits.visible);
+
 				ImGui.endMenu();
 			}
 
@@ -68,6 +73,7 @@ public class Aurora {
 		objlibDecomp.draw();
 
 		ModBuilder.gui();
+		GuiCredits.draw();
 
 		drawBackgroundElement();
 	}
