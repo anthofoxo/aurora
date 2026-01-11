@@ -10,6 +10,10 @@ extra_css:
   - extra.css
 nav:
   - Home: index.md
+  - Modding:
+    - Overview: modding/overview.md
+    - What Happened to TML: modding/tml_deprecation.md
+    - Windows Install Guide: modding/install_windows.md
   - Aurora:
     - User Guide:
       - "Installation Guide": aurora/user_install_guide.md
