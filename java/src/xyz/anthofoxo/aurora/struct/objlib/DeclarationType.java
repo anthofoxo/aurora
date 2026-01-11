@@ -37,7 +37,8 @@ public enum DeclarationType implements ThumperStruct {
 	Entity("Entity"),
 	EntityAnim("EntityAnim"),
 	
-	
+	GameSettings("GameSettings"),
+	EntityVar("EntityVar"),
 	TraitFilter("TraitFilter"),
 	Steering("Steering"),
 	Status("Status"),

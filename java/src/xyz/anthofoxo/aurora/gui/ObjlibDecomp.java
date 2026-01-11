@@ -20,7 +20,9 @@ import xyz.anthofoxo.aurora.struct.ChannelGroup;
 import xyz.anthofoxo.aurora.struct.DSP;
 import xyz.anthofoxo.aurora.struct.DSPChain;
 import xyz.anthofoxo.aurora.struct.DrawGroup;
+import xyz.anthofoxo.aurora.struct.EntityAnim;
 import xyz.anthofoxo.aurora.struct.EntitySpawner;
+import xyz.anthofoxo.aurora.struct.EntityVar;
 import xyz.anthofoxo.aurora.struct.Env;
 import xyz.anthofoxo.aurora.struct.Flow;
 import xyz.anthofoxo.aurora.struct.GfxLibImport;
@@ -58,7 +60,7 @@ import xyz.anthofoxo.aurora.struct.sequin.ParamPath;
 
 public class ObjlibDecomp {
 	public ImBoolean visible = new ImBoolean(false);
-	private ImString input = new ImString("", 512);
+	private ImString input = new ImString("Adecorators/turn.objlib", 512);
 	private String error = "";
 
 	public static class ObjlibLevel {
@@ -86,6 +88,7 @@ public class ObjlibDecomp {
 		public Map<String, SequinDrawer> drawers = new HashMap<>();
 		public Map<String, Sample> samples = new HashMap<>();
 		public Map<String, TraitAnim> anims = new HashMap<>();
+		public Map<String, EntityVar> entityVars = new HashMap<>();
 		public Map<String, Mesh> meshes = new HashMap<>();
 		public Map<String, VrSettings> vrsettings = new HashMap<>();
 		public Map<String, EntitySpawner> spawners = new HashMap<>();
@@ -137,6 +140,8 @@ public class ObjlibDecomp {
 		objectHeaders.put(DeclarationType.PostProcessPass, PostProcessPass.header());
 		objectHeaders.put(DeclarationType.Bender, Bender.header());
 		objectHeaders.put(DeclarationType.DrawGroup, DrawGroup.header());
+		objectHeaders.put(DeclarationType.EntityVar, EntityVar.header());
+		objectHeaders.put(DeclarationType.EntityAnim, EntityAnim.header());
 	}
 
 	private void parse() throws IOException {
@@ -296,6 +301,10 @@ public class ObjlibDecomp {
 			case Bender:
 				level.benders.put(declaration.name, in.obj(Bender.class));
 				break;
+			case EntityVar:
+				level.entityVars.put(declaration.name, in.obj(EntityVar.class));
+				break;
+
 			case PathDecorator:
 				level.decorators.put(declaration.name, in.obj(PathDecorator.class));
 				break;
@@ -344,6 +353,7 @@ public class ObjlibDecomp {
 			case TraitAnim:
 				level.anims.put(declaration.name, in.obj(TraitAnim.class));
 				break;
+
 			case DSPChain:
 				level.dchs.put(declaration.name, in.obj(DSPChain.class));
 				break;
@@ -564,7 +574,6 @@ public class ObjlibDecomp {
 			}
 
 			ImGui.inputText("Open Objlib", input);
-			ImGui.sameLine();
 			if (ImGui.button("Parse")) {
 				error = "";
 				try {

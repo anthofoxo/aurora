@@ -32,8 +32,5 @@
 	<classpathentry exported="true" kind="lib" path="aurora_lib/snakeyaml-2.5.jar" sourcepath="aurora_lib/snakeyaml-2.5-sources.jar"/>
 	<classpathentry exported="true" kind="lib" path="aurora_lib/snakeyaml-engine-2.10.jar" sourcepath="aurora_lib/snakeyaml-engine-2.10-sources.jar"/>
 	<classpathentry exported="true" kind="lib" path="aurora_res"/>
-	<classpathentry exported="true" kind="lib" path="aurora_lib/lwjgl-tinyfd.jar" sourcepath="aurora_lib/lwjgl-tinyfd-sources.jar"/>
-	<classpathentry exported="true" kind="lib" path="aurora_lib/lwjgl-tinyfd-natives-linux.jar"/>
-	<classpathentry exported="true" kind="lib" path="aurora_lib/lwjgl-tinyfd-natives-windows.jar"/>
 	<classpathentry kind="output" path="aurora_bin"/>
 </classpath>

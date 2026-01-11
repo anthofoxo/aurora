@@ -106,6 +106,9 @@ public class ModLauncher {
 
 				if (UserConfig.thumperPath() == null) {
 					ImGui.textUnformatted("Thumper Directory is not specified, levels will not be built");
+					if (ImGui.button("Fix Now")) {
+						UserConfig.pickAndSaveThumperPath();
+					}
 				}
 
 				ImGui.text(" ");
@@ -145,8 +148,7 @@ public class ModLauncher {
 			// Thumper path and mod search paths
 			//
 			if (ImGui.button("Thumper Game Install Location")) {
-				UserConfig.properties.remove("thumper.path");
-				UserConfig.thumperPath();
+				UserConfig.pickAndSaveThumperPath();
 			}
 
 			ImGui.sameLine();

@@ -188,7 +188,7 @@ public final class EntryPoint {
 			glfwShowWindow(window);
 
 			glfwSetWindowRefreshCallback(window, (long _) -> {
-				if (!UserConfig.tinyfdOpen) update();
+				update();
 			});
 
 			imGuiInit();

@@ -1,16 +1,22 @@
 package xyz.anthofoxo.aurora;
 
-import static org.lwjgl.util.tinyfd.TinyFileDialogs.tinyfd_openFileDialog;
-
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
+
+import javax.swing.JFileChooser;
+import javax.swing.JOptionPane;
+import javax.swing.SwingUtilities;
+import javax.swing.UIManager;
+import javax.swing.UnsupportedLookAndFeelException;
 
 public class UserConfig {
 	public static final String CONFIG_PATH = "aurora.properties";
@@ -63,21 +69,90 @@ public class UserConfig {
 		save();
 	}
 
-	public static boolean tinyfdOpen = false;
+	public static void pickAndSaveThumperPath() {
+		var path = pickThumperPath();
+		if (path != null) {
+			properties.setProperty("thumper.path", path);
+			save();
+		}
+	}
+
+	public static String pickThumperPath() {
+
+		SwingUtilities.invokeLater(() -> {
+			try {
+				UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+			} catch (ClassNotFoundException | InstantiationException | IllegalAccessException
+					| UnsupportedLookAndFeelException e) {
+				e.printStackTrace();
+			}
+		});
+
+		String path = null;
+
+		// Try Windows
+		if (path == null) try {
+			var value = "C:/Program Files (x86)/Steam/steamapps/common/Thumper";
+			if (Files.exists(Path.of(value))) path = value;
+		} catch (Throwable e) {
+		}
+
+		// Try Linux
+		if (path == null) try {
+			var value = "~/.local/share/Steam/steamapps/common/Thumper";
+			if (Files.exists(Path.of(value))) path = value;
+		} catch (Throwable e) {
+		}
+
+		if (path != null) {
+
+			var runnable = new Runnable() {
+				public boolean useFoundPath;
+
+				public void run() {
+					int option = JOptionPane.showOptionDialog(null,
+							"Thumper installation found, Should Aurora use this directory?",
+							"Thumper installation found", JOptionPane.YES_NO_CANCEL_OPTION,
+							JOptionPane.QUESTION_MESSAGE, null, null, 1);
+
+					if (option == JOptionPane.YES_OPTION) useFoundPath = true;
+				}
+			};
+			try {
+				SwingUtilities.invokeAndWait(runnable);
+			} catch (InvocationTargetException | InterruptedException e) {
+				e.printStackTrace();
+			}
+
+			if (runnable.useFoundPath) return path;
+			else path = null;
+		}
+
+		var runnable = new Runnable() {
+			public String path;
+
+			public void run() {
+				var chooser = new JFileChooser();
+				chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+
+				if (chooser.showOpenDialog(null) == JFileChooser.APPROVE_OPTION) {
+					path = chooser.getSelectedFile().toString();
+				}
+			}
+		};
+
+		try {
+			SwingUtilities.invokeAndWait(runnable);
+		} catch (InvocationTargetException | InterruptedException e) {
+			e.printStackTrace();
+		}
+
+		if (runnable.path != null) return runnable.path;
+		return null;
+	}
 
 	public static String thumperPath() {
-		var prop = properties.getProperty("thumper.path");
-		if (prop != null) return prop;
-
-		tinyfdOpen = true;
-		String v = tinyfd_openFileDialog("Select Thumper Executable", null, null, null, false);
-		tinyfdOpen = false;
-		if (v == null) return null;
-
-		v = Path.of(v).getParent().toString();
-		properties.setProperty("thumper.path", v);
-		save();
-		return v;
+		return properties.getProperty("thumper.path", null);
 	}
 
 	public static void save() {

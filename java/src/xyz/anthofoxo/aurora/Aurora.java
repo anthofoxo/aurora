@@ -19,6 +19,8 @@ public class Aurora {
 	private ObjlibDecomp objlibDecomp = new ObjlibDecomp();
 
 	public Aurora() {
+		// On startup if the path isnt set, prompt the user to set it
+		if (UserConfig.thumperPath() == null) UserConfig.pickAndSaveThumperPath();
 	}
 
 	public void update() {

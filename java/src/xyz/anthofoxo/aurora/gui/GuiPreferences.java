@@ -3,8 +3,12 @@ package xyz.anthofoxo.aurora.gui;
 import java.awt.Desktop;
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 
-import org.lwjgl.util.tinyfd.TinyFileDialogs;
+import javax.swing.JFileChooser;
+import javax.swing.SwingUtilities;
+import javax.swing.UIManager;
+import javax.swing.UnsupportedLookAndFeelException;
 
 import imgui.ImGui;
 import imgui.ImVec2;
@@ -26,14 +30,30 @@ public final class GuiPreferences {
 	public static void modSearchPathPanel() {
 
 		if (ImGui.button("Add Search Path")) {
-			String path = TinyFileDialogs.tinyfd_selectFolderDialog("Mod Search Path", null);
 
-			if (path != null) {
-				UserConfig.modPaths.add(path);
-				UserConfig.save();
-				ModLauncher.reloadList();
+			try {
+				SwingUtilities.invokeAndWait(() -> {
+					try {
+						UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+					} catch (ClassNotFoundException | InstantiationException | IllegalAccessException
+							| UnsupportedLookAndFeelException e) {
+						e.printStackTrace();
+					}
+
+					var chooser = new JFileChooser();
+					chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+					chooser.requestFocus();
+
+					if (chooser.showOpenDialog(null) == JFileChooser.APPROVE_OPTION) {
+						UserConfig.modPaths.add(chooser.getSelectedFile().toString());
+						UserConfig.save();
+						ModLauncher.reloadList();
+					}
+				});
+			} catch (InvocationTargetException | InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
 			}
-
 		}
 
 		ImGui.sameLine();
