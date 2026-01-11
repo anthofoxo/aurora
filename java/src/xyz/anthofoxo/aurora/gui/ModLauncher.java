@@ -144,16 +144,7 @@ public class ModLauncher {
 
 			ImGui.text(" ");
 
-			//
-			// Thumper path and mod search paths
-			//
-			if (ImGui.button("Thumper Game Install Location")) {
-				UserConfig.pickAndSaveThumperPath();
-			}
-
-			ImGui.sameLine();
-
-			ImGui.textUnformatted(UserConfig.thumperPath());
+			GuiPreferences.thumperPathPanel();
 
 			ImGui.separatorText("Mod Search Paths");
 			GuiPreferences.modSearchPathPanel();

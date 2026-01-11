@@ -98,6 +98,16 @@ public final class GuiPreferences {
 		}
 	}
 
+	public static void thumperPathPanel() {
+		if (ImGui.button("Thumper Game Install Location")) {
+			UserConfig.pickAndSaveThumperPath();
+		}
+
+		ImGui.sameLine();
+
+		ImGui.textUnformatted(UserConfig.thumperPath());
+	}
+
 	public static void draw() {
 		if (!visible.get()) return;
 
@@ -111,14 +121,9 @@ public final class GuiPreferences {
 
 		ImGui.separator();
 
-		if (ImGui.smallButton("Choose New Path")) {
-			UserConfig.properties.remove("thumper.path");
-			UserConfig.thumperPath();
-		}
+		thumperPathPanel();
 
-		ImGui.sameLine();
-
-		ImGui.textUnformatted(UserConfig.thumperPath());
+		ImGui.separator();
 
 		ImGui.separatorText("Mod Search Paths");
 		modSearchPathPanel();

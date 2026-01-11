@@ -69,6 +69,10 @@ public class UserConfig {
 		save();
 	}
 
+	/**
+	 * Prompts the user for their thumper path and if one is chosen, it'll be saved
+	 * in the user config settings.
+	 */
 	public static void pickAndSaveThumperPath() {
 		var path = pickThumperPath();
 		if (path != null) {
@@ -77,6 +81,13 @@ public class UserConfig {
 		}
 	}
 
+	/**
+	 * Searches a few common locations for the Thumper installation. If one is found
+	 * the user will be prompted if they want this path to be used. If they choose
+	 * no or a default wasn't found then they will be prompted to search for it
+	 * themselves. The return value of this function is the chosen directory or
+	 * <code>null</code> if the dialog was cancelled.
+	 */
 	public static String pickThumperPath() {
 
 		SwingUtilities.invokeLater(() -> {
