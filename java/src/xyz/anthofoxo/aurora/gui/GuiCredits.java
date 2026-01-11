@@ -12,7 +12,7 @@ public final class GuiCredits {
 	public static void draw() {
 		if (!visible.get()) return;
 
-		if (!ImGui.begin("Credits")) {
+		if (!ImGui.begin("Credits", visible)) {
 			ImGui.end();
 			return;
 		}
@@ -20,7 +20,7 @@ public final class GuiCredits {
 		ImGui.textUnformatted("Lead Developer");
 		ImGui.bulletText("AnthoFoxo");
 
-		ImGui.textUnformatted("UI Developer");
+		ImGui.textUnformatted("UX/UI Designer");
 		ImGui.bulletText("CocoaMix");
 
 		ImGui.textUnformatted("Reverse Engineering");

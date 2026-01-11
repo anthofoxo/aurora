@@ -24,6 +24,11 @@ public class UserConfig {
 
 	public static final List<String> modPaths = new ArrayList<>();
 
+	private static final String[] PREINSTALLED_THUMPER_LOCATIONS = {
+			"C:/Program Files (x86)/Steam/steamapps/common/Thumper", // Windows
+			"~/.local/share/Steam/steamapps/common/Thumper", // Linux
+	};
+
 	static {
 		try {
 			properties.load(new FileReader(new File(CONFIG_PATH)));
@@ -101,18 +106,14 @@ public class UserConfig {
 
 		String path = null;
 
-		// Try Windows
-		if (path == null) try {
-			var value = "C:/Program Files (x86)/Steam/steamapps/common/Thumper";
-			if (Files.exists(Path.of(value))) path = value;
-		} catch (Throwable e) {
-		}
-
-		// Try Linux
-		if (path == null) try {
-			var value = "~/.local/share/Steam/steamapps/common/Thumper";
-			if (Files.exists(Path.of(value))) path = value;
-		} catch (Throwable e) {
+		for (var preinstalledPath : PREINSTALLED_THUMPER_LOCATIONS) {
+			try {
+				if (Files.exists(Path.of(preinstalledPath))) {
+					path = preinstalledPath;
+					break;
+				}
+			} catch (Throwable e) {
+			}
 		}
 
 		if (path != null) {
@@ -123,7 +124,7 @@ public class UserConfig {
 				public void run() {
 					int option = JOptionPane.showOptionDialog(null,
 							"Thumper installation found, Should Aurora use this directory?",
-							"Thumper installation found", JOptionPane.YES_NO_CANCEL_OPTION,
+							"Thumper Installation Found", JOptionPane.YES_NO_CANCEL_OPTION,
 							JOptionPane.QUESTION_MESSAGE, null, null, 1);
 
 					if (option == JOptionPane.YES_OPTION) useFoundPath = true;
