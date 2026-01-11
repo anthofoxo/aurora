@@ -10,7 +10,8 @@ import xyz.anthofoxo.aurora.gui.ModLauncher;
 import xyz.anthofoxo.aurora.gui.ObjlibDecomp;
 
 public class Aurora {
-	public static final String TITLE = "Aurora v0.2.0-b.1";
+	public static final String TAG = "v0.2.0-b.2+WIP";
+	public static final String TITLE = "Aurora " + TAG;
 
 	public static boolean hasSessionLock = false;
 
@@ -22,6 +23,8 @@ public class Aurora {
 	public Aurora() {
 		// On startup if the path isnt set, prompt the user to set it
 		if (UserConfig.thumperPath() == null) UserConfig.pickAndSaveThumperPath();
+
+		Updater.announceReleases();
 	}
 
 	public void update() {

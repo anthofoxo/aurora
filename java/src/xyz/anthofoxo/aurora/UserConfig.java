@@ -15,8 +15,6 @@ import java.util.Properties;
 import javax.swing.JFileChooser;
 import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
-import javax.swing.UIManager;
-import javax.swing.UnsupportedLookAndFeelException;
 
 public class UserConfig {
 	public static final String CONFIG_PATH = "aurora.properties";
@@ -94,16 +92,6 @@ public class UserConfig {
 	 * <code>null</code> if the dialog was cancelled.
 	 */
 	public static String pickThumperPath() {
-
-		SwingUtilities.invokeLater(() -> {
-			try {
-				UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-			} catch (ClassNotFoundException | InstantiationException | IllegalAccessException
-					| UnsupportedLookAndFeelException e) {
-				e.printStackTrace();
-			}
-		});
-
 		String path = null;
 
 		for (var preinstalledPath : PREINSTALLED_THUMPER_LOCATIONS) {
@@ -117,27 +105,11 @@ public class UserConfig {
 		}
 
 		if (path != null) {
-
-			var runnable = new Runnable() {
-				public boolean useFoundPath;
-
-				public void run() {
-					int option = JOptionPane.showOptionDialog(null,
-							"Thumper installation found, Should Aurora use this directory?",
-							"Thumper Installation Found", JOptionPane.YES_NO_CANCEL_OPTION,
-							JOptionPane.QUESTION_MESSAGE, null, null, 1);
-
-					if (option == JOptionPane.YES_OPTION) useFoundPath = true;
-				}
-			};
-			try {
-				SwingUtilities.invokeAndWait(runnable);
-			} catch (InvocationTargetException | InterruptedException e) {
-				e.printStackTrace();
-			}
-
-			if (runnable.useFoundPath) return path;
-			else path = null;
+			if (JOptionPane.YES_OPTION == Util.showOptionDialog(
+					"Thumper installation found, Should Aurora use this directory?", "Thumper Installation Found",
+					JOptionPane.YES_NO_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE)) {
+				return path;
+			} else path = null;
 		}
 
 		var runnable = new Runnable() {

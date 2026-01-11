@@ -7,8 +7,6 @@ import java.lang.reflect.InvocationTargetException;
 
 import javax.swing.JFileChooser;
 import javax.swing.SwingUtilities;
-import javax.swing.UIManager;
-import javax.swing.UnsupportedLookAndFeelException;
 
 import imgui.ImGui;
 import imgui.ImVec2;
@@ -33,13 +31,6 @@ public final class GuiPreferences {
 
 			try {
 				SwingUtilities.invokeAndWait(() -> {
-					try {
-						UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-					} catch (ClassNotFoundException | InstantiationException | IllegalAccessException
-							| UnsupportedLookAndFeelException e) {
-						e.printStackTrace();
-					}
-
 					var chooser = new JFileChooser();
 					chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
 					chooser.requestFocus();
