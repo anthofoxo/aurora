@@ -3,9 +3,9 @@
 <head>
     <meta charset="utf-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="author" content="AnthoFoxo" /><link rel="canonical" href="https://anthofoxo.xyz/aurora/thumper/overall_structure/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="author" content="AnthoFoxo" /><link rel="canonical" href="https://anthofoxo.xyz/aurora/modding/install_overview/" />
       <link rel="shortcut icon" href="../../img/favicon.ico" />
-    <title>Overall File Structure - Thumper Documentation</title>
+    <title>Installing Aurora - Thumper Documentation</title>
     <link rel="stylesheet" href="../../css/theme.css" />
     <link rel="stylesheet" href="../../css/theme_extra.css" />
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
@@ -13,9 +13,9 @@
     
       <script>
         // Current page data
-        var mkdocs_page_name = "Overall File Structure";
-        var mkdocs_page_input_path = "thumper\\overall_structure.md";
-        var mkdocs_page_url = "/aurora/thumper/overall_structure/";
+        var mkdocs_page_name = "Installing Aurora";
+        var mkdocs_page_input_path = "modding\\install_overview.md";
+        var mkdocs_page_url = "/aurora/modding/install_overview/";
       </script>
     
     <!--[if lt IE 9]>
@@ -46,11 +46,11 @@
               </ul>
               <p class="caption"><span class="caption-text">Modding</span></p>
               <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../../modding/overview/">Overview</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../overview/">Overview</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../../modding/tml_deprecation/">What Happened to TML</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../tml_deprecation/">What Happened to TML</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../../modding/install_windows/">Windows Install Guide</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../install_windows/">Windows Install Guide</a>
                   </li>
               </ul>
               <p class="caption"><span class="caption-text">Aurora</span></p>
@@ -67,28 +67,24 @@
                   </li>
               </ul>
               <p class="caption"><span class="caption-text">Thumper</span></p>
-              <ul class="current">
-                  <li class="toctree-l1"><a class="reference internal" href="../">Introduction</a>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../thumper/">Introduction</a>
                   </li>
-                  <li class="toctree-l1 current"><a class="reference internal current" >Overview</a>
-    <ul class="current">
-                <li class="toctree-l2"><a class="reference internal" href="../drools_editor/">What We Know about Drool's Editor</a>
+                  <li class="toctree-l1"><a class="reference internal" >Overview</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="../../thumper/drools_editor/">What We Know about Drool's Editor</a>
                 </li>
-                <li class="toctree-l2 current"><a class="reference internal current" href="#">Overall File Structure</a>
-    <ul class="current">
-    <li class="toctree-l3"><a class="reference internal" href="#file-types">File Types</a>
-    </li>
-    </ul>
+                <li class="toctree-l2"><a class="reference internal" href="../../thumper/overall_structure/">Overall File Structure</a>
                 </li>
-                <li class="toctree-l2"><a class="reference internal" href="../objlib_structure/">Objlib Structure</a>
+                <li class="toctree-l2"><a class="reference internal" href="../../thumper/objlib_structure/">Objlib Structure</a>
                 </li>
-                <li class="toctree-l2"><a class="reference internal" href="../level_objlib_structure/">Level Objlib Structure</a>
+                <li class="toctree-l2"><a class="reference internal" href="../../thumper/level_objlib_structure/">Level Objlib Structure</a>
                 </li>
     </ul>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" >Data Types</a>
     <ul>
-                <li class="toctree-l2"><a class="reference internal" href="../basic_types/">Basic Data Types</a>
+                <li class="toctree-l2"><a class="reference internal" href="../../thumper/basic_types/">Basic Data Types</a>
                 </li>
     </ul>
                   </li>
@@ -107,11 +103,9 @@
         <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
   <ul class="wy-breadcrumbs">
     <li><a href="../.." class="icon icon-home" aria-label="Docs"></a></li>
-          <li class="breadcrumb-item">Thumper</li>
-          <li class="breadcrumb-item">Overview</li>
-      <li class="breadcrumb-item active">Overall File Structure</li>
+      <li class="breadcrumb-item active">Installing Aurora</li>
     <li class="wy-breadcrumbs-aside">
-          <a href="https://github.com/anthofoxo/aurora/tree/docs/docs/thumper/overall_structure.md" class="icon icon-github"> Edit on GitHub</a>
+          <a href="https://github.com/anthofoxo/aurora/tree/docs/docs/modding/install_overview.md" class="icon icon-github"> Edit on GitHub</a>
     </li>
   </ul>
   <hr/>
@@ -119,71 +113,18 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
             <div class="section" itemprop="articleBody">
               
-                <h1 id="overall-structure-of-game-files">Overall Structure of Game Files</h1>
-<p>Most of the game files, including 3D meshes, textures, audio samples and game object libraries are located in the <code>cache</code> directory in the game's installation files. All of them are cryptically named with hex characters plus a <code>.pc</code> file extension. The cryptic file names are resulted from applying a 32-bit hash function to their original file paths. For game object libraries and audio samples, their original file paths or file names are stored within the game files themselves and can be extracted.</p>
-<h2 id="file-types">File Types</h2>
-<p>The first 4 bytes of each game file is an <code>u32</code> identifying its file type. All possible values are listed in the table below.</p>
-<table>
-<thead>
-<tr>
-<th>Value</th>
-<th>Meaning</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>0</code></td>
-<td>Scoring file. Defines the scoring fules, such as how many points are awarded for each type of action and no miss and no damage bonuses.</td>
-</tr>
-<tr>
-<td><code>4</code></td>
-<td>Configuration files.</td>
-</tr>
-<tr>
-<td><code>5</code></td>
-<td>A list of UI menus, such as the credits, level select, leaderboards, options, and in-game pause screen.</td>
-</tr>
-<tr>
-<td><code>6</code></td>
-<td>Meshes. These are stored in a proprietary format.</td>
-</tr>
-<tr>
-<td><code>8</code></td>
-<td>Game object library. These are a custom format.</td>
-</tr>
-<tr>
-<td><code>9</code></td>
-<td>Credit files and level configuration files.</td>
-</tr>
-<tr>
-<td><code>12</code></td>
-<td>Textures. Stored as <code>.dds</code>.</td>
-</tr>
-<tr>
-<td><code>13</code></td>
-<td>Audio sample, These are stores as <code>FSB5 MFOD Banks</code></td>
-</tr>
-<tr>
-<td><code>14</code></td>
-<td>Level listing.</td>
-</tr>
-<tr>
-<td><code>28</code></td>
-<td>Shaders.</td>
-</tr>
-<tr>
-<td><code>93</code></td>
-<td>Unknown.</td>
-</tr>
-</tbody>
-</table>
+                <h1 id="installing-aurora">Installing Aurora</h1>
+<p>Thumper is a Windows only game and thus we can only officially support modding on Windows, however we put in a lot of effort to made modding work on as many platforms as possible. A list of platform we've gotten modding to work on are listed below. A detailed install guide is available for Windows. There isn't detailed guides for other platforms yet.</p>
+<h2 id="windows">Windows</h2>
+<p>Windows is Thumper's native build. This is the easiest way to do Thumper modding. All the tooling works with little to no issue on Windows.</p>
+<p>If you're on Windows. You may follow the detailed <a href="">Windows Install Guide</a>.</p>
+<h2 id="linux-debian-based">Linux (Debian Based)</h2>
+<p>Thumper does't support Linux but it does run via proton. Modding is still possible after jumping through some hoops.</p>
+<h2 id="steamdeck">SteamDeck</h2>
+<p>SteamDeck is just another Linux distribution but with many things locked down. Many things make SteamDeck hard to support.</p>
               
             </div>
           </div><footer>
-    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
-        <a href="../drools_editor/" class="btn btn-neutral float-left" title="What We Know about Drool's Editor"><span class="icon icon-circle-arrow-left"></span> Previous</a>
-        <a href="../objlib_structure/" class="btn btn-neutral float-right" title="Objlib Structure">Next <span class="icon icon-circle-arrow-right"></span></a>
-    </div>
 
   <hr/>
 
@@ -209,10 +150,6 @@
         </span>
     
     
-      <span><a href="../drools_editor/" style="color: #fcfcfc">&laquo; Previous</a></span>
-    
-    
-      <span><a href="../objlib_structure/" style="color: #fcfcfc">Next &raquo;</a></span>
     
   </span>
 </div>
