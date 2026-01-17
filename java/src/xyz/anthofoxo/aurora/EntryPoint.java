@@ -158,6 +158,7 @@ public final class EntryPoint {
 	}
 
 	public static void auroraMain() {
+		if (UserConfig.thumperPath() == null) UserConfig.pickAndSaveThumperPath();
 		Aurora.hasSessionLock = SessionLock.obtainLock();
 		System.out.println("Obtained Session Lock? " + Aurora.hasSessionLock);
 

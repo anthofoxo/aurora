@@ -21,6 +21,8 @@ public final class SessionLock {
 	private static FileLock lock;
 
 	public static boolean obtainLock() {
+		if (UserConfig.thumperPath() == null) return false;
+
 		var path = Path.of(UserConfig.thumperPath(), "aurora.lock");
 
 		if (!Files.exists(path)) {
