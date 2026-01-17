@@ -43,6 +43,8 @@ public class Aurora {
 
 			if (ImGui.beginMenu("Tools")) {
 				ImGui.menuItem("Hasher", null, hasher.visible);
+				if (ImGui.menuItem("Audio Sample Dump")) AudioExtract.open();
+
 				ImGui.menuItem("Objlib Decomp Tool", null, objlibDecomp.visible);
 				ImGui.separator();
 				ImGui.menuItem("Dear ImGui Demo", null, demo);
@@ -77,6 +79,7 @@ public class Aurora {
 
 		ModBuilder.gui();
 		GuiCredits.draw();
+		AudioExtract.draw();
 
 		drawBackgroundElement();
 	}

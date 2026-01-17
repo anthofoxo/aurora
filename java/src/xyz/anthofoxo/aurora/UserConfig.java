@@ -15,6 +15,7 @@ import java.util.Properties;
 import javax.swing.JFileChooser;
 import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
+import javax.swing.filechooser.FileNameExtensionFilter;
 
 public class UserConfig {
 	public static final String CONFIG_PATH = "aurora.properties";
@@ -70,6 +71,32 @@ public class UserConfig {
 	public static void setModEnabled(String modName, boolean enabled) {
 		properties.setProperty(String.format("mod.%s.enabled", modName), Boolean.toString(enabled));
 		save();
+	}
+
+	public static String pickVgmstreamPath() {
+		var runnable = new Runnable() {
+			public String path;
+
+			public void run() {
+				var chooser = new JFileChooser();
+				chooser.setDialogTitle("Select vgmstream");
+				chooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
+				chooser.setFileFilter(new FileNameExtensionFilter("VGMStream Executable", "exe"));
+
+				if (chooser.showOpenDialog(null) == JFileChooser.APPROVE_OPTION) {
+					path = chooser.getSelectedFile().toString();
+				}
+			}
+		};
+
+		try {
+			SwingUtilities.invokeAndWait(runnable);
+		} catch (InvocationTargetException | InterruptedException e) {
+			e.printStackTrace();
+		}
+
+		if (runnable.path != null) return runnable.path;
+		return null;
 	}
 
 	/**

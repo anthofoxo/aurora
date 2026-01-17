@@ -100,7 +100,8 @@ public class Updater {
 			return;
 		}
 
-		String stableTag = releases.get("latestStable").get("tag_name").asString();
+		String stableTag = releases.get("latestStable").isNull() ? "None"
+				: releases.get("latestStable").get("tag_name").asString();
 		String preTag = releases.get("latestPreRelease").isNull() ? "None"
 				: releases.get("latestPreRelease").get("tag_name").asString();
 
