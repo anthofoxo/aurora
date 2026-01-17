@@ -180,12 +180,15 @@ public class ModBuilder {
 		for (var searchPath : UserConfig.modPaths) {
 			try (var stream = Files.list(Path.of(searchPath))) {
 				for (Path path : stream.collect(Collectors.toList())) {
+					List<Throwable> throwables = new ArrayList<Throwable>();
+
 					try {
 						var target = new Tcle3(path);
 						target.enabled.set(UserConfig.isModEnabled(target.tcl.levelName));
 						targets.add(target);
 						continue;
 					} catch (Exception e) {
+						throwables.add(e);
 					}
 
 					try {
@@ -194,9 +197,18 @@ public class ModBuilder {
 						targets.add(target);
 						continue;
 					} catch (Exception e) {
+						throwables.add(e);
 					}
 
-					System.out.println("Failed to add target " + path);
+					throwables.add(0, new RuntimeException("Failed to add target: " + path.toString()));
+
+					String error = "";
+
+					for (var err : throwables) {
+						error += err.toString() + "\n";
+					}
+
+					System.err.println(error);
 				}
 			} catch (IOException e) {
 				e.printStackTrace();

@@ -122,7 +122,7 @@ public class Updater {
 			}
 		} else if (isNightlyNewer) {
 			if (JOptionPane.YES_OPTION == Util.showOptionDialog(
-					"A new nightly release is available. Do you want to open the download page?", "Update Available",
+					"A new pre-release is available. Do you want to open the download page?", "Update Available",
 					JOptionPane.YES_NO_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE)) {
 				Util.openURL(originNightly.get("html_url").asString());
 			}
