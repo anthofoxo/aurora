@@ -110,7 +110,9 @@ public class BuiltinNativeTarget extends Target {
 				int sampleEnd = reader.pos;
 
 				sample.pitch *= speedModifier;
-				sample.channelGroup = "sequin.ch";
+				// Thumper Levels are already use correct channels
+				// Do not apply channel group edits
+				// sample.channelGroup = "sequin.ch";
 
 				byte[] before = Arrays.copyOfRange(workingBytes, 0, findPos);
 				byte[] after = Arrays.copyOfRange(workingBytes, sampleEnd, workingBytes.length);
