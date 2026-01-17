@@ -9,6 +9,7 @@ import imgui.ImGuiTextFilter;
 import imgui.ImVec2;
 import imgui.ImVec4;
 import imgui.flag.ImGuiCol;
+import imgui.flag.ImGuiCond;
 import imgui.flag.ImGuiStyleVar;
 import imgui.flag.ImGuiTableFlags;
 import imgui.flag.ImGuiWindowFlags;
@@ -54,6 +55,7 @@ public class ModLauncher {
 	}
 
 	public static void draw() {
+		ImGui.setNextWindowSize(1280, 720, ImGuiCond.FirstUseEver);
 		ImGui.pushStyleVar(ImGuiStyleVar.FrameRounding, 6);
 		if (ImGui.begin("Launcher", ImGuiWindowFlags.MenuBar)) {
 			if (ImGui.beginMenuBar()) {
@@ -140,7 +142,7 @@ public class ModLauncher {
 
 				ImGui.endTable();
 			}
-			///
+			//
 
 			ImGui.text(" ");
 
