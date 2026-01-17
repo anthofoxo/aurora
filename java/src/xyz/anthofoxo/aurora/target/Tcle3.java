@@ -58,6 +58,8 @@ public class Tcle3 extends Target {
 	private List<Path> paths = new ArrayList<>();
 
 	public Tcle3(Path path) throws IOException {
+		boolean hasDotSecFile = false;
+
 		try (var stream = Files.walk(path)) {
 			for (var entry : stream.collect(Collectors.toList())) {
 				if (Files.isDirectory(entry)) continue;
@@ -73,6 +75,8 @@ public class Tcle3 extends Target {
 					} finally {
 						MemoryUtil.memFree(buffer);
 					}
+				} else if (".sec".equals(getExtension(entry.toString()))) {
+					hasDotSecFile = true;
 				} else if (".tcl".equals(getExtension(entry.toString()))) {
 					tcl = TCLFile.parse(JSON_MAPPER.readTree(Files.readAllBytes(entry)));
 				}
@@ -82,6 +86,12 @@ public class Tcle3 extends Target {
 		}
 
 		if (tcl == null) throw new IllegalStateException("No TCL file found");
+
+		// This should never be true for Tcle3 targets, if this occurs then someone
+		// unzipped a tcleartifact zip
+		if (hasDotSecFile) {
+			throw new IllegalStateException("Invalid target: " + path + "; did you unzip the precompiled .zip?");
+		}
 	}
 
 	public static ParamPath parseParamPath(String param_path, String param_path_hash) {
