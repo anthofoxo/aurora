@@ -83,7 +83,7 @@ public class UserConfig {
 				chooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
 				chooser.setFileFilter(new FileNameExtensionFilter("VGMStream Executable", "exe"));
 
-				if (chooser.showOpenDialog(null) == JFileChooser.APPROVE_OPTION) {
+				if (chooser.showOpenDialog(Util.makeOnTopParent()) == JFileChooser.APPROVE_OPTION) {
 					path = chooser.getSelectedFile().toString();
 				}
 			}
@@ -146,7 +146,7 @@ public class UserConfig {
 				var chooser = new JFileChooser();
 				chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
 
-				if (chooser.showOpenDialog(null) == JFileChooser.APPROVE_OPTION) {
+				if (chooser.showOpenDialog(Util.makeOnTopParent()) == JFileChooser.APPROVE_OPTION) {
 					path = chooser.getSelectedFile().toString();
 				}
 			}

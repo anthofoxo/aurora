@@ -16,6 +16,7 @@ import imgui.flag.ImGuiStyleVar;
 import imgui.type.ImBoolean;
 import xyz.anthofoxo.aurora.TextureRegistry;
 import xyz.anthofoxo.aurora.UserConfig;
+import xyz.anthofoxo.aurora.Util;
 import xyz.anthofoxo.aurora.gfx.Font;
 
 public final class GuiPreferences {
@@ -35,7 +36,7 @@ public final class GuiPreferences {
 					chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
 					chooser.requestFocus();
 
-					if (chooser.showOpenDialog(null) == JFileChooser.APPROVE_OPTION) {
+					if (chooser.showOpenDialog(Util.makeOnTopParent()) == JFileChooser.APPROVE_OPTION) {
 						UserConfig.modPaths.add(chooser.getSelectedFile().toString());
 						UserConfig.save();
 						ModLauncher.reloadList();

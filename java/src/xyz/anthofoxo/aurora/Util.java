@@ -50,10 +50,10 @@ public class Util {
 	public static JFrame makeOnTopParent() {
 		JFrame parent = new JFrame();
 		parent.setAlwaysOnTop(true);
-		parent.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
+		parent.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 		parent.setUndecorated(true);
 		parent.setLocationRelativeTo(null);
-		parent.setVisible(true);
+		parent.setVisible(false);
 		return parent;
 	}
 
