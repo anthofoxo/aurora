@@ -8,6 +8,8 @@ import java.lang.reflect.InvocationTargetException;
 import javax.swing.JFileChooser;
 import javax.swing.SwingUtilities;
 
+import org.lwjgl.openal.AL11;
+
 import imgui.ImGui;
 import imgui.ImVec2;
 import imgui.ImVec4;
@@ -109,6 +111,12 @@ public final class GuiPreferences {
 
 		if (ImGui.checkbox("Unlock Practice Mode", unlockPractice)) {
 			UserConfig.setUnlockPractice(unlockPractice.get());
+		}
+
+		float[] volume = new float[] { Float.parseFloat(UserConfig.get("aurora.audio.master", String.valueOf(1.0f))) };
+		if (ImGui.sliderFloat("Master Volume", volume, 0.0f, 1.0f)) {
+			UserConfig.set("aurora.audio.master", Float.toString(volume[0]));
+			AL11.alListenerf(AL11.AL_GAIN, volume[0]);
 		}
 
 		ImGui.separator();

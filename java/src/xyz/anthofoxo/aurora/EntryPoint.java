@@ -16,6 +16,7 @@ import org.lwjgl.glfw.Callbacks;
 import org.lwjgl.glfw.GLFW;
 import org.lwjgl.glfw.GLFWErrorCallback;
 import org.lwjgl.glfw.GLFWImage;
+import org.lwjgl.openal.AL11;
 import org.lwjgl.opengl.GL;
 import org.lwjgl.opengl.GL46C;
 import org.lwjgl.system.MemoryStack;
@@ -163,6 +164,7 @@ public final class EntryPoint {
 		System.out.println("Obtained Session Lock? " + Aurora.hasSessionLock);
 
 		audioEngine = new AudioEngine();
+		AL11.alListenerf(AL11.AL_GAIN, Float.parseFloat(UserConfig.get("aurora.audio.master", String.valueOf(1.0f))));
 
 		// Aurora failed to obtain the lock, meaning another instance has it.
 		// In that case the stand-alone should build the targets, here we just exit
