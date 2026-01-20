@@ -89,6 +89,11 @@ public class Tcle3Watcher {
 			for (WatchEvent<?> event : key.pollEvents()) {
 				WatchEvent.Kind<?> kind = event.kind();
 				if (kind == OVERFLOW) continue;
+
+				WatchEvent<Path> ev = (WatchEvent<Path>) event;
+				Path filename = ev.context();
+				if (!filename.toString().toLowerCase().endsWith(".tcl")) continue;
+
 				update = true;
 				// dont early break, make sure everything is polled
 			}
