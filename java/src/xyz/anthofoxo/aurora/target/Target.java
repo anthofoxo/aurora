@@ -10,8 +10,12 @@ import xyz.anthofoxo.aurora.gfx.Texture;
 import xyz.anthofoxo.aurora.tml.TCLFile;
 
 public abstract class Target {
+	// @formatter:off
 	public static final JsonMapper JSON_MAPPER = JsonMapper.builder()
-			.configure(JsonReadFeature.ALLOW_SINGLE_QUOTES, true).build();
+			.configure(JsonReadFeature.ALLOW_SINGLE_QUOTES, true)
+			.configure(JsonReadFeature.ALLOW_TRAILING_COMMA, true)
+			.build();
+	// @formatter:on
 
 	public final String origin;
 
