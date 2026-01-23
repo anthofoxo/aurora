@@ -274,9 +274,25 @@ public class Tcle3 extends Target {
 			"kTraitCue", "kTraitEvent", "kTraitSym", "kTraitList", "kTraitTraitPath", "kTraitQuat", "kTraitChildLib",
 			"kTraitComponent", "kNumTraitTypes");
 
+	private static int tcleToInt(String value) {
+		try {
+			return Integer.parseInt(value);
+		} catch (NumberFormatException _) {
+
+		}
+
+		try {
+			return (int) Float.parseFloat(value);
+		} catch (NumberFormatException _) {
+		}
+
+		throw new NumberFormatException("For input string: \"" + value + "\"");
+	}
+
 	private static void Write_Data_Point_Value(AuroraWriter f, String val, String trait_type) {
-		if (trait_type.equals("kTraitInt")) f.i32(Integer.parseInt(val));
-		else if (trait_type.equals("kTraitBool") || trait_type.equals("kTraitAction")) {
+		if (trait_type.equals("kTraitInt")) {
+			f.i32(tcleToInt(val));
+		} else if (trait_type.equals("kTraitBool") || trait_type.equals("kTraitAction")) {
 			f.bool(toBoolean(val));
 		} else if (trait_type.equals("kTraitFloat")) f.f32(Float.parseFloat(val));
 		else if (trait_type.equals("kTraitColor")) {
