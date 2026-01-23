@@ -376,7 +376,10 @@ public class Tcle3 extends Target {
 		for (var _obj : seq_objs) {
 			String obj_name = _obj.get("obj_name").asString();
 			if (obj_name.startsWith("_")) continue;
-			if (!toBoolean((_obj.get("enabled").asString("True")))) continue;
+
+			if (_obj.get("enabled") != null) {
+				if (!toBoolean((_obj.get("enabled").asString("True")))) continue;
+			}
 
 			Write_Sequencer_Object_v3(f, _obj, beat_cnt);
 			f.i32(0);
