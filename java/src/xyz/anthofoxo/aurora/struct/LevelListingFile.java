@@ -10,16 +10,24 @@ public class LevelListingFile implements ThumperStruct {
 		public String unlocks;
 		public boolean defaultLocked;
 		public boolean unknown1;
-		
+
 		/**
 		 * When set to true, upon level completion, the credit sequence is triggered
 		 */
 		public boolean triggersCredits;
-		
+
 		public int colorIndex0;
 		public int colorIndex1;
 	}
 
 	public int fileType = 16;
 	public List<Entry> enteries;
+
+	public boolean hasEntryKey(String key) {
+		for (var entry : enteries) {
+			if (entry.key.equals(key)) return true;
+		}
+
+		return false;
+	}
 }
