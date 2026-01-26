@@ -121,7 +121,7 @@ public class Updater {
 					JOptionPane.YES_NO_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE)) {
 				Util.openURL(originStable.get("html_url").asString());
 			}
-		} else if (isNightlyNewer) {
+		} else if (UserConfig.get("aurora.announce.prerelease", false) && isNightlyNewer) {
 			if (JOptionPane.YES_OPTION == Util.showOptionDialog(
 					"A new pre-release is available. Do you want to open the download page?", "Update Available",
 					JOptionPane.YES_NO_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE)) {

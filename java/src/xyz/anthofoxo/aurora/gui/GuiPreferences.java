@@ -27,6 +27,7 @@ public final class GuiPreferences {
 
 	public static ImBoolean visible = new ImBoolean(false);
 	public static ImBoolean unlockPractice = new ImBoolean(UserConfig.isUnlockPractice());
+	public static ImBoolean announcePrereleases = new ImBoolean(UserConfig.get("aurora.announce.prerelease", false));
 
 	public static void modSearchPathPanel() {
 
@@ -111,6 +112,10 @@ public final class GuiPreferences {
 
 		if (ImGui.checkbox("Unlock Practice Mode", unlockPractice)) {
 			UserConfig.setUnlockPractice(unlockPractice.get());
+		}
+
+		if (ImGui.checkbox("Annouce Pre-release Builds", announcePrereleases)) {
+			UserConfig.set("aurora.announce.prerelease", unlockPractice.get());
 		}
 
 		float[] volume = new float[] { Float.parseFloat(UserConfig.get("aurora.audio.master", String.valueOf(1.0f))) };

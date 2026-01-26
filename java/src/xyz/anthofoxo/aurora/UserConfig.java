@@ -50,6 +50,10 @@ public class UserConfig {
 		save();
 	}
 
+	public static void set(String key, boolean value) {
+		set(key, String.valueOf(value));
+	}
+
 	public static String get(String key, String defaultValue) {
 		return properties.getProperty(key, defaultValue);
 	}
@@ -182,5 +186,9 @@ public class UserConfig {
 	public static void setShowGuide(boolean b) {
 		properties.setProperty("aurora.show_guide", Boolean.toString(b));
 		save();
+	}
+
+	public static boolean get(String key, boolean defaultValue) {
+		return Boolean.parseBoolean(get(key, String.valueOf(defaultValue)));
 	}
 }
