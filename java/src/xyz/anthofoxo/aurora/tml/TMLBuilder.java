@@ -52,19 +52,13 @@ public class TMLBuilder {
 			if (!entry.enabled.get()) continue;
 
 			Future<CompiledTarget> future = executor.submit(() -> {
-				try {
-					CompiledTarget compiled = entry.build((float) entry.speedModifier[0] / 100.0f);
-					if (entry.speedModifier[0] != 100) {
-						compiled.localizationKey += ".speed" + entry.speedModifier[0];
-						compiled.localizationValue += " (" + entry.speedModifier[0] + "%)";
-					}
-
-					return compiled;
-				} catch (IOException e) {
-					e.printStackTrace();
+				CompiledTarget compiled = entry.build((float) entry.speedModifier[0] / 100.0f);
+				if (entry.speedModifier[0] != 100) {
+					compiled.localizationKey += ".speed" + entry.speedModifier[0];
+					compiled.localizationValue += " (" + entry.speedModifier[0] + "%)";
 				}
-				return null;
 
+				return compiled;
 			});
 
 			futures.add(future);
@@ -80,6 +74,8 @@ public class TMLBuilder {
 				if (result != null) assets.add(result);
 
 			} catch (InterruptedException | ExecutionException e) {
+
+				// FIXME: Add to build text
 				e.printStackTrace();
 			}
 			completed++;
@@ -126,7 +122,8 @@ public class TMLBuilder {
 			listings.enteries.add(entry);
 		}
 
-		{
+		// Make sure level 3 is listed if it isn't in our listing yet
+		if (!listings.hasEntryKey("level3")) {
 			var entry = new LevelListingFile.Entry();
 			entry.key = "level3";
 			entry.unknown0 = 0;

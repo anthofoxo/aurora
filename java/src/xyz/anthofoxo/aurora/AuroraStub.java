@@ -18,6 +18,41 @@ public final class AuroraStub {
 	 */
 	public static boolean shouldLaunchThumper = false;
 
+	/**
+	 * When Aurora exits, this value is checked for, if this is set the false then
+	 * the initial terminal window that is spawned with Aurora will be closed.
+	 */
+	public static boolean keepTerminalWindow = false;
+
 	private AuroraStub() {
+	}
+
+	/**
+	 * Main function when using the stand-alone runtime.
+	 */
+	public static void main(String[] args) {
+		init();
+		shutdown();
+	}
+
+	/**
+	 * Invoked by the Aurora stub during stream startup.
+	 */
+	public static void init() {
+		EntryPoint.auroraMain();
+	}
+
+	/**
+	 * Invoked by the Aurora stub during steam event updates.
+	 */
+	public static void update() {
+		Tcle3Watcher.update();
+	}
+
+	/**
+	 * Invoked by the Aurora stub during steam shutdown.
+	 */
+	public static void shutdown() {
+		EntryPoint.auroraShutdown();
 	}
 }

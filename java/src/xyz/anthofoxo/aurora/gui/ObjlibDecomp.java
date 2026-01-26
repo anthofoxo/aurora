@@ -20,7 +20,9 @@ import xyz.anthofoxo.aurora.struct.ChannelGroup;
 import xyz.anthofoxo.aurora.struct.DSP;
 import xyz.anthofoxo.aurora.struct.DSPChain;
 import xyz.anthofoxo.aurora.struct.DrawGroup;
+import xyz.anthofoxo.aurora.struct.EntityAnim;
 import xyz.anthofoxo.aurora.struct.EntitySpawner;
+import xyz.anthofoxo.aurora.struct.EntityVar;
 import xyz.anthofoxo.aurora.struct.Env;
 import xyz.anthofoxo.aurora.struct.Flow;
 import xyz.anthofoxo.aurora.struct.GfxLibImport;
@@ -44,19 +46,21 @@ import xyz.anthofoxo.aurora.struct.SequinMaster;
 import xyz.anthofoxo.aurora.struct.SequinPulse;
 import xyz.anthofoxo.aurora.struct.Tex2D;
 import xyz.anthofoxo.aurora.struct.TraitAnim;
+import xyz.anthofoxo.aurora.struct.Vec4f;
 import xyz.anthofoxo.aurora.struct.Vibration;
 import xyz.anthofoxo.aurora.struct.VrSettings;
 import xyz.anthofoxo.aurora.struct.Xfmer;
 import xyz.anthofoxo.aurora.struct.annotation.FixedSize;
 import xyz.anthofoxo.aurora.struct.comp.Comp;
 import xyz.anthofoxo.aurora.struct.objlib.DeclarationType;
+import xyz.anthofoxo.aurora.struct.objlib.FileType;
 import xyz.anthofoxo.aurora.struct.objlib.LibraryImport;
 import xyz.anthofoxo.aurora.struct.objlib.ObjectDeclaration;
 import xyz.anthofoxo.aurora.struct.sequin.ParamPath;
 
 public class ObjlibDecomp {
 	public ImBoolean visible = new ImBoolean(false);
-	private ImString input = new ImString("", 512);
+	private ImString input = new ImString("Adecorators/turn.objlib", 512);
 	private String error = "";
 
 	public static class ObjlibLevel {
@@ -84,6 +88,7 @@ public class ObjlibDecomp {
 		public Map<String, SequinDrawer> drawers = new HashMap<>();
 		public Map<String, Sample> samples = new HashMap<>();
 		public Map<String, TraitAnim> anims = new HashMap<>();
+		public Map<String, EntityVar> entityVars = new HashMap<>();
 		public Map<String, Mesh> meshes = new HashMap<>();
 		public Map<String, VrSettings> vrsettings = new HashMap<>();
 		public Map<String, EntitySpawner> spawners = new HashMap<>();
@@ -135,6 +140,8 @@ public class ObjlibDecomp {
 		objectHeaders.put(DeclarationType.PostProcessPass, PostProcessPass.header());
 		objectHeaders.put(DeclarationType.Bender, Bender.header());
 		objectHeaders.put(DeclarationType.DrawGroup, DrawGroup.header());
+		objectHeaders.put(DeclarationType.EntityVar, EntityVar.header());
+		objectHeaders.put(DeclarationType.EntityAnim, EntityAnim.header());
 	}
 
 	private void parse() throws IOException {
@@ -189,7 +196,11 @@ public class ObjlibDecomp {
 						g.value = in.str();
 					} else if (g.type.equals("kTraitBool")) {
 						g.value = in.bool();
-					} else throw new IllegalStateException();
+					} else if (g.type.equals("kTraitAction")) {
+						in.enclosing.push(GfxLibImport.class);
+						in.objlist(Comp.class);
+						in.enclosing.pop();
+					} else throw new IllegalStateException(g.type + " not supported");
 
 					s.groupings.add(g);
 				}
@@ -202,7 +213,34 @@ public class ObjlibDecomp {
 
 				level.gfxImports.add(s);
 
-			} else throw new IllegalStateException();
+			} else if (importObj.libType == LibraryType.AvatarLib) {
+
+				in.i32arr(3);
+				in.bool();
+				int groupNum = in.i32(); // groups num
+
+				for (int i = 0; i < groupNum; ++i) {
+
+					in.objlist(ParamPath.class); // param paths
+					String traittype = in.str(); // traittype
+
+					if (traittype.equals("kTraitObj")) {
+						in.str();
+					} else if (traittype.equals("kTraitBool")) {
+						in.bool();
+					} else if (traittype.equals("kTraitColor")) {
+						in.obj(Vec4f.class);
+					} else if (traittype.equals("kTraitFloat")) {
+						in.f32();
+					} else if (traittype.equals("kTraitAction")) {
+						in.enclosing.push(GfxLibImport.class);
+						in.objlist(Comp.class);
+						in.enclosing.pop();
+					} else throw new IllegalStateException(traittype + " not supported");
+
+				}
+
+			} else throw new IllegalStateException("unknown import type " + importObj.libType);
 		}
 		level._endskyboxoffset = in.position();
 
@@ -263,6 +301,10 @@ public class ObjlibDecomp {
 			case Bender:
 				level.benders.put(declaration.name, in.obj(Bender.class));
 				break;
+			case EntityVar:
+				level.entityVars.put(declaration.name, in.obj(EntityVar.class));
+				break;
+
 			case PathDecorator:
 				level.decorators.put(declaration.name, in.obj(PathDecorator.class));
 				break;
@@ -311,6 +353,7 @@ public class ObjlibDecomp {
 			case TraitAnim:
 				level.anims.put(declaration.name, in.obj(TraitAnim.class));
 				break;
+
 			case DSPChain:
 				level.dchs.put(declaration.name, in.obj(DSPChain.class));
 				break;
@@ -531,7 +574,6 @@ public class ObjlibDecomp {
 			}
 
 			ImGui.inputText("Open Objlib", input);
-			ImGui.sameLine();
 			if (ImGui.button("Parse")) {
 				error = "";
 				try {

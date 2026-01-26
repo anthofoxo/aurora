@@ -4,6 +4,7 @@
 #include <strsafe.h>
 #include <jni.h>
 
+#include <cassert>
 #include <string>
 #include <iostream>
 #include <optional>
@@ -84,8 +85,6 @@ static void checkJavaException(JNIEnv* env) {
 	MessageBoxA(nullptr, string.c_str(), "Java Exception", MB_OK | MB_ICONERROR);
 }
 
-static bool gWantThumperLaunch = false;
-
 static std::optional<std::string> findJar() {
 	for (auto const& entry : std::filesystem::directory_iterator(".")) {
 		if (entry.path().extension() == ".jar") { return entry.path().generic_string(); }
@@ -93,11 +92,50 @@ static std::optional<std::string> findJar() {
 	return std::nullopt;
 }
 
+struct JavaStuff {
+	bool hasAurora = false;
+	HMODULE mod = nullptr;
+	JavaVM* jvm = nullptr;
+
+	JNIEnv* getEnv(bool& shouldDetach) {
+		JNIEnv* env;
+		shouldDetach = false;
+		jint retval = jvm->GetEnv((void**)&env, JNI_VERSION_24);
+		assert(retval == JNI_OK);
+
+		if (retval == JNI_EDETACHED) {
+			JavaVMAttachArgs args;
+			args.version = JNI_VERSION_24;
+			args.name = NULL;
+			args.group = NULL;
+			retval = jvm->AttachCurrentThread((void**)&env, &args);
+			shouldDetach = true;
+		}
+
+		return env;
+	}
+
+	void shutdown() {
+		jvm->DestroyJavaVM();
+		FreeLibrary(mod);
+	}
+};
+
+static JavaStuff gJava;
+
+static bool gWantThumperLaunch = false;
+
+static void errorMessageBox(char const* text) {
+	std::cerr << text << std::endl;
+	MessageBoxA(NULL, text, "Aurora Stub Error", MB_OKCANCEL);
+}
+
 static void spawnAurora() {
 	TCHAR* javahome = tryFindJavaHome();
 	if (javahome == nullptr) {
-		std::cerr << "Cannot find java home via registry keys. Is your Java installed correctly?\n";
-		exit(EXIT_FAILURE);
+		errorMessageBox("Cannot find java home via registry keys. Is Java installed correctly? Thumper will launch without aurora.");
+		gWantThumperLaunch = true;
+		return;
 	}
 
 	TCHAR dllPath[MAX_PATH];
@@ -105,18 +143,20 @@ static void spawnAurora() {
 	delete[] javahome;
 
 	if (FAILED(hr)) {
-		exit(EXIT_FAILURE);
-	}
-
-	HMODULE jniModule = LoadLibrary(dllPath);
-	if (jniModule == nullptr) {
-		std::cerr << "Failed to load JNI\n";
+		errorMessageBox("Failed to find bin/server/jvm.dll. Is Java installed correctly? Thumper will launch without aurora.");
 		gWantThumperLaunch = true;
 		return;
 	}
 
-	auto impl_JNI_GetDefaultJavaVMInitArgs = (decltype(&JNI_GetDefaultJavaVMInitArgs))GetProcAddress(jniModule, "JNI_GetDefaultJavaVMInitArgs");
-	auto impl_JNI_CreateJavaVM = (decltype(&JNI_CreateJavaVM))GetProcAddress(jniModule, "JNI_CreateJavaVM");
+	gJava.mod = LoadLibrary(dllPath);
+	if (gJava.mod == nullptr) {
+		errorMessageBox("Failed to load JNI. Thumper will launch without aurora.");
+		gWantThumperLaunch = true;
+		return;
+	}
+
+	auto impl_JNI_GetDefaultJavaVMInitArgs = (decltype(&JNI_GetDefaultJavaVMInitArgs))GetProcAddress(gJava.mod, "JNI_GetDefaultJavaVMInitArgs");
+	auto impl_JNI_CreateJavaVM = (decltype(&JNI_CreateJavaVM))GetProcAddress(gJava.mod, "JNI_CreateJavaVM");
 
 	JavaVMInitArgs initArgs{};
 	initArgs.version = JNI_VERSION_24;
@@ -162,23 +202,17 @@ static void spawnAurora() {
 	initArgs.nOptions = options.size();
 	initArgs.ignoreUnrecognized = JNI_FALSE;
 
-	JavaVM* jvm;
 	JNIEnv* env;
-	jint retvalue = impl_JNI_CreateJavaVM(&jvm, (void**)&env, &initArgs);
+	jint retvalue = impl_JNI_CreateJavaVM(&gJava.jvm, (void**)&env, &initArgs);
 
-	jclass clClass = env->FindClass("java/lang/ClassLoader");
-	jmethodID getSystemCL = env->GetStaticMethodID(clClass, "getSystemClassLoader", "()Ljava/lang/ClassLoader;");
-	jobject systemCl = env->CallStaticObjectMethod(clClass, getSystemCL);
-	jclass classLoaderClass = env->GetObjectClass(systemCl);
-	jmethodID loadClass = env->GetMethodID(classLoaderClass, "loadClass", "(Ljava/lang/String;)Ljava/lang/Class;");
+	jclass auroraStubClass  = env->FindClass("xyz/anthofoxo/aurora/AuroraStub");
 
-	jstring auroraStubClassName = env->NewStringUTF("xyz.anthofoxo.aurora.AuroraStub");
-	jclass auroraStubClass = (jclass)env->CallObjectMethod(systemCl, loadClass, auroraStubClassName);
-	checkJavaException(env);
+	gJava.hasAurora = auroraStubClass != NULL;
 
 	if (auroraStubClass == NULL) {
-		jvm->DestroyJavaVM();
-		FreeLibrary(jniModule);
+		errorMessageBox("Cannot find main aurora entrypoint. Is aurora installed correctly? Thumper will proceed and launch without aurora.");
+		env->DeleteLocalRef(auroraStubClass);
+		gJava.shutdown();
 		gWantThumperLaunch = true;
 		return;
 	}
@@ -188,62 +222,30 @@ static void spawnAurora() {
 		jfieldID fieldid = env->GetStaticFieldID(auroraStubClass, "integrated", "Z");
 		checkJavaException(env);
 
-		if (fieldid == NULL) {
-			jvm->DestroyJavaVM();
-			FreeLibrary(jniModule);
-			gWantThumperLaunch = true;
-			return;
+		if (fieldid != NULL) {
+			env->SetStaticBooleanField(auroraStubClass, fieldid, true);
 		}
-
-		env->SetStaticBooleanField(auroraStubClass, fieldid, true);
 	}
 
-	jstring name = env->NewStringUTF("xyz.anthofoxo.aurora.EntryPoint");
-	jclass clazz = (jclass)env->CallObjectMethod(systemCl, loadClass, name);
-	checkJavaException(env);
-	if (clazz == NULL) {
-		jvm->DestroyJavaVM();
-		FreeLibrary(jniModule);
-		gWantThumperLaunch = true;
-		return;
+	{
+		auto mid = env->GetStaticMethodID(auroraStubClass, "init", "()V");
+
+		if (mid) {
+			env->CallStaticVoidMethod(auroraStubClass, mid);
+			checkJavaException(env);
+		}
 	}
-
-	jmethodID mid = env->GetStaticMethodID(clazz, "auroraMain", "()V");
-	checkJavaException(env);
-
-	if (mid == NULL) {
-		jvm->DestroyJavaVM();
-		FreeLibrary(jniModule);
-		gWantThumperLaunch = true;
-		return;
-	}
-
-	env->CallStaticVoidMethod(clazz, mid);
-	checkJavaException(env);
 
 	// Aurora has returned, fetch the wantLaunchThumperFlag from vm
-	{
-		jfieldID fieldid = env->GetStaticFieldID(auroraStubClass, "shouldLaunchThumper", "Z");
-		checkJavaException(env);
+	jfieldID fieldid = env->GetStaticFieldID(auroraStubClass, "shouldLaunchThumper", "Z");
+	checkJavaException(env);
 
-		if (fieldid == NULL) {
-			jvm->DestroyJavaVM();
-			FreeLibrary(jniModule);
-			gWantThumperLaunch = true;
-			return;
-		}
-
+	if (fieldid == NULL) {
+		gWantThumperLaunch = true;
+	}
+	else {
 		gWantThumperLaunch = env->GetStaticBooleanField(auroraStubClass, fieldid);
 	}
-
-	env->DeleteLocalRef(auroraStubClass);
-	checkJavaException(env);
-
-	env->DeleteLocalRef(clazz);
-	checkJavaException(env);
-
-	jvm->DestroyJavaVM();
-	FreeLibrary(jniModule);
 }
 
 S_API bool S_CALLTYPE SteamAPI_RestartAppIfNecessary(uint32 unOwnAppID) {
@@ -259,7 +261,7 @@ S_API bool S_CALLTYPE SteamAPI_RestartAppIfNecessary(uint32 unOwnAppID) {
 	gSteam = LoadLibraryA("steam_api64.dll.bak");
 
 	if (gSteam == nullptr) {
-		std::cerr << "Failed to load steam_api64.dll.bak\n";
+		errorMessageBox("Failed to load steam_api64.dll.bak, Thumper is unable to launch in this state.");
 		exit(EXIT_FAILURE);
 	}
 
@@ -275,7 +277,47 @@ S_API bool S_CALLTYPE SteamAPI_RestartAppIfNecessary(uint32 unOwnAppID) {
 }
 
 S_API bool S_CALLTYPE SteamAPI_Init() { return STEAM_FORWARD(SteamAPI_Init); }
-S_API void S_CALLTYPE SteamAPI_Shutdown() { STEAM_FORWARD(SteamAPI_Shutdown); }
+
+S_API void S_CALLTYPE SteamAPI_Shutdown() {
+	if (gJava.hasAurora) {
+		bool detach;
+		JNIEnv* env = gJava.getEnv(detach);
+		jclass auroraStubClass = env->FindClass("xyz/anthofoxo/aurora/AuroraStub");
+
+		if (auroraStubClass) {
+			auto mid = env->GetStaticMethodID(auroraStubClass, "shutdown", "()V");
+			env->CallStaticVoidMethod(auroraStubClass, mid);
+		}
+
+		if (detach) {
+			gJava.jvm->DetachCurrentThread();
+		}
+
+		gJava.shutdown();
+	}
+
+	STEAM_FORWARD(SteamAPI_Shutdown);
+}
+
+S_API void S_CALLTYPE SteamAPI_RunCallbacks() {
+	if (gJava.hasAurora) {
+		bool shouldDetach = false;
+		JNIEnv* env = gJava.getEnv(shouldDetach);
+
+		jclass clazz = env->FindClass("xyz/anthofoxo/aurora/AuroraStub");
+
+		if (clazz != nullptr) {
+			auto mid = env->GetStaticMethodID(clazz, "update", "()V");
+			env->CallStaticVoidMethod(clazz, mid);
+			env->DeleteLocalRef(clazz);
+		}
+
+		if (shouldDetach) gJava.jvm->DetachCurrentThread();
+	}
+
+	return STEAM_FORWARD(SteamAPI_RunCallbacks);
+}
+
 S_API void* S_CALLTYPE SteamInternal_FindOrCreateUserInterface(HSteamUser hSteamUser, const char* pszVersion) {
 	return STEAM_FORWARD(SteamInternal_FindOrCreateUserInterface, hSteamUser, pszVersion);
 }
@@ -285,4 +327,3 @@ S_API void S_CALLTYPE SteamAPI_UnregisterCallResult(class CCallbackBase* pCallba
 	return STEAM_FORWARD(SteamAPI_UnregisterCallResult, pCallback, hAPICall);
 }
 S_API void SteamAPI_RegisterCallResult(class CCallbackBase* pCallback, SteamAPICall_t hAPICall) { return STEAM_FORWARD(SteamAPI_RegisterCallResult, pCallback, hAPICall); }
-S_API void S_CALLTYPE SteamAPI_RunCallbacks() { return STEAM_FORWARD(SteamAPI_RunCallbacks); }

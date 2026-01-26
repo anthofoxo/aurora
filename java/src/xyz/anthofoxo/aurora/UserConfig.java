@@ -1,22 +1,32 @@
 package xyz.anthofoxo.aurora;
 
-import static org.lwjgl.util.tinyfd.TinyFileDialogs.tinyfd_openFileDialog;
-
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
+
+import javax.swing.JFileChooser;
+import javax.swing.JOptionPane;
+import javax.swing.SwingUtilities;
+import javax.swing.filechooser.FileNameExtensionFilter;
 
 public class UserConfig {
 	public static final String CONFIG_PATH = "aurora.properties";
 	public static final Properties properties = new Properties();
 
 	public static final List<String> modPaths = new ArrayList<>();
+
+	private static final String[] PREINSTALLED_THUMPER_LOCATIONS = {
+			"C:/Program Files (x86)/Steam/steamapps/common/Thumper", // Windows
+			"~/.local/share/Steam/steamapps/common/Thumper", // Linux
+	};
 
 	static {
 		try {
@@ -38,6 +48,10 @@ public class UserConfig {
 	public static void set(String key, String value) {
 		properties.setProperty(key, value);
 		save();
+	}
+
+	public static void set(String key, boolean value) {
+		set(key, String.valueOf(value));
 	}
 
 	public static String get(String key, String defaultValue) {
@@ -63,21 +77,97 @@ public class UserConfig {
 		save();
 	}
 
-	public static boolean tinyfdOpen = false;
+	public static String pickVgmstreamPath() {
+		var runnable = new Runnable() {
+			public String path;
+
+			public void run() {
+				var chooser = new JFileChooser();
+				chooser.setDialogTitle("Select vgmstream");
+				chooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
+				chooser.setFileFilter(new FileNameExtensionFilter("VGMStream Executable", "exe"));
+
+				if (chooser.showOpenDialog(Util.makeOnTopParent()) == JFileChooser.APPROVE_OPTION) {
+					path = chooser.getSelectedFile().toString();
+				}
+			}
+		};
+
+		try {
+			SwingUtilities.invokeAndWait(runnable);
+		} catch (InvocationTargetException | InterruptedException e) {
+			e.printStackTrace();
+		}
+
+		if (runnable.path != null) return runnable.path;
+		return null;
+	}
+
+	/**
+	 * Prompts the user for their thumper path and if one is chosen, it'll be saved
+	 * in the user config settings.
+	 */
+	public static void pickAndSaveThumperPath() {
+		var path = pickThumperPath();
+		if (path != null) {
+			properties.setProperty("thumper.path", path);
+			save();
+		}
+	}
+
+	/**
+	 * Searches a few common locations for the Thumper installation. If one is found
+	 * the user will be prompted if they want this path to be used. If they choose
+	 * no or a default wasn't found then they will be prompted to search for it
+	 * themselves. The return value of this function is the chosen directory or
+	 * <code>null</code> if the dialog was cancelled.
+	 */
+	public static String pickThumperPath() {
+		String path = null;
+
+		for (var preinstalledPath : PREINSTALLED_THUMPER_LOCATIONS) {
+			try {
+				if (Files.exists(Path.of(preinstalledPath))) {
+					path = preinstalledPath;
+					break;
+				}
+			} catch (Throwable e) {
+			}
+		}
+
+		if (path != null) {
+			if (JOptionPane.YES_OPTION == Util.showOptionDialog(
+					"Thumper installation found, Should Aurora use this directory?", "Thumper Installation Found",
+					JOptionPane.YES_NO_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE)) {
+				return path;
+			} else path = null;
+		}
+
+		var runnable = new Runnable() {
+			public String path;
+
+			public void run() {
+				var chooser = new JFileChooser();
+				chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+
+				if (chooser.showOpenDialog(Util.makeOnTopParent()) == JFileChooser.APPROVE_OPTION) {
+					path = chooser.getSelectedFile().toString();
+				}
+			}
+		};
+
+		try {
+			SwingUtilities.invokeAndWait(runnable);
+		} catch (InvocationTargetException | InterruptedException e) {
+			e.printStackTrace();
+		}
+
+		if (runnable.path != null) return runnable.path;
+		return null;
+	}
 
 	public static String thumperPath() {
-		var prop = properties.getProperty("thumper.path");
-		if (prop != null) return prop;
-
-		tinyfdOpen = true;
-		String v = tinyfd_openFileDialog("Select Thumper Executable", null, null, null, false);
-		tinyfdOpen = false;
-		if (v == null) return null;
-
-		v = Path.of(v).getParent().toString();
-		properties.setProperty("thumper.path", v);
-		save();
-		return v;
+		return properties.getProperty("thumper.path", null);
 	}
 
 	public static void save() {
@@ -96,5 +186,9 @@ public class UserConfig {
 	public static void setShowGuide(boolean b) {
 		properties.setProperty("aurora.show_guide", Boolean.toString(b));
 		save();
+	}
+
+	public static boolean get(String key, boolean defaultValue) {
+		return Boolean.parseBoolean(get(key, String.valueOf(defaultValue)));
 	}
 }

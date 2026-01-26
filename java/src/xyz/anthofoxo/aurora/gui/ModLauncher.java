@@ -1,29 +1,24 @@
 package xyz.anthofoxo.aurora.gui;
 
-import java.awt.Desktop;
-import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
-
-import org.lwjgl.util.tinyfd.TinyFileDialogs;
 
 import imgui.ImGui;
 import imgui.ImGuiTextFilter;
 import imgui.ImVec2;
 import imgui.ImVec4;
 import imgui.flag.ImGuiCol;
+import imgui.flag.ImGuiCond;
 import imgui.flag.ImGuiStyleVar;
 import imgui.flag.ImGuiTableFlags;
 import imgui.flag.ImGuiWindowFlags;
 import imgui.type.ImBoolean;
-import xyz.anthofoxo.aurora.Aurora;
 import xyz.anthofoxo.aurora.AuroraStub;
 import xyz.anthofoxo.aurora.BuiltinModOptions;
-import xyz.anthofoxo.aurora.EntryPoint;
 import xyz.anthofoxo.aurora.ModBuilder;
+import xyz.anthofoxo.aurora.Tcle3Watcher;
+import xyz.anthofoxo.aurora.TextureRegistry;
 import xyz.anthofoxo.aurora.UserConfig;
 import xyz.anthofoxo.aurora.gfx.Font;
 import xyz.anthofoxo.aurora.target.Target;
@@ -46,9 +41,9 @@ public class ModLauncher {
 	private static ImBoolean enableCampaignLevels = new ImBoolean(
 			Boolean.parseBoolean(UserConfig.get(USERCONFIG_NATIVE_GAME_STR, Boolean.toString(true))));
 
-	private static Boolean showselected = false;
-	private static Boolean ranksortorder = false;
-	private static Boolean namesortorder = false;
+	private static boolean showselected = false;
+	private static boolean ranksortorder = false;
+	private static boolean namesortorder = false;
 
 	static {
 		reloadList();
@@ -60,6 +55,7 @@ public class ModLauncher {
 	}
 
 	public static void draw() {
+		ImGui.setNextWindowSize(1280, 720, ImGuiCond.FirstUseEver);
 		ImGui.pushStyleVar(ImGuiStyleVar.FrameRounding, 6);
 		if (ImGui.begin("Launcher", ImGuiWindowFlags.MenuBar)) {
 			if (ImGui.beginMenuBar()) {
@@ -110,10 +106,11 @@ public class ModLauncher {
 					ImGui.popStyleColor();
 				}
 
-				String thumperpath = UserConfig.thumperPath();
-
-				if (thumperpath == null) {
+				if (UserConfig.thumperPath() == null) {
 					ImGui.textUnformatted("Thumper Directory is not specified, levels will not be built");
+					if (ImGui.button("Fix Now")) {
+						UserConfig.pickAndSaveThumperPath();
+					}
 				}
 
 				ImGui.text(" ");
@@ -121,19 +118,20 @@ public class ModLauncher {
 				ImGui.pushFont(Font.getFont("levelfont"));
 				ImGui.checkbox("MOD MODE ENABLED", isModModeEnabled);
 
-				String text = AuroraStub.integrated ? "Launch Thumper" : "Build Mods";
-
 				ImGui.text(" ");
 				ImGui.sameLine();
-				if (ImGui.button(text)) {
-
+				if (ImGui.button(AuroraStub.integrated ? "Launch Thumper" : "Build Mods")) {
 					if (buildTargets.get()) {
-						ModBuilder.build(customs, isModModeEnabled.get(), autoUnlockLevels.get());
+						ModBuilder.buildModsAsync(customs, isModModeEnabled.get(), autoUnlockLevels.get());
 					}
 
 					if (AuroraStub.integrated) {
-						AuroraStub.shouldLaunchThumper = true;
-						EntryPoint.running = false;
+						try {
+							Tcle3Watcher.setup(customs);
+						} catch (IOException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						}
 					}
 				}
 				ImGui.popFont();
@@ -144,75 +142,14 @@ public class ModLauncher {
 
 				ImGui.endTable();
 			}
-			///
+			//
 
 			ImGui.text(" ");
 
-			//
-			// Thumper path and mod search paths
-			//
-			if (ImGui.button("Thumper Game Install Location")) {
-				UserConfig.properties.remove("thumper.path");
-				UserConfig.thumperPath();
-			}
-
-			ImGui.sameLine();
-
-			ImGui.textUnformatted(UserConfig.thumperPath());
+			GuiPreferences.thumperPathPanel();
 
 			ImGui.separatorText("Mod Search Paths");
-
-			if (ImGui.button("Add Search Path")) {
-				String path = TinyFileDialogs.tinyfd_selectFolderDialog("Mod Search Path", null);
-
-				if (path != null) {
-					UserConfig.modPaths.add(path);
-					UserConfig.save();
-					ModLauncher.reloadList();
-				}
-
-			}
-			ImGui.sameLine();
-			ImGui.pushFont(Font.getFont("defaultsmall"));
-			ImGui.text("Any levels found in the listed paths will appear in the level list below.");
-			ImGui.popFont();
-
-			int removeIdx = -1;
-
-			for (int i = 0; i < UserConfig.modPaths.size(); ++i) {
-				ImGui.pushStyleVar(ImGuiStyleVar.ItemSpacing, new ImVec2(3f, 3f));
-				var buttonremove = Aurora.buttonicons.get("icon-remove.png");
-				ImGui.pushID(i);
-				ImGui.pushStyleColor(ImGuiCol.Button, new ImVec4(0.4f, 0, 0, 1));
-				ImGui.pushStyleColor(ImGuiCol.ButtonHovered, new ImVec4(1f, 0, 0, 1));
-				if (ImGui.imageButton("buttonremove", buttonremove.getHandle(), 16, 16)) removeIdx = i;
-				ImGui.popStyleColor(2);
-
-				ImGui.sameLine();
-
-				var buttonfolder = Aurora.buttonicons.get("icon-openfolder.png");
-				if (ImGui.imageButton("buttonfolder", buttonfolder.getHandle(), 16, 16)) {
-					try {
-						Desktop.getDesktop().open(new File(UserConfig.modPaths.get(i)));
-					} catch (IOException e) {
-						e.printStackTrace();
-					}
-				}
-				ImGui.popStyleVar();
-
-				ImGui.sameLine();
-				ImGui.pushFont(Font.getFont("consolas"));
-				ImGui.textUnformatted(UserConfig.modPaths.get(i));
-				ImGui.popFont();
-				ImGui.popID();
-			}
-
-			if (removeIdx != -1) {
-				UserConfig.modPaths.remove(removeIdx);
-				UserConfig.save();
-				ModLauncher.reloadList();
-			}
-			///
+			GuiPreferences.modSearchPathPanel();
 
 			ImGui.pushStyleVar(ImGuiStyleVar.ItemSpacing, new ImVec2(0, 10));
 			ImGui.text(" ");
@@ -235,7 +172,7 @@ public class ModLauncher {
 			ImGui.popStyleColor(2);
 			ImGui.popStyleVar();
 
-			var buttonrefresh = Aurora.buttonicons.get("icon-refresh.png");
+			var buttonrefresh = TextureRegistry.get("button_icons/icon-refresh.png");
 			ImGui.pushStyleColor(ImGuiCol.Button, new ImVec4(0.2f, 0.2f, 0.2f, 1));
 			ImGui.pushStyleColor(ImGuiCol.ButtonHovered, new ImVec4(0.7f, 0.7f, 0.7f, 1));
 			if (ImGui.imageButton("Reload", buttonrefresh.getHandle(), 18, 18)) reloadList();
@@ -278,22 +215,20 @@ public class ModLauncher {
 			ImGui.pushStyleColor(ImGuiCol.ButtonHovered, new ImVec4(1f, 0, 1f, 1));
 			if (ImGui.button("Name")) {
 				namesortorder = !namesortorder;
-				Collections.sort(customs, new Comparator<Target>() {
-					public int compare(Target obj1, Target obj2) {
-						if (namesortorder)
-							return obj1.tcl.levelName.toUpperCase().compareTo(obj2.tcl.levelName.toUpperCase());
-						else return obj2.tcl.levelName.toUpperCase().compareTo(obj1.tcl.levelName.toUpperCase());
-					}
+
+				customs.sort((obj1, obj2) -> {
+					if (namesortorder)
+						return obj1.tcl.levelName.toUpperCase().compareTo(obj2.tcl.levelName.toUpperCase());
+					return obj2.tcl.levelName.toUpperCase().compareTo(obj1.tcl.levelName.toUpperCase());
 				});
 			}
 			ImGui.sameLine();
 			if (ImGui.button("Difficulty")) {
 				ranksortorder = !ranksortorder;
-				Collections.sort(customs, new Comparator<Target>() {
-					public int compare(Target obj1, Target obj2) {
-						if (ranksortorder) return obj1.tcl.difficulty.compareTo(obj2.tcl.difficulty);
-						else return obj2.tcl.difficulty.compareTo(obj1.tcl.difficulty);
-					}
+
+				customs.sort((obj1, obj2) -> {
+					if (ranksortorder) return obj1.tcl.difficulty.compareTo(obj2.tcl.difficulty);
+					return obj2.tcl.difficulty.compareTo(obj1.tcl.difficulty);
 				});
 			}
 			ImGui.popStyleColor(2);
@@ -327,6 +262,8 @@ public class ModLauncher {
 
 							ImGui.sameLine();
 							ImGui.selectable(custom.tcl.levelName, custom == selected);
+							ImGui.setItemTooltip(custom.origin);
+
 							if (ImGui.isItemHovered() && ImGui.isMouseDoubleClicked(0)) {
 								custom.enabled.set(!custom.enabled.get());
 								UserConfig.setModEnabled(custom.tcl.levelName, custom.enabled.get());
@@ -339,7 +276,7 @@ public class ModLauncher {
 
 								String match = "scaled_" + custom.tcl.difficulty.toLowerCase() + ".png";
 
-								var texture = Aurora.icons.get(match);
+								var texture = TextureRegistry.get("difficulty_icons/" + match);
 
 								if (texture != null) {
 									// ImGui.sameLine();
@@ -370,27 +307,14 @@ public class ModLauncher {
 							ImGui.popFont();
 							if (selected.tcl.difficulty != null && !selected.tcl.difficulty.isEmpty()) {
 								String match = selected.tcl.difficulty.toLowerCase() + "_large.png";
-								var texture = Aurora.icons.get(match);
+								var texture = TextureRegistry.get("difficulty_icons/" + match);
 								if (texture != null) {
 									// float size = ImGui.getFrameHeight();
 									ImGui.sameLine(ImGui.getCursorPosX(), ImGui.getStyle().getItemSpacingX());
 									ImGui.image(texture.getHandle(), 50, 50);
 								}
 							}
-							// separator colors to match the levels rail colors
-							ImGui.pushStyleColor(ImGuiCol.Separator,
-									new ImVec4(selected.tcl.railsGlowColor.w, selected.tcl.railsGlowColor.x,
-											selected.tcl.railsGlowColor.y, selected.tcl.railsGlowColor.z));
-							ImGui.separator();
-							ImGui.popStyleColor();
-							ImGui.pushStyleColor(ImGuiCol.Separator, new ImVec4(selected.tcl.railsColor.w,
-									selected.tcl.railsColor.x, selected.tcl.railsColor.y, selected.tcl.railsColor.z));
-							ImGui.separator();
-							ImGui.popStyleColor();
-							ImGui.pushStyleColor(ImGuiCol.Separator, new ImVec4(selected.tcl.pathColor.w,
-									selected.tcl.pathColor.x, selected.tcl.pathColor.y, selected.tcl.pathColor.z));
-							ImGui.separator();
-							ImGui.popStyleColor();
+							railColorsTop();
 
 							ImGui.textUnformatted("  Author:");
 							String[] authors = selected.tcl.author.replace(" ", "").split(",");
@@ -424,73 +348,9 @@ public class ModLauncher {
 							ImGui.popStyleVar();
 							ImGui.popStyleColor();
 
-							// separator colors to match the levels rail colors
-							ImGui.pushStyleColor(ImGuiCol.Separator, new ImVec4(selected.tcl.pathColor.w,
-									selected.tcl.pathColor.x, selected.tcl.pathColor.y, selected.tcl.pathColor.z));
-							ImGui.separator();
-							ImGui.popStyleColor();
-							ImGui.pushStyleColor(ImGuiCol.Separator, new ImVec4(selected.tcl.railsColor.w,
-									selected.tcl.railsColor.x, selected.tcl.railsColor.y, selected.tcl.railsColor.z));
-							ImGui.separator();
-							ImGui.popStyleColor();
-							ImGui.pushStyleColor(ImGuiCol.Separator,
-									new ImVec4(selected.tcl.railsGlowColor.w, selected.tcl.railsGlowColor.x,
-											selected.tcl.railsGlowColor.y, selected.tcl.railsGlowColor.z));
-							ImGui.separator();
-							ImGui.popStyleColor();
+							railColorsBottom();
 
-							ImGui.pushStyleVar(ImGuiStyleVar.GrabMinSize, 20);
-							ImGui.pushStyleVar(ImGuiStyleVar.GrabRounding, 5);
-							ImGui.sliderInt("Speed Modifier", selected.speedModifier, 10, 300, "%d%%");
-							ImGui.popStyleVar(2);
-							// buttons to quick change speed modifier
-							var sizew = 48;
-							var sizeh = 25;
-							ImGui.pushStyleVar(ImGuiStyleVar.ItemSpacing, new ImVec2(3f, 3f));
-
-							ImGui.pushStyleColor(ImGuiCol.Button, new ImVec4(0, 0.4f, 0, 1));
-							ImGui.pushStyleColor(ImGuiCol.ButtonHovered, new ImVec4(0, 1f, 0, 1));
-							if (ImGui.button("0.25x", sizew, sizeh)) {
-								selected.speedModifier[0] = 25;
-							}
-							ImGui.popStyleColor(2);
-							ImGui.sameLine();
-							ImGui.pushStyleColor(ImGuiCol.Button, new ImVec4(0, 0.4f, 0, 1));
-							ImGui.pushStyleColor(ImGuiCol.ButtonHovered, new ImVec4(0, 1f, 0, 1));
-							if (ImGui.button("0.5x", sizew, sizeh)) {
-								selected.speedModifier[0] = 50;
-							}
-							ImGui.popStyleColor(2);
-							ImGui.sameLine();
-							ImGui.pushStyleColor(ImGuiCol.Button, new ImVec4(0, 0.4f, 0, 1));
-							ImGui.pushStyleColor(ImGuiCol.ButtonHovered, new ImVec4(0, 1f, 0, 1));
-							if (ImGui.button("1x", sizew, sizeh)) {
-								selected.speedModifier[0] = 100;
-							}
-							ImGui.popStyleColor(2);
-							ImGui.sameLine();
-							ImGui.pushStyleColor(ImGuiCol.Button, new ImVec4(0, 0.4f, 0, 1));
-							ImGui.pushStyleColor(ImGuiCol.ButtonHovered, new ImVec4(0, 1f, 0, 1));
-							if (ImGui.button("1.5x", sizew, sizeh)) {
-								selected.speedModifier[0] = 150;
-							}
-							ImGui.popStyleColor(2);
-							ImGui.sameLine();
-							ImGui.pushStyleColor(ImGuiCol.Button, new ImVec4(0, 0.4f, 0, 1));
-							ImGui.pushStyleColor(ImGuiCol.ButtonHovered, new ImVec4(0, 1f, 0, 1));
-							if (ImGui.button("2x", sizew, sizeh)) {
-								selected.speedModifier[0] = 200;
-							}
-							ImGui.popStyleColor(2);
-							ImGui.sameLine();
-							ImGui.pushStyleColor(ImGuiCol.Button, new ImVec4(0, 0.4f, 0, 1));
-							ImGui.pushStyleColor(ImGuiCol.ButtonHovered, new ImVec4(0, 1f, 0, 1));
-							if (ImGui.button("3x", sizew, sizeh)) {
-								selected.speedModifier[0] = 300;
-							}
-							ImGui.popStyleColor(2);
-
-							ImGui.popStyleVar();
+							drawSpeedMod();
 						}
 					}
 					ImGui.endChild();
@@ -503,6 +363,44 @@ public class ModLauncher {
 		}
 		ImGui.popStyleVar();
 		ImGui.end();
+	}
+
+	private static void railColorsTop() {
+		ImGui.pushStyleColor(ImGuiCol.Separator, selected.tcl.railsGlowColor.toImVec4wxyz(null));
+		ImGui.separator();
+		ImGui.pushStyleColor(ImGuiCol.Separator, selected.tcl.railsColor.toImVec4wxyz(null));
+		ImGui.separator();
+		ImGui.pushStyleColor(ImGuiCol.Separator, selected.tcl.pathColor.toImVec4wxyz(null));
+		ImGui.separator();
+		ImGui.popStyleColor(3);
+	}
+
+	private static void railColorsBottom() {
+		ImGui.pushStyleColor(ImGuiCol.Separator, selected.tcl.pathColor.toImVec4wxyz(null));
+		ImGui.separator();
+		ImGui.pushStyleColor(ImGuiCol.Separator, selected.tcl.railsColor.toImVec4wxyz(null));
+		ImGui.separator();
+		ImGui.pushStyleColor(ImGuiCol.Separator, selected.tcl.railsGlowColor.toImVec4wxyz(null));
+		ImGui.separator();
+		ImGui.popStyleColor(3);
+	}
+
+	private static void drawSpeedMod() {
+		ImGui.pushStyleVar(ImGuiStyleVar.GrabMinSize, 20);
+		ImGui.pushStyleVar(ImGuiStyleVar.GrabRounding, 5);
+		ImGui.sliderInt("Speed Modifier", selected.speedModifier, 10, 300, "%d%%");
+		ImGui.popStyleVar(2);
+
+		ImGui.pushStyleVar(ImGuiStyleVar.ItemSpacing, 3f, 3f);
+		ImGui.pushStyleColor(ImGuiCol.Button, 0f, 0.4f, 0f, 1f);
+		ImGui.pushStyleColor(ImGuiCol.ButtonHovered, 0f, 1f, 0f, 1f);
+		for (var speed : new int[] { 50, 75, 90, 100, 110, 125, 150 }) {
+			if (ImGui.button(Float.toString(speed / 100.0f) + "x", 48f, 25f)) selected.speedModifier[0] = speed;
+			ImGui.sameLine();
+		}
+		ImGui.popStyleColor(2);
+		ImGui.popStyleVar();
+		ImGui.dummy(0, 0);
 	}
 
 }
