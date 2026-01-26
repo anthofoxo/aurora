@@ -16,6 +16,7 @@ import org.lwjgl.glfw.Callbacks;
 import org.lwjgl.glfw.GLFW;
 import org.lwjgl.glfw.GLFWErrorCallback;
 import org.lwjgl.glfw.GLFWImage;
+import org.lwjgl.openal.AL11;
 import org.lwjgl.opengl.GL;
 import org.lwjgl.opengl.GL46C;
 import org.lwjgl.system.MemoryStack;
@@ -27,6 +28,7 @@ import imgui.flag.ImGuiConfigFlags;
 import imgui.flag.ImGuiDockNodeFlags;
 import imgui.gl3.ImGuiImplGl3;
 import imgui.glfw.ImGuiImplGlfw;
+import xyz.anthofoxo.aurora.audio.AudioEngine;
 import xyz.anthofoxo.aurora.gfx.Font;
 
 public final class EntryPoint {
@@ -36,6 +38,7 @@ public final class EntryPoint {
 	private static ImGuiImplGl3 imGuiGl3 = new ImGuiImplGl3();
 
 	private static Aurora aurora;
+	private static AudioEngine audioEngine;
 
 	private EntryPoint() {
 	}
@@ -124,7 +127,7 @@ public final class EntryPoint {
 		Font.registerFont("consolas.ttf", "consolas", 14);
 	}
 
-	public static void auroraMain() {
+	private static long createWindow() {
 		GLFWErrorCallback.createPrint(System.err).set();
 
 		if (!glfwInit()) {
@@ -136,18 +139,13 @@ public final class EntryPoint {
 		glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
 		glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 		glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE);
-		window = glfwCreateWindow(1600, 900, Aurora.TITLE, MemoryUtil.NULL, MemoryUtil.NULL);
+		long window = glfwCreateWindow(1600, 900, Aurora.TITLE, MemoryUtil.NULL, MemoryUtil.NULL);
 
 		if (window == MemoryUtil.NULL) {
 			throw new RuntimeException("Failed to create the GLFW window");
 		}
 
-		try {
-			setIcons();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-
+		// Center the window on the primary display
 		try (MemoryStack stack = MemoryStack.stackPush()) {
 			var pWidth = stack.mallocInt(1);
 			var pHeight = stack.mallocInt(1);
@@ -157,49 +155,82 @@ public final class EntryPoint {
 			glfwSetWindowPos(window, (vidmode.width() - pWidth.get(0)) / 2, (vidmode.height() - pHeight.get(0)) / 2);
 		}
 
-		glfwMakeContextCurrent(window);
-		GL.createCapabilities(true);
-		glfwSwapInterval(1);
-		glfwShowWindow(window);
-
-		glfwSetWindowRefreshCallback(window, (long _) -> {
-			if (!UserConfig.tinyfdOpen) update();
-		});
-
-		imGuiInit();
-
-		aurora = new Aurora();
-
-		while (running) {
-
-			update();
-
-			if (ImGui.getIO().hasConfigFlags(ImGuiConfigFlags.ViewportsEnable)) {
-				final long backupCurrentContext = glfwGetCurrentContext();
-				ImGui.updatePlatformWindows();
-				ImGui.renderPlatformWindowsDefault();
-				glfwMakeContextCurrent(backupCurrentContext);
-			}
-
-			glfwPollEvents();
-			if (glfwWindowShouldClose(window)) running = false;
-		}
-
-		imGuiGl3.shutdown();
-		imGuiGlfw.shutdown();
-		ImGui.destroyContext();
-
-		Aurora.icons.values().forEach(e -> e.close());
-		Aurora.textures.values().forEach(e -> e.close());
-		Aurora.buttonicons.values().forEach(e -> e.close());
-
-		Callbacks.glfwFreeCallbacks(window);
-		glfwDestroyWindow(window);
-		glfwTerminate();
-		Objects.requireNonNull(glfwSetErrorCallback(null)).free();
+		return window;
 	}
 
-	public static void main(String[] args) {
-		auroraMain();
+	public static void auroraMain() {
+		if (UserConfig.thumperPath() == null) UserConfig.pickAndSaveThumperPath();
+		Aurora.hasSessionLock = SessionLock.obtainLock();
+		System.out.println("Obtained Session Lock? " + Aurora.hasSessionLock);
+
+		audioEngine = new AudioEngine();
+		AL11.alListenerf(AL11.AL_GAIN, Float.parseFloat(UserConfig.get("aurora.audio.master", String.valueOf(1.0f))));
+
+		// Aurora failed to obtain the lock, meaning another instance has it.
+		// In that case the stand-alone should build the targets, here we just exit
+		// aurora and proceed
+		if (!Aurora.hasSessionLock && AuroraStub.integrated) {
+			System.out.println("The session failed to lock, launching thumper without building targets");
+			EntryPoint.running = false;
+			AuroraStub.shouldLaunchThumper = true;
+			return;
+		}
+
+		try {
+			window = createWindow();
+
+			try {
+				setIcons();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+
+			glfwMakeContextCurrent(window);
+			GL.createCapabilities(true);
+			glfwSwapInterval(1);
+			glfwShowWindow(window);
+
+			glfwSetWindowRefreshCallback(window, (long _) -> {
+				update();
+			});
+
+			imGuiInit();
+
+			aurora = new Aurora();
+
+			while (running) {
+
+				update();
+
+				if (ImGui.getIO().hasConfigFlags(ImGuiConfigFlags.ViewportsEnable)) {
+					final long backupCurrentContext = glfwGetCurrentContext();
+					ImGui.updatePlatformWindows();
+					ImGui.renderPlatformWindowsDefault();
+					glfwMakeContextCurrent(backupCurrentContext);
+				}
+
+				glfwPollEvents();
+				if (glfwWindowShouldClose(window)) running = false;
+			}
+
+			imGuiGl3.shutdown();
+			imGuiGlfw.shutdown();
+			ImGui.destroyContext();
+
+			TextureRegistry.close();
+
+			Callbacks.glfwFreeCallbacks(window);
+			glfwDestroyWindow(window);
+			glfwTerminate();
+			Objects.requireNonNull(glfwSetErrorCallback(null)).free();
+		} finally {
+			SessionLock.freeLock();
+		}
+	}
+
+	public static void auroraShutdown() {
+		if (Tcle3Watcher.buffer != null) Tcle3Watcher.buffer.close();
+		if (Tcle3Watcher.source != null) Tcle3Watcher.source.close();
+		audioEngine.close();
 	}
 }

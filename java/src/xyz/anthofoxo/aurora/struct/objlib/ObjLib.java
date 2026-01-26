@@ -7,7 +7,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import xyz.anthofoxo.aurora.gui.FileType;
 import xyz.anthofoxo.aurora.parse.AuroraReader;
 import xyz.anthofoxo.aurora.parse.AuroraWriter;
 import xyz.anthofoxo.aurora.struct.Bender;

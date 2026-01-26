@@ -22,6 +22,8 @@ public class TcleArtifact extends Target {
 	private List<ZipEntry> paths = new ArrayList<>();
 
 	public TcleArtifact(Path path) throws ZipException, IOException {
+		super(path.toString());
+
 		zipFile = new ZipFile(path.toFile());
 		Enumeration<? extends ZipEntry> entries = zipFile.entries();
 

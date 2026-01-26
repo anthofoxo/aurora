@@ -8,6 +8,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 import org.lwjgl.system.MemoryUtil;
@@ -58,13 +59,17 @@ public class Tcle3 extends Target {
 	private List<Path> paths = new ArrayList<>();
 
 	public Tcle3(Path path) throws IOException {
+		super(path.toString());
+
 		boolean hasDotSecFile = false;
 
 		try (var stream = Files.walk(path)) {
 			for (var entry : stream.collect(Collectors.toList())) {
 				if (Files.isDirectory(entry)) continue;
 
-				if (".png".equals(getExtension(entry.toString()))) {
+				if (".sec".equals(getExtension(entry.toString()))) {
+					hasDotSecFile = true;
+				} else if (".png".equals(getExtension(entry.toString()))) {
 
 					var bytes = Files.readAllBytes(entry);
 					ByteBuffer buffer = MemoryUtil.memAlloc(bytes.length);
@@ -121,16 +126,7 @@ public class Tcle3 extends Target {
 		// depending if the string is plain text or hex-hash, write it to .pc file
 		// differently
 		if (!isNullOrEmpty(param_path)) hashedName = Hash.fnv1a(param_name);
-		else {
-			byte[] str = stringToByteArray(param_name);
-			assert (str.length == 4);
-
-			hashedName = 0;
-			hashedName |= (str[0] & 0xFF) << 24;
-			hashedName |= (str[1] & 0xFF) << 16;
-			hashedName |= (str[2] & 0xFF) << 8;
-			hashedName |= (str[3] & 0xFF);
-		}
+		else hashedName = hexStringToInt(param_name);
 
 		return new ParamPath(hashedName, Integer.parseInt(param_idx));
 	}
@@ -146,34 +142,16 @@ public class Tcle3 extends Target {
 		return bytes;
 	}
 
-	public static SequinGate toSequinGate(JsonNode obj) {
-		SequinGate gate = new SequinGate().withTMLDefaults();
-		gate.entitySpawnerName = obj.get("spn_name").asString();
-		gate.params = List.of(parseParamPath(obj.get("param_path"), obj.get("param_path_hash")));
+	public static int hexStringToInt(String hex) {
+		byte[] str = stringToByteArray(hex);
+		assert (str.length == 4);
 
-		for (var boss_pattern : obj.get("boss_patterns")) {
-			var pattern = new SequinGate.BossPattern().withTMLDefaults();
-
-			var nodeName = boss_pattern.get("node_name");
-			int hash;
-
-			if (nodeName != null) hash = Hash.fnv1a(nodeName.asString());
-			else hash = Integer.reverse(Hash.fnv1a(boss_pattern.get("node_name_hash").asString()));
-
-			pattern.nodeHash = hash;
-			pattern.levelName = boss_pattern.get("lvl_name").asString();
-			pattern.sentryType = boss_pattern.get("sentry_type").asString();
-			pattern.bucketNum = boss_pattern.get("bucket_num").asInt();
-			gate.patterns.add(pattern);
-		}
-
-		gate.preLevelName = obj.get("pre_lvl_name").asString();
-		gate.postLevelName = obj.get("post_lvl_name").asString();
-		gate.restartLevelName = obj.get("restart_lvl_name").asString();
-		gate.sectionType = obj.get("section_type").asString();
-		gate.randomType = obj.get("random_type").asString();
-
-		return gate;
+		int value = 0;
+		value |= (str[0] & 0xFF) << 24;
+		value |= (str[1] & 0xFF) << 16;
+		value |= (str[2] & 0xFF) << 8;
+		value |= (str[3] & 0xFF);
+		return value;
 	}
 
 	@Override
@@ -229,8 +207,6 @@ public class Tcle3 extends Target {
 		}
 
 		writer.i8arr(PrecompiledBin.getObjDef0());
-
-		// writer.i8arr(Util.getResourceBytes("obj_def_customlevel.objlib"));
 		writer.i8arr(PrecompiledBin.readBins());
 
 		for (var obj : objs) {
@@ -248,8 +224,8 @@ public class Tcle3 extends Target {
 				// @formatter:on
 
 				Write_Lvl_Comp(writer, obj);
-			} else if (objType.equals("SequinGate")) writer.obj(toSequinGate(obj));
-			else if (objType.equals("SequinMaster")) writer.obj(toSequinMaster(obj));
+			} else if (objType.equals("SequinGate")) writer.obj(SequinGate.fromTcle3(obj));
+			else if (objType.equals("SequinMaster")) writer.obj(SequinMaster.fromTcle3(obj));
 			else if (objType.equals("EntitySpawner")) writer.obj(toEntiySpawner(obj));
 			else if (objType.equals("Sample")) {
 				var sample = toSample(obj);
@@ -281,64 +257,8 @@ public class Tcle3 extends Target {
 		return compiled;
 	}
 
-	public static SequinMaster toSequinMaster(JsonNode obj) {
-		SequinMaster master = new SequinMaster();
-		master.header = SequinMaster.header();
-
-		// @formatter:off
-		master.comps = List.of(
-				new AnimComp(),
-				new EditStateComp()
-			);
-		// @formatter:on
-
-		master.unknown4 = 0;
-		master.unknown5 = 300.0f;
-		master.skybox = obj.get("skybox_name").asString();
-		master.introLevel = obj.get("intro_lvl_name").asString();
-		master.levels = new ArrayList<>();
-
-		final var tmlMasterIsolate = asBool(obj.get("isolate_tracks"));
-
-		for (var grouping : obj.get("groupings")) {
-			// If track isolation is enabled, only add the isolated tracks to the level.
-			// If it's off, isolate_tracks will be False, and so will all instances
-			// grouping["isolate"]
-			if (asBool(grouping.get("isolate")) == tmlMasterIsolate) {
-				var entry = new SequinMaster.Entry();
-				entry.lvlName = grouping.get("lvl_name").asString();
-				entry.gateName = grouping.get("gate_name").asString();
-				entry.hasCheckpoint = asBool(grouping.get("checkpoint"));
-				entry.checkpointLeaderLvlName = grouping.get("checkpoint_leader_lvl_name").asString();
-				entry.restLvlName = grouping.get("rest_lvl_name").asString();
-				entry.unknownBool0 = true;
-				entry.unknownBool1 = false;
-				entry.unknown0 = 1;
-				entry.unknownBool2 = true;
-				entry.playPlus = asBool(grouping.get("play_plus"));
-				master.levels.add(entry);
-			}
-		}
-
-		master.footer1 = false;
-		master.footer2 = true;
-		master.footer3 = 3;
-		master.footer4 = 50;
-		master.footer5 = 8;
-		master.footer6 = 1;
-		master.footer7 = 0.6f;
-		master.footer8 = 0.5f;
-		master.footer9 = 0.5f;
-		master.checkpointLvl = obj.get("checkpoint_lvl_name").asString();
-		master.pathGameplay = "path.gameplay";
-
-		return master;
-	}
-
 	private static boolean isNullOrEmpty(String str) {
-		if (str == null) return true;
-		if (str.isEmpty()) return true;
-		return false;
+		return Objects.requireNonNullElse(str, "").isEmpty();
 	}
 
 	public static ParamPath parseParamPath(JsonNode paramPathNode, JsonNode paramPathHashNode) {
@@ -356,9 +276,25 @@ public class Tcle3 extends Target {
 			"kTraitCue", "kTraitEvent", "kTraitSym", "kTraitList", "kTraitTraitPath", "kTraitQuat", "kTraitChildLib",
 			"kTraitComponent", "kNumTraitTypes");
 
+	private static int tcleToInt(String value) {
+		try {
+			return Integer.parseInt(value);
+		} catch (NumberFormatException _) {
+
+		}
+
+		try {
+			return (int) Float.parseFloat(value);
+		} catch (NumberFormatException _) {
+		}
+
+		throw new NumberFormatException("For input string: \"" + value + "\"");
+	}
+
 	private static void Write_Data_Point_Value(AuroraWriter f, String val, String trait_type) {
-		if (trait_type.equals("kTraitInt")) f.i32(Integer.parseInt(val));
-		else if (trait_type.equals("kTraitBool") || trait_type.equals("kTraitAction")) {
+		if (trait_type.equals("kTraitInt")) {
+			f.i32(tcleToInt(val));
+		} else if (trait_type.equals("kTraitBool") || trait_type.equals("kTraitAction")) {
 			f.bool(toBoolean(val));
 		} else if (trait_type.equals("kTraitFloat")) f.f32(Float.parseFloat(val));
 		else if (trait_type.equals("kTraitColor")) {
@@ -424,20 +360,6 @@ public class Tcle3 extends Target {
 		}
 	}
 
-	private static boolean toBoolean(String s) {
-		try {
-			return Integer.parseInt(s) == 1;
-		} catch (NumberFormatException e) {
-		}
-
-		try {
-			return Float.parseFloat(s) != 0.0f;
-		} catch (NumberFormatException e) {
-		}
-
-		return Boolean.parseBoolean(s);
-	}
-
 	private static void Write_Sequencer_Objects(AuroraWriter f, JsonNode obj) {
 
 		int beat_cnt = 0;
@@ -456,6 +378,10 @@ public class Tcle3 extends Target {
 		for (var _obj : seq_objs) {
 			String obj_name = _obj.get("obj_name").asString();
 			if (obj_name.startsWith("_")) continue;
+
+			if (_obj.get("enabled") != null) {
+				if (!toBoolean((_obj.get("enabled").asString("True")))) continue;
+			}
 
 			Write_Sequencer_Object_v3(f, _obj, beat_cnt);
 			f.i32(0);
@@ -565,10 +491,24 @@ public class Tcle3 extends Target {
 		f.obj(toVec3f(obj.get("start_angle_fracs")));
 	}
 
-	private static boolean asBool(JsonNode node) {
+	public static boolean asBool(JsonNode node) {
 		if (node == null || node.isNull()) return false;
 		if (node.isBoolean()) return node.asBoolean();
 		return Boolean.parseBoolean(node.asString());
+	}
+
+	private static boolean toBoolean(String s) {
+		try {
+			return Integer.parseInt(s) == 1;
+		} catch (NumberFormatException e) {
+		}
+
+		try {
+			return Float.parseFloat(s) != 0.0f;
+		} catch (NumberFormatException e) {
+		}
+
+		return Boolean.parseBoolean(s);
 	}
 
 	private static Vec3f toVec3f(JsonNode obj) {

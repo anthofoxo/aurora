@@ -9,9 +9,9 @@ public class DSPParamEQ implements Comp {
 	public int hash = HASH;
 	public int unknown0;
 
-	public float unknown1;
+	public float cutoffFrequency;
 	public float unknown2;
-	public float unknown3;
+	public float volumeGain;
 
 	public boolean unknown4;
 

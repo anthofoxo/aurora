@@ -184,7 +184,7 @@ public class AuroraReader {
 					boolean ignoreField = false;
 
 					for (var itCtx : enclosing) {
-						if (itCtx.equals(removalAnnotation.clazz())) {
+						if (List.of(removalAnnotation.clazz()).contains(itCtx)) {
 							ignoreField = true;
 							break;
 						}

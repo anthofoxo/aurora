@@ -5,6 +5,9 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import java.lang.reflect.InvocationTargetException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -18,7 +21,67 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import javax.swing.JFrame;
+import javax.swing.JOptionPane;
+import javax.swing.SwingUtilities;
+import javax.swing.UIManager;
+import javax.swing.UnsupportedLookAndFeelException;
+
 public class Util {
+
+	static {
+		SwingUtilities.invokeLater(() -> {
+			try {
+				UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+			} catch (ClassNotFoundException | InstantiationException | IllegalAccessException
+					| UnsupportedLookAndFeelException e) {
+				e.printStackTrace();
+			}
+		});
+	}
+
+	public static String getStackTraceAsString(Throwable throwable) {
+		StringWriter sw = new StringWriter();
+		PrintWriter pw = new PrintWriter(sw);
+		throwable.printStackTrace(pw);
+		return sw.toString(); // stack trace as a string
+	}
+
+	public static JFrame makeOnTopParent() {
+		JFrame parent = new JFrame();
+		parent.setAlwaysOnTop(true);
+		parent.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+		parent.setUndecorated(true);
+		parent.setLocationRelativeTo(null);
+		parent.setVisible(false);
+		return parent;
+	}
+
+	public static int showOptionDialog(String message, String title, int optionType, int messageType) {
+		var runnable = new Runnable() {
+			public int returnValue;
+
+			public void run() {
+				var parent = makeOnTopParent();
+
+				try {
+					returnValue = JOptionPane.showOptionDialog(parent, message, title, optionType, messageType, null,
+							null, 0);
+				} finally {
+					parent.dispose();
+				}
+			}
+		};
+
+		try {
+			SwingUtilities.invokeAndWait(runnable);
+		} catch (InvocationTargetException | InterruptedException e) {
+			e.printStackTrace();
+		}
+
+		return runnable.returnValue;
+	}
+
 	public static InputStream getResource(String resource) {
 		try {
 			return new FileInputStream(resource);

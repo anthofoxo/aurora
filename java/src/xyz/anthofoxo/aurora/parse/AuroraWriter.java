@@ -130,7 +130,20 @@ public class AuroraWriter {
 				// Check if the field removal context is valid
 				var removalAnnotation = field.getAnnotation(RemoveFieldIfEnclosed.class);
 				if (removalAnnotation != null) {
-					if (enclosing.contains(removalAnnotation.clazz())) continue;
+					boolean ignoreField = false;
+
+					for (var itCtx : enclosing) {
+						if (List.of(removalAnnotation.clazz()).contains(itCtx)) {
+							ignoreField = true;
+							break;
+						}
+
+					}
+
+					if (ignoreField) {
+						// If this field shouldnt be written then do not write it
+						continue;
+					}
 				}
 
 				var type = field.getType();

@@ -36,6 +36,20 @@ public enum DeclarationType implements ThumperStruct {
 	UICanvas("UICanvas"),
 	Entity("Entity"),
 	EntityAnim("EntityAnim"),
+	
+	GameSettings("GameSettings"),
+	EntityVar("EntityVar"),
+	TraitFilter("TraitFilter"),
+	Steering("Steering"),
+	Status("Status"),
+	Light("Light"),
+	TraitBinding("TraitBinding"),
+	XfmFilter("XfmFilter"),
+	PathCondition("PathCondition"),
+	PathGameplay("PathGameplay"),
+	Mastering("Mastering"),
+	
+	
 	PostProcess("PostProcess");
 	// @formatter:on
 

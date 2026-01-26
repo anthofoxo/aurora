@@ -1,5 +1,6 @@
 package xyz.anthofoxo.aurora.struct;
 
+import imgui.ImVec4;
 import tools.jackson.databind.JsonNode;
 
 public class Vec4f implements ThumperStruct {
@@ -16,6 +17,12 @@ public class Vec4f implements ThumperStruct {
 		this.y = y;
 		this.z = z;
 		this.w = w;
+	}
+
+	public ImVec4 toImVec4wxyz(ImVec4 dest) {
+		if (dest == null) dest = new ImVec4();
+		dest.set(w, x, y, z);
+		return dest;
 	}
 
 	public static Vec4f parse(JsonNode node) {

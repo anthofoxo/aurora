@@ -46,6 +46,7 @@ public interface Comp extends ThumperStruct {
 		else if (hash == XfmComp.HASH) return in.obj(XfmComp.class);
 		else if (hash == PollComp.HASH) return in.obj(PollComp.class);
 		else if (hash == PPVignette.HASH) return in.obj(PPVignette.class);
+		else if (hash == EntityComp.HASH) return in.obj(EntityComp.class);
 
 		// DSP Stuff
 		else if (hash == DSPEcho.HASH) return in.obj(DSPEcho.class);
