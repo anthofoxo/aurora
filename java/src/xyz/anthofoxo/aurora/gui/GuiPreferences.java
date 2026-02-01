@@ -34,17 +34,26 @@ public final class GuiPreferences {
 		if (ImGui.button("Add Search Path")) {
 
 			try {
-				SwingUtilities.invokeAndWait(() -> {
-					var chooser = new JFileChooser();
-					chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
-					chooser.requestFocus();
+				var runnable = new Runnable() {
+					public boolean reloadList = false;
 
-					if (chooser.showOpenDialog(Util.makeOnTopParent()) == JFileChooser.APPROVE_OPTION) {
-						UserConfig.modPaths.add(chooser.getSelectedFile().toString());
-						UserConfig.save();
-						ModLauncher.reloadList();
+					public void run() {
+						var chooser = new JFileChooser();
+						chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+						chooser.requestFocus();
+
+						reloadList = chooser.showOpenDialog(Util.makeOnTopParent()) == JFileChooser.APPROVE_OPTION;
+
+						if (reloadList) {
+							UserConfig.modPaths.add(chooser.getSelectedFile().toString());
+							UserConfig.save();
+						}
 					}
-				});
+				};
+
+				SwingUtilities.invokeAndWait(runnable);
+				if (runnable.reloadList) ModLauncher.reloadList();
+
 			} catch (InvocationTargetException | InterruptedException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
