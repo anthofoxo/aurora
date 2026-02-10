@@ -10,6 +10,8 @@
 #include <optional>
 #include <vector>
 #include <filesystem>
+#include <map>
+#include <chrono>
 
 #define STEAM_FORWARD(name, ...) reinterpret_cast<decltype(&name)>(GetProcAddress(gSteam, #name))(__VA_ARGS__)
 
@@ -86,8 +88,16 @@ static void checkJavaException(JNIEnv* env) {
 }
 
 static std::optional<std::string> findJar() {
-	for (auto const& entry : std::filesystem::directory_iterator(".")) {
-		if (entry.path().extension() == ".jar") { return entry.path().generic_string(); }
+	std::multimap<std::chrono::file_clock::time_point, std::filesystem::directory_entry> sort_by_time;
+
+	for (auto &entry : std::filesystem::directory_iterator("."))
+		if (entry.is_regular_file()) {
+			auto time = std::chrono::file_clock::time_point(entry.last_write_time());
+			sort_by_time.insert({time, entry});
+	}
+
+	for (auto item = sort_by_time.rbegin(); item != sort_by_time.rend(); ++item) {
+		if (item->second.path().extension() == ".jar") { return item->second.path().generic_string(); }
 	}
 	return std::nullopt;
 }
