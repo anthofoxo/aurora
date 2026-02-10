@@ -1,5 +1,7 @@
 #include "aurora_steam.h"
 
+#include "semver.hpp"
+
 #include <Windows.h>
 #include <strsafe.h>
 #include <jni.h>
@@ -85,11 +87,48 @@ static void checkJavaException(JNIEnv* env) {
 	MessageBoxA(nullptr, string.c_str(), "Java Exception", MB_OK | MB_ICONERROR);
 }
 
-static std::optional<std::string> findJar() {
-	for (auto const& entry : std::filesystem::directory_iterator(".")) {
-		if (entry.path().extension() == ".jar") { return entry.path().generic_string(); }
+static auto parseSemver(std::string_view str) {
+	if (auto idx = str.find("_v"); idx != std::string_view::npos) {
+		str = str.substr(idx + 2); // after "_v"
 	}
-	return std::nullopt;
+	else if (auto idx = str.find(" v");  idx != std::string_view::npos) {
+		str = str.substr(idx + 2); // after " v"
+	}
+	else throw std::runtime_error("Invalid jar name");
+
+	if (auto end = str.rfind(".jar"); end != std::string_view::npos)
+		str = str.substr(0, end);
+
+	semver::version v;
+	semver::parse(str, v);
+	return v;
+}
+
+static std::optional<std::string> findJar() {
+	std::vector<std::string> choices;
+
+	for (const auto& entry : std::filesystem::directory_iterator(".")) {
+		if (entry.path().extension() == ".jar")
+			choices.push_back(entry.path().generic_string());
+	}
+
+	std::cout << "Matched " << choices.size() << " jars" << std::endl;
+
+	if (choices.empty()) return std::nullopt;
+
+	std::size_t bestIdx = 0;
+	semver::version bestVersion = parseSemver(choices[0]);
+
+	for (std::size_t i = 1; i < choices.size(); ++i) {
+		auto v = parseSemver(choices[i]);
+		if (v > bestVersion) {
+			bestIdx = i;
+			bestVersion = v;
+		}
+	}
+
+	std::cout << "Selected: " << choices[bestIdx] << '\n';
+	return choices[bestIdx];
 }
 
 struct JavaStuff {
