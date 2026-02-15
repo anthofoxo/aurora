@@ -1,5 +1,8 @@
 package xyz.anthofoxo.aurora.struct;
 
+import tools.jackson.databind.node.ArrayNode;
+import tools.jackson.dataformat.yaml.YAMLMapper;
+
 public class Vec3f implements ThumperStruct {
 	public float x;
 	public float y;
@@ -17,6 +20,15 @@ public class Vec3f implements ThumperStruct {
 	@Override
 	public String toString() {
 		return String.format("[%.1f, %.1f, %.1f]", x, y, z);
+	}
+
+	public ArrayNode toAur() {
+		YAMLMapper mapper = new YAMLMapper();
+		var node = mapper.createArrayNode();
+		node.add(x);
+		node.add(y);
+		node.add(z);
+		return node;
 	}
 
 }

@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.node.ObjectNode;
+import tools.jackson.dataformat.yaml.YAMLMapper;
 import xyz.anthofoxo.aurora.struct.annotation.FixedSize;
 import xyz.anthofoxo.aurora.struct.comp.AnimComp;
 import xyz.anthofoxo.aurora.struct.comp.Comp;
@@ -26,6 +28,23 @@ public class SequinMaster implements ThumperStruct {
 		public int unknown0;
 		public boolean unknownBool2;
 		public boolean playPlus;
+
+		public ObjectNode toAur() {
+			YAMLMapper mapper = new YAMLMapper();
+			var root = mapper.createObjectNode();
+			if (!lvlName.isEmpty()) root.put("level_name", lvlName);
+			if (!gateName.isEmpty()) root.put("gate_name", gateName);
+			if (!hasCheckpoint) root.put("checkpoint", hasCheckpoint);
+			if (!checkpointLeaderLvlName.isEmpty()) root.put("checkpoint_leader_level", checkpointLeaderLvlName);
+			if (!restLvlName.isEmpty()) root.put("rest_level", restLvlName);
+			if (!unknownBool0) root.put("_unknownBool0", unknownBool0);
+			if (unknownBool1) root.put("_unknownBool1", unknownBool1);
+			if (unknown0 != 1) root.put("_unknown0", unknown0);
+			if (!unknownBool2) root.put("_unknownBool2", unknownBool2);
+			if (!playPlus) root.put("play_plus", playPlus);
+			return root;
+
+		}
 
 		@Override
 		public String toString() {
@@ -53,6 +72,63 @@ public class SequinMaster implements ThumperStruct {
 	public float footer9;
 	public String checkpointLvl;
 	public String pathGameplay;
+
+	public ObjectNode toAur() {
+		YAMLMapper mapper = new YAMLMapper();
+		var root = mapper.createObjectNode();
+
+		{
+			var node = mapper.createArrayNode();
+			for (int value : header) node.add(value);
+			root.set("header", node);
+		}
+
+		{
+			var node = mapper.createObjectNode();
+
+			for (var comp : comps) {
+				var compNode = mapper.createObjectNode();
+
+				if (comp instanceof EditStateComp) {
+				} else if (comp instanceof AnimComp c) {
+					compNode.put("unknown0", c.unknown0);
+					compNode.put("unknown1", c.unknown1);
+					compNode.put("unit", c.timeUnit.name());
+				} else {
+					compNode.put("warning", "comp not extracted");
+				}
+
+				node.set(comp.getClass().getSimpleName(), compNode);
+			}
+
+			root.set("components", node);
+
+		}
+
+		{
+			var node = mapper.createArrayNode();
+			for (var entry : levels) node.add(entry.toAur());
+			root.set("entries", node);
+		}
+
+		root.put("unknown4", unknown4);
+		root.put("unknown5", unknown5);
+		root.put("skybox", skybox);
+		if (!introLevel.isEmpty()) root.put("intro_level", introLevel);
+		root.put("footer1", footer1);
+		root.put("footer2", footer2);
+		root.put("footer3", footer3);
+		root.put("footer4", footer4);
+		root.put("footer5", footer5);
+		root.put("footer6", footer6);
+		root.put("footer7", footer7);
+		root.put("footer8", footer8);
+		root.put("footer9", footer9);
+		if (!checkpointLvl.isEmpty()) root.put("checkpoint_level", checkpointLvl);
+		if (!pathGameplay.equals("path.gameplay")) root.put("path_gameplay", pathGameplay);
+
+		return root;
+	}
 
 	public static SequinMaster fromTcle3(JsonNode obj) {
 		SequinMaster master = new SequinMaster();

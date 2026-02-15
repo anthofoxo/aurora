@@ -1,5 +1,8 @@
 package xyz.anthofoxo.aurora.struct;
 
+import tools.jackson.databind.node.ObjectNode;
+import tools.jackson.dataformat.yaml.YAMLMapper;
+
 public class Transform implements ThumperStruct {
 	public Vec3f pos;
 	public Vec3f rotx;
@@ -23,5 +26,16 @@ public class Transform implements ThumperStruct {
 		t.scale.y = scaleY;
 		t.scale.z = scaleZ;
 		return t;
+	}
+
+	public ObjectNode toAur() {
+		YAMLMapper mapper = new YAMLMapper();
+		var node = mapper.createObjectNode();
+		node.set("pos", pos.toAur());
+		node.set("rotx", rotx.toAur());
+		node.set("roty", roty.toAur());
+		node.set("rotz", rotz.toAur());
+		node.set("scale", scale.toAur());
+		return node;
 	}
 }

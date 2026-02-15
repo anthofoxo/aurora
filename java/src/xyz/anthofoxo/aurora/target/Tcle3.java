@@ -132,6 +132,20 @@ public class Tcle3 extends Target {
 	}
 
 	private static byte[] stringToByteArray(String hex) {
+		if (hex == null) {
+			throw new IllegalArgumentException("Hex string is null");
+		}
+
+		// Expected hex length (8 chars = 4 bytes)
+		int expectedLength = 8;
+
+		if (hex.length() > expectedLength) {
+			throw new IllegalArgumentException("Hex string too long: " + hex);
+		}
+
+		// Left-pad with zeros
+		hex = String.format("%" + expectedLength + "s", hex).replace(' ', '0');
+
 		int len = hex.length();
 		byte[] bytes = new byte[len / 2];
 
@@ -353,10 +367,26 @@ public class Tcle3 extends Target {
 
 			for (var dp : _obj.get("data_points")) {
 				f.f32(dp.get("beat").asFloat());
-				Write_Data_Point_Value(f, dp.get("value").asString(), traittype);
+				Write_Data_Point_Value(f, datapointNodeToString(dp), traittype);
 				f.str(dp.get("interp").asString());
 				f.str(dp.get("ease").asString());
 			}
+		}
+	}
+
+	private static String datapointNodeToString(JsonNode node) {
+		var v = node.get("value");
+		if (v.isString()) return v.asString();
+		else if (v.isFloat()) return String.valueOf(v.asFloat());
+		else if (v.isDouble()) return String.valueOf(v.asDouble());
+		else if (v.isInt()) return String.valueOf(v.asInt());
+		else if (v.isBoolean()) return String.valueOf(v.asBoolean());
+		else if (v.isArray()) {
+			
+			return "0";
+		}
+		else {
+			throw new IllegalStateException("invalid datapoint: " + v);
 		}
 	}
 

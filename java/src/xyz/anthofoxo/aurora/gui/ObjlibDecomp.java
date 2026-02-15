@@ -4,12 +4,16 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import imgui.ImGui;
+import imgui.ImGuiTextFilter;
 import imgui.type.ImBoolean;
+import imgui.type.ImFloat;
+import imgui.type.ImInt;
 import imgui.type.ImString;
 import xyz.anthofoxo.aurora.Hash;
 import xyz.anthofoxo.aurora.UserConfig;
@@ -63,6 +67,19 @@ public class ObjlibDecomp {
 	private ImString input = new ImString("Adecorators/turn.objlib", 512);
 	private String error = "";
 
+	public static class ObjlibObject {
+		public String name;
+		public DeclarationType type;
+		public Object definition;
+		public boolean editorEnabled;
+
+		public int offsetStart;
+		public int offsetEnd;
+		public int offsetSize;
+	}
+
+	static ImGuiTextFilter filter = new ImGuiTextFilter();
+
 	public static class ObjlibLevel {
 		public FileType fileType;
 		public LibraryType libraryType;
@@ -77,34 +94,32 @@ public class ObjlibDecomp {
 
 		public List<GfxLibImport> gfxImports = new ArrayList<>();
 
-		public Map<String, xyz.anthofoxo.aurora.struct.Path> paths = new HashMap<>();
-		public Map<String, SequinLeaf> leafs = new HashMap<>();
-		public Map<String, SequinMaster> masters = new HashMap<>();
-		public Map<String, SequinLevel> levels = new HashMap<>();
-		public Map<String, SequinGate> gates = new HashMap<>();
-		public Map<String, Cam> cams = new HashMap<>();
-		public Map<String, Bender> benders = new HashMap<>();
-		public Map<String, Env> envs = new HashMap<>();
-		public Map<String, SequinDrawer> drawers = new HashMap<>();
-		public Map<String, Sample> samples = new HashMap<>();
-		public Map<String, TraitAnim> anims = new HashMap<>();
-		public Map<String, EntityVar> entityVars = new HashMap<>();
-		public Map<String, Mesh> meshes = new HashMap<>();
-		public Map<String, VrSettings> vrsettings = new HashMap<>();
-		public Map<String, EntitySpawner> spawners = new HashMap<>();
-		public Map<String, Tex2D> tex2ds = new HashMap<>();
-		public Map<String, Xfmer> xfmers = new HashMap<>();
-		public Map<String, ChannelGroup> channelGroups = new HashMap<>();
-		public Map<String, DSPChain> dchs = new HashMap<>();
-		public Map<String, Vibration> vibs = new HashMap<>();
-		public Map<String, PathDecorator> decorators = new HashMap<>();
-		public Map<String, Scene> scenes = new HashMap<>();
-		public Map<String, PostProcess> postProcess = new HashMap<>();
-		public Map<String, PostProcessPass> passes = new HashMap<>();
-		public Map<String, SequinPulse> pulses = new HashMap<>();
-		public Map<String, Mat> mats = new HashMap<>();
-		public Map<String, DSP> dsps = new HashMap<>();
-		public Map<String, DrawGroup> drawGroups = new HashMap<>();
+		/*
+		 * public Map<String, xyz.anthofoxo.aurora.struct.Path> paths = new HashMap<>();
+		 * public Map<String, SequinLeaf> leafs = new HashMap<>(); public Map<String,
+		 * SequinMaster> masters = new HashMap<>(); public Map<String, SequinLevel>
+		 * levels = new HashMap<>(); public Map<String, SequinGate> gates = new
+		 * HashMap<>(); public Map<String, Cam> cams = new HashMap<>(); public
+		 * Map<String, Bender> benders = new HashMap<>(); public Map<String, Env> envs =
+		 * new HashMap<>(); public Map<String, SequinDrawer> drawers = new HashMap<>();
+		 * public Map<String, Sample> samples = new HashMap<>(); public Map<String,
+		 * TraitAnim> anims = new HashMap<>(); public Map<String, EntityVar> entityVars
+		 * = new HashMap<>(); public Map<String, Mesh> meshes = new HashMap<>(); public
+		 * Map<String, VrSettings> vrsettings = new HashMap<>(); public Map<String,
+		 * EntitySpawner> spawners = new HashMap<>(); public Map<String, Tex2D> tex2ds =
+		 * new HashMap<>(); public Map<String, Xfmer> xfmers = new HashMap<>(); public
+		 * Map<String, ChannelGroup> channelGroups = new HashMap<>(); public Map<String,
+		 * DSPChain> dchs = new HashMap<>(); public Map<String, Vibration> vibs = new
+		 * HashMap<>(); public Map<String, PathDecorator> decorators = new HashMap<>();
+		 * public Map<String, Scene> scenes = new HashMap<>(); public Map<String,
+		 * PostProcess> postProcess = new HashMap<>(); public Map<String,
+		 * PostProcessPass> passes = new HashMap<>(); public Map<String, SequinPulse>
+		 * pulses = new HashMap<>(); public Map<String, Mat> mats = new HashMap<>();
+		 * public Map<String, DSP> dsps = new HashMap<>(); public Map<String, DrawGroup>
+		 * drawGroups = new HashMap<>();
+		 */
+
+		public List<ObjlibObject> objects = new ArrayList<>();
 
 		public ObjlibFooter genericFooter;
 		public Object libraryFooter;
@@ -142,6 +157,343 @@ public class ObjlibDecomp {
 		objectHeaders.put(DeclarationType.DrawGroup, DrawGroup.header());
 		objectHeaders.put(DeclarationType.EntityVar, EntityVar.header());
 		objectHeaders.put(DeclarationType.EntityAnim, EntityAnim.header());
+	}
+
+	private static ImString buffer = new ImString(512);
+
+	private void panelProjectExplorer() {
+		if (level == null) return;
+
+		var imFloat = new ImFloat();
+		var imInt = new ImInt();
+		var imBool = new ImBoolean();
+
+		for (var object : level.objects) {
+			if (!object.editorEnabled) continue;
+
+			if (object.type == DeclarationType.SequinLevel && object.definition instanceof SequinLevel obj) {
+				ImBoolean visible = new ImBoolean(object.editorEnabled);
+
+				if (ImGui.begin("SequinLevel Editor (" + object.name + ")", visible)) {
+
+					int i = 0;
+					for (var entry : obj.enteries) {
+						if (ImGui.treeNode(i++, entry.leafName)) {
+
+							ImGui.labelText("unknown0", entry.unknown0 + "");
+							ImGui.labelText("beatCount", entry.beatCount + "");
+							ImGui.labelText("unknown1", entry.unknown1 + "");
+							ImGui.labelText("leafName", entry.leafName + "");
+							ImGui.labelText("mainPath", entry.mainPath + "");
+							ImGui.labelText("stepGameplay", entry.stepGameplay + "");
+							ImGui.labelText("totalBeatToThisPoint", entry.totalBeatToThisPoint + "");
+
+							if (ImGui.collapsingHeader("Subpaths")) {
+								for (var subpathEntry : entry.subpaths) {
+									int j = 0;
+									if (ImGui.treeNode(j++, subpathEntry.path)) {
+										ImGui.treePop();
+									}
+								}
+							}
+
+							ImGui.treePop();
+						}
+
+					}
+
+				}
+				ImGui.end();
+
+				if (!visible.get()) {
+					object.editorEnabled = false;
+				}
+			}
+
+			if (object.type == DeclarationType.Sample && object.definition instanceof Sample obj) {
+
+				ImBoolean visible = new ImBoolean(object.editorEnabled);
+
+				if (ImGui.begin("Sample Editor (" + object.name + ")", visible)) {
+
+					buffer.set(obj.path);
+					if (ImGui.inputText("Path", buffer)) {
+						obj.path = buffer.get();
+					}
+
+					buffer.set(obj.channelGroup);
+					if (ImGui.inputText("Channel Group", buffer)) {
+						obj.channelGroup = buffer.get();
+					}
+
+					buffer.set(obj.mode);
+					if (ImGui.inputText("Mode", buffer)) {
+						obj.mode = buffer.get();
+					}
+
+					var v = new ImFloat(obj.offset);
+					if (ImGui.inputFloat("Offset", v)) obj.offset = v.get();
+
+					v = new ImFloat(obj.pan);
+					if (ImGui.inputFloat("Pan", v)) obj.pan = v.get();
+
+					v = new ImFloat(obj.pitch);
+					if (ImGui.inputFloat("Pitch", v)) obj.pitch = v.get();
+
+					v = new ImFloat(obj.volume);
+					if (ImGui.inputFloat("Volume", v)) obj.volume = v.get();
+
+				}
+				ImGui.end();
+
+				if (!visible.get()) {
+					object.editorEnabled = false;
+				}
+
+			}
+
+			if (object.definition instanceof SequinGate obj) {
+				ImBoolean visible = new ImBoolean(object.editorEnabled);
+
+				if (ImGui.begin("Gate Editor (" + object.name + ")", visible)) {
+
+					buffer.set(obj.entitySpawnerName);
+					if (ImGui.inputText("Name", buffer)) {
+						obj.entitySpawnerName = buffer.get();
+					}
+
+					buffer.set(obj.preLevelName);
+					if (ImGui.inputText("preLevelName", buffer)) {
+						obj.preLevelName = buffer.get();
+					}
+
+					buffer.set(obj.postLevelName);
+					if (ImGui.inputText("postLevelName", buffer)) {
+						obj.postLevelName = buffer.get();
+					}
+
+					buffer.set(obj.restartLevelName);
+					if (ImGui.inputText("restartLevelName", buffer)) {
+						obj.restartLevelName = buffer.get();
+					}
+
+					buffer.set(obj.unknown0);
+					if (ImGui.inputText("pellet transition level", buffer)) {
+						obj.unknown0 = buffer.get();
+					}
+
+					buffer.set(obj.sectionType);
+					if (ImGui.inputText("sectionType", buffer)) {
+						obj.sectionType = buffer.get();
+					}
+
+					buffer.set(obj.randomType);
+					if (ImGui.inputText("randomType", buffer)) {
+						obj.randomType = buffer.get();
+					}
+
+					imFloat.set(obj.unknown1);
+					if (ImGui.inputFloat("unknown9", imFloat)) obj.unknown1 = imFloat.get();
+
+					ImGui.separatorText("Params");
+
+					for (var param : obj.params) {
+						var t = Hash.hashes.get(param.paramHash);
+						var str = t == null ? Integer.toHexString(param.paramHash) : new String(t);
+						ImGui.text(str + " (" + param.paramIdx + ")");
+					}
+
+					ImGui.separatorText("Entries");
+
+					int i = 0;
+					for (var entry : obj.patterns) {
+						if (ImGui.treeNode(i++, "(" + i + ") " + entry.levelName)) {
+
+							buffer.set(entry.levelName);
+							if (ImGui.inputText("levelName", buffer)) {
+								entry.levelName = buffer.get();
+							}
+
+							buffer.set(entry.sentryType);
+							if (ImGui.inputText("sentryType", buffer)) {
+								entry.sentryType = buffer.get();
+							}
+
+							imBool.set(entry.unknown0);
+							if (ImGui.checkbox("unknown0", imBool)) entry.unknown0 = imBool.get();
+
+							imInt.set(entry.unknown1);
+							if (ImGui.inputInt("unknown1", imInt)) entry.unknown1 = imInt.get();
+							imInt.set(entry.nodeHash);
+							if (ImGui.inputInt("nodeHash", imInt)) entry.nodeHash = imInt.get();
+							imInt.set(entry.bucketNum);
+							if (ImGui.inputInt("Bucket Number", imInt)) entry.bucketNum = imInt.get();
+
+							ImGui.treePop();
+						}
+					}
+
+				}
+				ImGui.end();
+
+				if (!visible.get()) {
+					object.editorEnabled = false;
+				}
+			}
+
+			if (object.type == DeclarationType.EntitySpawner && object.definition instanceof EntitySpawner obj) {
+
+				ImBoolean visible = new ImBoolean(object.editorEnabled);
+
+				if (ImGui.begin("Entity Spawner Editor (" + object.name + ")", visible)) {
+
+					imInt.set(obj.unknown);
+					if (ImGui.inputInt("unknown", imInt)) obj.unknown = imInt.get();
+
+					buffer.set(obj.objlibPath);
+					if (ImGui.inputText("objlibPath", buffer)) {
+						obj.objlibPath = buffer.get();
+					}
+
+					buffer.set(obj.bucket);
+					if (ImGui.inputText("bucket", buffer)) {
+						obj.bucket = buffer.get();
+					}
+
+				}
+				ImGui.end();
+
+				if (!visible.get()) {
+					object.editorEnabled = false;
+				}
+
+			}
+
+			if (object.type == DeclarationType.SequinMaster && object.definition instanceof SequinMaster obj) {
+
+				ImBoolean visible = new ImBoolean(object.editorEnabled);
+
+				if (ImGui.begin("Master Editor (" + object.name + ")", visible)) {
+
+					// header, comp
+
+					imInt.set(obj.unknown4);
+					if (ImGui.inputInt("Unknown4", imInt)) obj.unknown4 = imInt.get();
+
+					imFloat.set(obj.unknown5);
+					if (ImGui.inputFloat("unknown5", imFloat)) obj.unknown5 = imFloat.get();
+
+					buffer.set(obj.skybox);
+					if (ImGui.inputText("Skybox", buffer)) obj.skybox = buffer.get();
+
+					buffer.set(obj.introLevel);
+					if (ImGui.inputText("Intro Level", buffer)) {
+						obj.introLevel = buffer.get();
+					}
+
+					imBool.set(obj.footer1);
+					if (ImGui.checkbox("footer1", imBool)) obj.footer1 = imBool.get();
+					imBool.set(obj.footer2);
+					if (ImGui.checkbox("footer2", imBool)) obj.footer2 = imBool.get();
+					imInt.set(obj.footer3);
+					if (ImGui.inputInt("footer3", imInt)) obj.footer3 = imInt.get();
+					imInt.set(obj.footer4);
+					if (ImGui.inputInt("footer4", imInt)) obj.footer4 = imInt.get();
+					imInt.set(obj.footer5);
+					if (ImGui.inputInt("footer5", imInt)) obj.footer5 = imInt.get();
+					imInt.set(obj.footer6);
+					if (ImGui.inputInt("footer6", imInt)) obj.footer6 = imInt.get();
+					imFloat.set(obj.footer7);
+					if (ImGui.inputFloat("footer7", imFloat)) obj.footer7 = imFloat.get();
+					imFloat.set(obj.footer8);
+					if (ImGui.inputFloat("footer8", imFloat)) obj.footer8 = imFloat.get();
+					imFloat.set(obj.footer9);
+					if (ImGui.inputFloat("footer9", imFloat)) obj.footer9 = imFloat.get();
+
+					buffer.set(obj.checkpointLvl);
+					if (ImGui.inputText("Checkpoint Level", buffer)) {
+						obj.checkpointLvl = buffer.get();
+					}
+
+					buffer.set(obj.pathGameplay);
+					if (ImGui.inputText("Gameplay", buffer)) {
+						obj.pathGameplay = buffer.get();
+					}
+
+					if (ImGui.collapsingHeader("Entries")) {
+
+						int i = 0;
+
+						for (var entry : obj.levels) {
+
+							var display = entry.gateName.isEmpty() ? entry.lvlName : entry.gateName;
+
+							if (ImGui.treeNode(i++, "(" + i + ") " + display)) {
+
+								buffer.set(entry.lvlName);
+								if (ImGui.inputText("lvlName", buffer)) entry.lvlName = buffer.get();
+								buffer.set(entry.gateName);
+								if (ImGui.inputText("gateName", buffer)) entry.gateName = buffer.get();
+								imBool.set(entry.hasCheckpoint);
+								if (ImGui.checkbox("Checkpoint", imBool)) entry.hasCheckpoint = imBool.get();
+
+								buffer.set(entry.checkpointLeaderLvlName);
+								if (ImGui.inputText("checkpointLeaderLvlName", buffer))
+									entry.checkpointLeaderLvlName = buffer.get();
+								buffer.set(entry.restLvlName);
+								if (ImGui.inputText("restLvlName", buffer)) entry.restLvlName = buffer.get();
+
+								imBool.set(entry.unknownBool0);
+								if (ImGui.checkbox("unknownBool0", imBool)) entry.unknownBool0 = imBool.get();
+								imBool.set(entry.unknownBool1);
+								if (ImGui.checkbox("unknownBool1", imBool)) entry.unknownBool1 = imBool.get();
+
+								imInt.set(entry.unknown0);
+								if (ImGui.inputInt("unknown0", imInt)) entry.unknown0 = imInt.get();
+
+								imBool.set(entry.unknownBool2);
+								if (ImGui.checkbox("unknownBool2", imBool)) entry.unknownBool2 = imBool.get();
+								imBool.set(entry.playPlus);
+								if (ImGui.checkbox("Play Plus", imBool)) entry.playPlus = imBool.get();
+
+								ImGui.treePop();
+							}
+						}
+					}
+
+				}
+				ImGui.end();
+
+				if (!visible.get()) {
+					object.editorEnabled = false;
+				}
+
+			}
+		}
+
+		if (!ImGui.begin("Project Explorer")) {
+			ImGui.end();
+			return;
+		}
+
+		ImGui.textUnformatted(
+				level.levelPath + " (" + Integer.toHexString(Hash.fnv1a("A" + level.levelPath.toLowerCase())) + ".pc)");
+		ImGui.separator();
+
+		filter.draw();
+
+		for (var entry : level.objects) {
+			if (!filter.passFilter(entry.name)) continue;
+
+			if (ImGui.selectable(entry.name, entry.editorEnabled)) {
+				entry.editorEnabled ^= true;
+			}
+
+			ImGui.setItemTooltip("Offset: 0x" + Integer.toHexString(entry.offsetStart) + ", Size: 0x"
+					+ Integer.toHexString(entry.offsetSize));
+		}
+
+		ImGui.end();
 	}
 
 	private void parse() throws IOException {
@@ -248,6 +600,8 @@ public class ObjlibDecomp {
 
 		boolean lastObjectOk = false;
 
+		ObjlibObject lastRefFilled = null;
+
 		quit_reading: for (var declaration : level.objectDeclarations) {
 
 			// The previous object had an unknown structure, attempt to skip overr it by
@@ -274,6 +628,11 @@ public class ObjlibDecomp {
 				} else {
 					System.err.println("Skipped 0x" + Integer.toHexString(seeked + 8)); // +8 account for initial header
 
+					if (lastRefFilled != null) {
+						lastRefFilled.offsetEnd = in.pos;
+						lastRefFilled.offsetSize = lastRefFilled.offsetEnd - lastRefFilled.offsetStart;
+
+					}
 				}
 			}
 
@@ -281,93 +640,97 @@ public class ObjlibDecomp {
 
 			System.out.println(declaration.name + " 0x" + Integer.toHexString(in.pos));
 
+			var obj = new ObjlibObject();
+			obj.type = declaration.type;
+			obj.name = declaration.name;
+
+			obj.offsetStart = in.pos;
+
 			switch (declaration.type) {
 
 			case SequinLeaf:
-				level.leafs.put(declaration.name, in.obj(SequinLeaf.class));
+				obj.definition = in.obj(SequinLeaf.class);
 				break;
 			case Env:
-				level.envs.put(declaration.name, in.obj(Env.class));
+				obj.definition = in.obj(Env.class);
 				break;
 			case SequinMaster:
-				level.masters.put(declaration.name, in.obj(SequinMaster.class));
+				obj.definition = in.obj(SequinMaster.class);
 				break;
 			case DrawGroup:
-				level.drawGroups.put(declaration.name, in.obj(DrawGroup.class));
+				obj.definition = in.obj(DrawGroup.class);
 				break;
 			case Vibration:
-				level.vibs.put(declaration.name, in.obj(Vibration.class));
+				obj.definition = in.obj(Vibration.class);
 				break;
 			case Bender:
-				level.benders.put(declaration.name, in.obj(Bender.class));
+				obj.definition = in.obj(Bender.class);
 				break;
 			case EntityVar:
-				level.entityVars.put(declaration.name, in.obj(EntityVar.class));
+				obj.definition = in.obj(EntityVar.class);
 				break;
-
 			case PathDecorator:
-				level.decorators.put(declaration.name, in.obj(PathDecorator.class));
+				obj.definition = in.obj(PathDecorator.class);
 				break;
 			case Mat:
-				level.mats.put(declaration.name, in.obj(Mat.class));
+				obj.definition = in.obj(Mat.class);
 				break;
 			case DSP:
-				level.dsps.put(declaration.name, in.obj(DSP.class));
+				obj.definition = in.obj(DSP.class);
 				break;
 			case SequinDrawer:
-				level.drawers.put(declaration.name, in.obj(SequinDrawer.class));
+				obj.definition = in.obj(SequinDrawer.class);
 				break;
 			case ChannelGroup:
-				level.channelGroups.put(declaration.name, in.obj(ChannelGroup.class));
+				obj.definition = in.obj(ChannelGroup.class);
 				break;
 			case SequinPulse:
-				level.pulses.put(declaration.name, in.obj(SequinPulse.class));
+				obj.definition = in.obj(SequinPulse.class);
 				break;
 			case SequinLevel:
-				level.levels.put(declaration.name, in.obj(SequinLevel.class));
+				obj.definition = in.obj(SequinLevel.class);
 				break;
 			case Sample:
-				level.samples.put(declaration.name, in.obj(Sample.class));
+				obj.definition = in.obj(Sample.class);
 				break;
 			case EntitySpawner:
-				level.spawners.put(declaration.name, in.obj(EntitySpawner.class));
+				obj.definition = in.obj(EntitySpawner.class);
 				break;
 			case SequinGate:
-				level.gates.put(declaration.name, in.obj(SequinGate.class));
+				obj.definition = in.obj(SequinGate.class);
 				break;
 			case Tex2D:
-				level.tex2ds.put(declaration.name, in.obj(Tex2D.class));
+				obj.definition = in.obj(Tex2D.class);
 				break;
 			case Xfmer:
-				level.xfmers.put(declaration.name, in.obj(Xfmer.class));
+				obj.definition = in.obj(Xfmer.class);
 				break;
 			case Scene:
-				level.scenes.put(declaration.name, in.obj(Scene.class));
+				obj.definition = in.obj(Scene.class);
 				break;
 			case Mesh:
-				level.meshes.put(declaration.name, in.obj(Mesh.class));
+				obj.definition = in.obj(Mesh.class);
 				break;
 			case VrSettings:
-				level.vrsettings.put(declaration.name, in.obj(VrSettings.class));
+				obj.definition = in.obj(VrSettings.class);
 				break;
 			case TraitAnim:
-				level.anims.put(declaration.name, in.obj(TraitAnim.class));
+				obj.definition = in.obj(TraitAnim.class);
 				break;
-
 			case DSPChain:
-				level.dchs.put(declaration.name, in.obj(DSPChain.class));
+				obj.definition = in.obj(DSPChain.class);
 				break;
 			case Cam:
-				level.cams.put(declaration.name, in.obj(Cam.class));
+				obj.definition = in.obj(Cam.class);
 				break;
 			case PostProcessPass:
-				level.passes.put(declaration.name, in.obj(PostProcessPass.class));
+				obj.definition = in.obj(PostProcessPass.class);
 				break;
 			case PostProcess:
-				level.postProcess.put(declaration.name, in.obj(PostProcess.class));
+				obj.definition = in.obj(PostProcess.class);
 				break;
 			case Path:
-				level.paths.put(declaration.name, in.obj(xyz.anthofoxo.aurora.struct.Path.class));
+				obj.definition = in.obj(xyz.anthofoxo.aurora.struct.Path.class);
 				break;
 			default:
 
@@ -376,7 +739,13 @@ public class ObjlibDecomp {
 				System.err.println("Skipping: " + declaration.name + " (" + declaration.type + ") at 0x"
 						+ Integer.toHexString(in.position()));
 
+				lastRefFilled = obj;
 			}
+
+			obj.offsetEnd = in.pos;
+			obj.offsetSize = obj.offsetEnd - obj.offsetStart;
+
+			level.objects.add(obj);
 		}
 
 		if (lastObjectOk)
@@ -396,19 +765,31 @@ public class ObjlibDecomp {
 			assert (in.position() == in.bytes.length);
 		}
 
+		// export flows
+
+		for (var obj : level.objects) {
+			if (obj.type == DeclarationType.Flow) {
+
+				String file = "C:\\Users\\antho\\Desktop\\testing\\"
+						+ level.levelPath.replace('.', '_').replace('/', '_') + "#" + obj.name;
+
+				byte[] data = Arrays.copyOfRange(bytes, obj.offsetStart, obj.offsetEnd);
+
+				Files.write(Path.of(file), data);
+
+			}
+		}
+
 	}
 
 	private void drawParsed() {
 		if (level == null) return;
 
-		if (ImGui.collapsingHeader("Samples")) {
-			for (var entry : level.samples.entrySet()) {
-				if (ImGui.treeNode(entry.getKey())) {
-					entry.getValue().gui();
-					ImGui.treePop();
-				}
-			}
-		}
+		/*
+		 * if (ImGui.collapsingHeader("Samples")) { for (var entry :
+		 * level.samples.entrySet()) { if (ImGui.treeNode(entry.getKey())) {
+		 * entry.getValue().gui(); ImGui.treePop(); } } }
+		 */
 
 		ImGui.labelText("content offset", Integer.toHexString(level._startcontentoffset));
 		ImGui.labelText("end objlib import", Integer.toHexString(level._endskyboxoffset));
@@ -468,95 +849,72 @@ public class ObjlibDecomp {
 		);
 	// @formatter:on
 
-	private void calcLevelLength() {
-		if (level == null) return;
-
-		int numBeats = computeBeatLength();
-		if (level.libraryFooter != null) {
-			if (level.libraryFooter instanceof LevelLibFooter f) {
-				float numMinutes = (float) numBeats / f.bpm;
-				System.out.println(minutesToMinutesSeconds(numMinutes));
-			} else {
-				throw new IllegalStateException();
-			}
-
-		} else {
-			System.out.println(numBeats + " beats");
-		}
-	}
-
-	public static int getLevelBeatCount(SequinLevel level) {
-		int total = 0;
-
-		for (var leafEntry : level.enteries) {
-			total += leafEntry.beatCount;
-		}
-
-		return total;
-
-	}
-
-	public static String minutesToMinutesSeconds(float minutes) {
-		int totalSeconds = Math.round(minutes * 60);
-		int mins = totalSeconds / 60;
-		int secs = totalSeconds % 60;
-		return String.format("%d:%02d", mins, secs);
-	}
-
-	public int computeBeatLength() {
-		if (level == null) return 0;
-		int total = 0;
-
-		// for each master (should be just one)
-		for (var master : level.masters.values()) {
-			for (var masterLevelEntry : master.levels) {
-				if (!masterLevelEntry.lvlName.isEmpty()) {
-					var lvl = level.levels.get(masterLevelEntry.lvlName);
-
-					if (lvl == null) {
-						System.err.println("cant find " + masterLevelEntry.lvlName);
-					} else {
-						total += getLevelBeatCount(lvl);
-					}
-
-					var lvlrest = level.levels.get(masterLevelEntry.restLvlName);
-
-					if (lvlrest == null) {
-						System.err.println("cant find " + masterLevelEntry.restLvlName);
-					} else {
-						total += getLevelBeatCount(lvlrest);
-					}
-
-				} else {
-
-					var gate = level.gates.get(masterLevelEntry.gateName);
-
-					if (gate == null) {
-						System.err.println("cant find " + masterLevelEntry.gateName);
-						continue;
-					}
-
-					for (var pattern : gate.patterns) {
-						var lvl = level.levels.get(pattern.levelName);
-
-						if (lvl == null) {
-							System.err.println("cant find gate lvl " + pattern.levelName);
-						} else {
-							total += getLevelBeatCount(lvl);
-						}
-
-					}
-
-				}
-
-			}
-		}
-
-		return total;
-	}
+	/*
+	 * 
+	 * private void calcLevelLength() { if (level == null) return;
+	 * 
+	 * int numBeats = computeBeatLength(); if (level.libraryFooter != null) { if
+	 * (level.libraryFooter instanceof LevelLibFooter f) { float numMinutes =
+	 * (float) numBeats / f.bpm;
+	 * System.out.println(minutesToMinutesSeconds(numMinutes)); } else { throw new
+	 * IllegalStateException(); }
+	 * 
+	 * } else { System.out.println(numBeats + " beats"); } }
+	 * 
+	 * public static int getLevelBeatCount(SequinLevel level) { int total = 0;
+	 * 
+	 * for (var leafEntry : level.enteries) { total += leafEntry.beatCount; }
+	 * 
+	 * return total;
+	 * 
+	 * }
+	 * 
+	 * public static String minutesToMinutesSeconds(float minutes) { int
+	 * totalSeconds = Math.round(minutes * 60); int mins = totalSeconds / 60; int
+	 * secs = totalSeconds % 60; return String.format("%d:%02d", mins, secs); }
+	 * 
+	 * public int computeBeatLength() { if (level == null) return 0; int total = 0;
+	 * 
+	 * // for each master (should be just one) for (var master :
+	 * level.masters.values()) { for (var masterLevelEntry : master.levels) { if
+	 * (!masterLevelEntry.lvlName.isEmpty()) { var lvl =
+	 * level.levels.get(masterLevelEntry.lvlName);
+	 * 
+	 * if (lvl == null) { System.err.println("cant find " +
+	 * masterLevelEntry.lvlName); } else { total += getLevelBeatCount(lvl); }
+	 * 
+	 * var lvlrest = level.levels.get(masterLevelEntry.restLvlName);
+	 * 
+	 * if (lvlrest == null) { System.err.println("cant find " +
+	 * masterLevelEntry.restLvlName); } else { total += getLevelBeatCount(lvlrest);
+	 * }
+	 * 
+	 * } else {
+	 * 
+	 * var gate = level.gates.get(masterLevelEntry.gateName);
+	 * 
+	 * if (gate == null) { System.err.println("cant find " +
+	 * masterLevelEntry.gateName); continue; }
+	 * 
+	 * for (var pattern : gate.patterns) { var lvl =
+	 * level.levels.get(pattern.levelName);
+	 * 
+	 * if (lvl == null) { System.err.println("cant find gate lvl " +
+	 * pattern.levelName); } else { total += getLevelBeatCount(lvl); }
+	 * 
+	 * }
+	 * 
+	 * }
+	 * 
+	 * } }
+	 * 
+	 * return total; }
+	 */
 
 	public void draw() {
 		if (!visible.get()) return;
+
+		panelProjectExplorer();
 
 		if (Hasher.commExport != null) {
 			input.set(UserConfig.thumperPath() + "/cache/" + Hasher.commExport + ".pc");
@@ -589,9 +947,39 @@ public class ObjlibDecomp {
 				drawParsed();
 			}
 
-			if (ImGui.button("Calc Length")) {
-				calcLevelLength();
-			}
+			/*
+			 * if (ImGui.button("Calc Length")) { calcLevelLength(); }
+			 */
+
+			/*
+			 * if (ImGui.button("Extract to .aur format")) {
+			 * 
+			 * var root = new YAMLMapper().createObjectNode();
+			 * 
+			 * for (var entry : level.masters.entrySet()) { var node =
+			 * entry.getValue().toAur(); root.set(entry.getKey(), node); }
+			 * 
+			 * for (var entry : level.gates.entrySet()) { var node =
+			 * entry.getValue().toAur(); root.set(entry.getKey(), node); }
+			 * 
+			 * for (var entry : level.levels.entrySet()) { var node =
+			 * entry.getValue().toAur(); root.set(entry.getKey(), node); }
+			 * 
+			 * ObjectMapper jsonMapper = new ObjectMapper(); Object data =
+			 * jsonMapper.convertValue(root, Object.class);
+			 * 
+			 * DumpSettings settings =
+			 * DumpSettings.builder().setDefaultScalarStyle(ScalarStyle.PLAIN)
+			 * .setDefaultFlowStyle(FlowStyle.BLOCK).setIndent(2).setIndicatorIndent(2) //
+			 * dash alignment .setIndentWithIndicator(true) // prettier lists .setWidth(120)
+			 * // avoid aggressive wrapping .build();
+			 * 
+			 * Dump dump = new Dump(settings); String yaml = dump.dumpToString(data);
+			 * 
+			 * var bytes = yaml.getBytes(); var buffer = MemoryUtil.memAlloc(bytes.length);
+			 * buffer.put(0, bytes); GLFW.nglfwSetClipboardString(EntryPoint.window,
+			 * MemoryUtil.memAddress(buffer)); MemoryUtil.memFree(buffer); }
+			 */
 
 		}
 		ImGui.end();
