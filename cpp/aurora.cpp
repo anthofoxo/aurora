@@ -135,10 +135,11 @@ struct JavaStuff {
 	bool hasAurora = false;
 	HMODULE mod = nullptr;
 	JavaVM* jvm = nullptr;
+	jclass auroraStubClass = nullptr;
+	jmethodID auroraStubUpdateMid = nullptr;
 
-	JNIEnv* getEnv(bool& shouldDetach) {
+	JNIEnv* getEnv() {
 		JNIEnv* env;
-		shouldDetach = false;
 		jint retval = jvm->GetEnv((void**)&env, JNI_VERSION_24);
 		assert(retval == JNI_OK);
 
@@ -148,10 +149,21 @@ struct JavaStuff {
 			args.name = NULL;
 			args.group = NULL;
 			retval = jvm->AttachCurrentThread((void**)&env, &args);
-			shouldDetach = true;
 		}
 
 		return env;
+	}
+
+	jclass getAuroraStubClass() {
+		if (auroraStubClass != nullptr) return auroraStubClass;
+		auroraStubClass = getEnv()->FindClass("xyz/anthofoxo/aurora/AuroraStub");
+		return auroraStubClass;
+	}
+
+	auto getAuroraStubUpdateMid() {
+		if (auroraStubUpdateMid != nullptr) return auroraStubUpdateMid;
+		auroraStubUpdateMid = getEnv()->GetStaticMethodID(getAuroraStubClass(), "update", "()V");
+		return auroraStubUpdateMid;
 	}
 
 	void shutdown() {
@@ -244,7 +256,7 @@ static void spawnAurora() {
 	JNIEnv* env;
 	jint retvalue = impl_JNI_CreateJavaVM(&gJava.jvm, (void**)&env, &initArgs);
 
-	jclass auroraStubClass  = env->FindClass("xyz/anthofoxo/aurora/AuroraStub");
+	jclass auroraStubClass = gJava.getAuroraStubClass();
 
 	gJava.hasAurora = auroraStubClass != NULL;
 
@@ -319,17 +331,13 @@ S_API bool S_CALLTYPE SteamAPI_Init() { return STEAM_FORWARD(SteamAPI_Init); }
 
 S_API void S_CALLTYPE SteamAPI_Shutdown() {
 	if (gJava.hasAurora) {
-		bool detach;
-		JNIEnv* env = gJava.getEnv(detach);
-		jclass auroraStubClass = env->FindClass("xyz/anthofoxo/aurora/AuroraStub");
+
+		JNIEnv* env = gJava.getEnv();
+		jclass auroraStubClass = gJava.getAuroraStubClass();
 
 		if (auroraStubClass) {
 			auto mid = env->GetStaticMethodID(auroraStubClass, "shutdown", "()V");
 			env->CallStaticVoidMethod(auroraStubClass, mid);
-		}
-
-		if (detach) {
-			gJava.jvm->DetachCurrentThread();
 		}
 
 		gJava.shutdown();
@@ -340,18 +348,11 @@ S_API void S_CALLTYPE SteamAPI_Shutdown() {
 
 S_API void S_CALLTYPE SteamAPI_RunCallbacks() {
 	if (gJava.hasAurora) {
-		bool shouldDetach = false;
-		JNIEnv* env = gJava.getEnv(shouldDetach);
+		JNIEnv* env = gJava.getEnv();
 
-		jclass clazz = env->FindClass("xyz/anthofoxo/aurora/AuroraStub");
-
-		if (clazz != nullptr) {
-			auto mid = env->GetStaticMethodID(clazz, "update", "()V");
-			env->CallStaticVoidMethod(clazz, mid);
-			env->DeleteLocalRef(clazz);
+		if (auto clazz = gJava.getAuroraStubClass(); clazz != nullptr) {
+			env->CallStaticVoidMethod(clazz, gJava.getAuroraStubUpdateMid());
 		}
-
-		if (shouldDetach) gJava.jvm->DetachCurrentThread();
 	}
 
 	return STEAM_FORWARD(SteamAPI_RunCallbacks);
